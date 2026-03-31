@@ -12,6 +12,7 @@ namespace CRM.Enterprise.Api.Reporting;
 /// </summary>
 public sealed class PipelineByStageTelerikReport : Report
 {
+    private const double ContentWidthCm = 17.4;
     // CRM brand palette
     private static readonly Color CyanColor = Color.FromArgb(6, 182, 212);
     private static readonly Color PurpleColor = Color.FromArgb(168, 85, 247);
@@ -64,7 +65,7 @@ public sealed class PipelineByStageTelerikReport : Report
     public PipelineByStageTelerikReport()
     {
         Name = "PipelineByStageTelerikReport";
-        Width = Unit.Cm(18.5);
+        Width = Unit.Cm(ContentWidthCm);
         PageSettings.PaperKind = System.Drawing.Printing.PaperKind.Custom;
         PageSettings.PaperSize = new SizeU(Unit.Cm(27.94), Unit.Cm(21.59));
         PageSettings.Margins = new MarginsU(Unit.Cm(1), Unit.Cm(1), Unit.Cm(1), Unit.Cm(1));
@@ -201,7 +202,7 @@ public sealed class PipelineByStageTelerikReport : Report
         {
             Value = "",
             Location = new PointU(Unit.Cm(0), Unit.Cm(3.3)),
-            Size = new SizeU(Unit.Cm(18.5), Unit.Cm(0.03)),
+            Size = new SizeU(Unit.Cm(ContentWidthCm), Unit.Cm(0.03)),
             Style = { BackgroundColor = Gray200 }
         };
 
@@ -240,7 +241,7 @@ public sealed class PipelineByStageTelerikReport : Report
         {
             Value = "",
             Location = new PointU(Unit.Cm(18), Unit.Cm(0.3)),
-            Size = new SizeU(Unit.Cm(0.5), Unit.Cm(0.5)),
+            Size = new SizeU(Unit.Cm(0.4), Unit.Cm(0.5)),
             Style =
             {
                 Font = { Size = Unit.Point(8) },
@@ -248,6 +249,8 @@ public sealed class PipelineByStageTelerikReport : Report
                 TextAlign = HorizontalAlign.Right
             }
         };
+
+        footerRight.Location = new PointU(Unit.Cm(ContentWidthCm - 0.4), Unit.Cm(0.3));
 
         footer.Items.AddRange(new ReportItemBase[] { footerLeft, footerRight });
         Items.Add(footer);
@@ -258,7 +261,7 @@ public sealed class PipelineByStageTelerikReport : Report
         var graph = new Graph
         {
             Location = new PointU(Unit.Cm(0), Unit.Cm(0.5)),
-            Size = new SizeU(Unit.Cm(18.5), Unit.Cm(6.4)),
+            Size = new SizeU(Unit.Cm(ContentWidthCm), Unit.Cm(6.4)),
             DataSource = sqlDs,
             Style =
             {
@@ -354,15 +357,15 @@ public sealed class PipelineByStageTelerikReport : Report
         var table = new Table
         {
             Location = new PointU(Unit.Cm(0), Unit.Cm(7.8)),
-            Size = new SizeU(Unit.Cm(18.5), Unit.Cm(3.0)),
+            Size = new SizeU(Unit.Cm(ContentWidthCm), Unit.Cm(3.0)),
             DataSource = sqlDs
         };
 
         // ── Columns: Stage | Deals | Value | Bar Proportion ──
-        table.Body.Columns.Add(new TableBodyColumn(Unit.Cm(5.6))); // Stage
-        table.Body.Columns.Add(new TableBodyColumn(Unit.Cm(2.9))); // Deals
-        table.Body.Columns.Add(new TableBodyColumn(Unit.Cm(4.2))); // Value
-        table.Body.Columns.Add(new TableBodyColumn(Unit.Cm(5.8))); // Visual bar
+        table.Body.Columns.Add(new TableBodyColumn(Unit.Cm(5.2))); // Stage
+        table.Body.Columns.Add(new TableBodyColumn(Unit.Cm(2.7))); // Deals
+        table.Body.Columns.Add(new TableBodyColumn(Unit.Cm(3.9))); // Value
+        table.Body.Columns.Add(new TableBodyColumn(Unit.Cm(5.6))); // Visual bar
 
         // ── Row group (detail row per stage) ──
         var detailGroup = new TableGroup { Name = "detailGroup" };

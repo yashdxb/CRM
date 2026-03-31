@@ -15,10 +15,11 @@ import { AvatarModule } from 'primeng/avatar';
 import { MenuModule } from 'primeng/menu';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 
-import { MailboxFolder, MailboxFolderType, MailboxEmail, ComposeMode, CrmLinkEntityType } from '../models/email.model';
+import { MailboxFolder, MailboxFolderType, MailboxEmail, CrmLinkEntityType } from '../models/email.model';
 import { MailboxService } from '../services/mailbox.service';
 import { CrmEmailLinkService } from '../services/crm-email-link.service';
 import { UiStateService } from '../../../../core/ui-state/ui-state.service';
+import { MailComposeService } from '../../../../core/email/mail-compose.service';
 
 interface MailboxLayoutPrefs {
   listPaneWidth: number;
@@ -28,7 +29,6 @@ interface MailboxLayoutPrefs {
 import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { AppToastService } from '../../../../core/app-toast.service';
-import { EmailComposeDialogComponent } from '../components/email-compose-dialog.component';
 
 @Component({
   selector: 'app-emails-page',
@@ -46,8 +46,7 @@ import { EmailComposeDialogComponent } from '../components/email-compose-dialog.
     DividerModule,
     AvatarModule,
     MenuModule,
-    ConfirmDialogModule,
-    EmailComposeDialogComponent
+    ConfirmDialogModule
   ],
   templateUrl: './emails.page.html',
   styleUrl: './emails.page.scss'
@@ -61,6 +60,7 @@ export class EmailsPage implements OnInit, OnDestroy {
   private readonly elementRef = inject(ElementRef);
   private readonly uiState = inject(UiStateService);
   private readonly sanitizer = inject(DomSanitizer);
+  private readonly mailCompose = inject(MailComposeService);
   private routeSub?: Subscription;
 
   // State
@@ -72,9 +72,6 @@ export class EmailsPage implements OnInit, OnDestroy {
   protected readonly stats = this.mailbox.stats;
 
   protected searchTerm = '';
-  protected showComposeDialog = false;
-  protected composeMode: ComposeMode = 'new';
-  protected replyToEmail: MailboxEmail | null = null;
   protected readingPanePosition: 'right' | 'bottom' | 'off' = 'right';
 
   // CRM Link state
@@ -112,9 +109,19 @@ export class EmailsPage implements OnInit, OnDestroy {
   // Keyboard shortcut handling
   @HostListener('document:keydown', ['$event'])
   handleKeyboard(event: KeyboardEvent): void {
-    // Ignore if typing in input
-    if ((event.target as HTMLElement).tagName === 'INPUT' || 
-        (event.target as HTMLElement).tagName === 'TEXTAREA') {
+    const target = event.target as HTMLElement | null;
+    if (!target) {
+      return;
+    }
+
+    const tagName = target.tagName;
+    const typingInEditor =
+      tagName === 'INPUT' ||
+      tagName === 'TEXTAREA' ||
+      target.isContentEditable ||
+      !!target.closest('.ql-editor, .p-editor-container, [contenteditable=\"true\"], [role=\"textbox\"]');
+
+    if (typingInEditor) {
       return;
     }
 
@@ -270,18 +277,20 @@ export class EmailsPage implements OnInit, OnDestroy {
   replyToSelected(replyAll = false): void {
     const email = this.selectedEmail();
     if (email) {
-      this.composeMode = replyAll ? 'replyAll' : 'reply';
-      this.replyToEmail = email;
-      this.showComposeDialog = true;
+      this.mailCompose.open({
+        mode: replyAll ? 'replyAll' : 'reply',
+        replyToEmail: email
+      });
     }
   }
 
   forwardSelected(): void {
     const email = this.selectedEmail();
     if (email) {
-      this.composeMode = 'forward';
-      this.replyToEmail = email;
-      this.showComposeDialog = true;
+      this.mailCompose.open({
+        mode: 'forward',
+        replyToEmail: email
+      });
     }
   }
 
@@ -321,17 +330,7 @@ export class EmailsPage implements OnInit, OnDestroy {
   // ═══════════════════════════════════════════════════════════════════════════
 
   openCompose(): void {
-    this.composeMode = 'new';
-    this.replyToEmail = null;
-    this.showComposeDialog = true;
-  }
-
-  onEmailSent(): void {
-    this.showComposeDialog = false;
-    this.replyToEmail = null;
-    this.mailbox.loadEmails();
-    this.mailbox.loadStats();
-    this.toastService.show('success', 'Email sent successfully');
+    this.mailCompose.open();
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

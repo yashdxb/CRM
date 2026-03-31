@@ -39,6 +39,11 @@
                 "glob": "**/*",
                 "input": "src/assets",
                 "output": "assets"
+              },
+              {
+                "glob": "telerikReportViewer*.js",
+                "input": "node_modules/@progress/telerik-jquery-report-viewer/dist/js",
+                "output": "assets/vendor"
               }
             ],
               "styles": [
@@ -47,8 +52,7 @@
                 "src/styles.scss"
               ],
               "scripts": [
-                "node_modules/jquery/dist/jquery.min.js",
-                "node_modules/@progress/telerik-jquery-report-viewer/dist/js/telerikReportViewer.min.js"
+                "node_modules/jquery/dist/jquery.min.js"
               ]
           },
           "configurations": {

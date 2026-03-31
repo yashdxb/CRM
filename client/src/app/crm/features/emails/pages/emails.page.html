@@ -335,12 +335,3 @@
     </div>
   </div>
 }
-
-<!-- Compose Email Dialog -->
-<app-email-compose-dialog
-  [visible]="showComposeDialog"
-  [mode]="composeMode"
-  [replyToEmail]="replyToEmail!"
-  (visibleChange)="showComposeDialog = $event"
-  (sent)="onEmailSent()"
-></app-email-compose-dialog>

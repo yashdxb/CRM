@@ -38,30 +38,21 @@ interface RelatedEntityOption {
     ProgressSpinnerModule
   ],
   template: `
-    <p-dialog
-      [(visible)]="visible"
-      [modal]="true"
-      [dismissableMask]="true"
-      [style]="{ width: '720px', maxWidth: '95vw' }"
-      [contentStyle]="{ padding: '0' }"
-      (onHide)="onCancel()"
-      styleClass="compose-email-dialog"
-    >
-      <ng-template pTemplate="header">
-        <div class="dialog-header">
-          <div class="header-icon" [class]="headerIconClass()">
-            <i class="pi" [ngClass]="headerIcon()"></i>
-          </div>
-          <div class="header-text">
-            <h2>{{ headerTitle() }}</h2>
-            <span class="header-subtitle">{{ headerSubtitle() }}</span>
-          </div>
+    <ng-template #composeHeader>
+      <div class="dialog-header">
+        <div class="header-icon" [class]="headerIconClass()">
+          <i class="pi" [ngClass]="headerIcon()"></i>
         </div>
-      </ng-template>
-      
+        <div class="header-text">
+          <h2>{{ headerTitle() }}</h2>
+          <span class="header-subtitle">{{ headerSubtitle() }}</span>
+        </div>
+      </div>
+    </ng-template>
+
+    <ng-template #composeContent>
       <div class="compose-body">
         <form [formGroup]="form" class="compose-form">
-          <!-- Template Selection (hide for reply/forward) -->
           @if (mode === 'new') {
           <div class="form-section template-section">
             <div class="section-header">
@@ -105,13 +96,12 @@ interface RelatedEntityOption {
           </div>
           }
 
-          <!-- Recipients Section -->
           <div class="form-section recipients-section">
             <div class="section-header">
               <i class="pi pi-users"></i>
               <span>Recipients</span>
             </div>
-            
+
             <div class="field">
               <label>To <span class="required">*</span></label>
               <div class="input-with-icon">
@@ -162,13 +152,12 @@ interface RelatedEntityOption {
             </div>
           </div>
 
-          <!-- Message Section -->
           <div class="form-section message-section">
             <div class="section-header">
               <i class="pi pi-pencil"></i>
               <span>Message</span>
             </div>
-            
+
             <div class="field">
               <label>Subject <span class="required">*</span></label>
               <div class="input-with-icon">
@@ -211,7 +200,6 @@ interface RelatedEntityOption {
             </div>
           </div>
 
-          <!-- Related Entity Section -->
           <div class="form-section link-section" *ngIf="showRelatedEntity">
             <div class="section-header">
               <i class="pi pi-link"></i>
@@ -259,36 +247,68 @@ interface RelatedEntityOption {
           </div>
         </form>
       </div>
+    </ng-template>
+
+    <ng-template #composeFooter>
+      <div class="dialog-footer">
+        <button
+          pButton
+          type="button"
+          class="btn btn-ghost"
+          (click)="onCancel()"
+        >
+          <i class="pi pi-times"></i>
+          <span>Cancel</span>
+        </button>
+        <button
+          pButton
+          type="button"
+          class="btn btn-primary btn-send"
+          [disabled]="form.invalid || sending()"
+          (click)="onSend()"
+        >
+          <i class="pi pi-send" *ngIf="!sending()"></i>
+          <p-progressSpinner
+            *ngIf="sending()"
+            [style]="{ width: '16px', height: '16px' }"
+            strokeWidth="4"
+          ></p-progressSpinner>
+          <span>{{ sending() ? 'Sending...' : 'Send Email' }}</span>
+        </button>
+      </div>
+    </ng-template>
+
+    @if (!embedded) {
+    <p-dialog
+      [(visible)]="visible"
+      [modal]="true"
+      [dismissableMask]="true"
+      [style]="{ width: '720px', maxWidth: '95vw' }"
+      [contentStyle]="{ padding: '0' }"
+      (onHide)="onCancel()"
+      styleClass="compose-email-dialog"
+    >
+      <ng-template pTemplate="header">
+        <ng-container *ngTemplateOutlet="composeHeader"></ng-container>
+      </ng-template>
+
+      <ng-container *ngTemplateOutlet="composeContent"></ng-container>
 
       <ng-template pTemplate="footer">
-        <div class="dialog-footer">
-          <button
-            pButton
-            type="button"
-            class="btn btn-ghost"
-            (click)="onCancel()"
-          >
-            <i class="pi pi-times"></i>
-            <span>Cancel</span>
-          </button>
-          <button
-            pButton
-            type="button"
-            class="btn btn-primary btn-send"
-            [disabled]="form.invalid || sending()"
-            (click)="onSend()"
-          >
-            <i class="pi pi-send" *ngIf="!sending()"></i>
-            <p-progressSpinner
-              *ngIf="sending()"
-              [style]="{ width: '16px', height: '16px' }"
-              strokeWidth="4"
-            ></p-progressSpinner>
-            <span>{{ sending() ? 'Sending...' : 'Send Email' }}</span>
-          </button>
-        </div>
+        <ng-container *ngTemplateOutlet="composeFooter"></ng-container>
       </ng-template>
     </p-dialog>
+    } @else {
+    <section class="compose-page-shell">
+      <header class="compose-page-header">
+        <ng-container *ngTemplateOutlet="composeHeader"></ng-container>
+      </header>
+      <ng-container *ngTemplateOutlet="composeContent"></ng-container>
+      <footer class="compose-page-footer">
+        <ng-container *ngTemplateOutlet="composeFooter"></ng-container>
+      </footer>
+    </section>
+    }
   `,
   styles: [`
     /* Dialog Header */
@@ -328,6 +348,30 @@ interface RelatedEntityOption {
       padding: 1.25rem 1.5rem;
       max-height: 65vh;
       overflow-y: auto;
+    }
+
+    .compose-page-shell {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+      overflow: hidden;
+    }
+
+    .compose-page-header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+      background: linear-gradient(180deg, #ffffff 0%, #fafafa 100%);
+    }
+
+    .compose-page-shell .compose-body {
+      max-height: none;
+      overflow: visible;
+    }
+
+    .compose-page-footer {
+      border-top: 1px solid rgba(0, 0, 0, 0.06);
+      background: linear-gradient(180deg, #fafafa 0%, #f5f5f5 100%);
     }
 
     .compose-form {
@@ -649,6 +693,7 @@ export class EmailComposeDialogComponent implements OnInit, OnChanges {
   private readonly toast = inject(AppToastService);
 
   @Input() visible = false;
+  @Input() embedded = false;
   @Input() showRelatedEntity = true;
   @Input() defaultToEmail = '';
   @Input() defaultToName = '';

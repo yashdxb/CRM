@@ -122,8 +122,12 @@
         </div>
       </section>
       <div class="embed-shell">
+        <div class="loading-state" *ngIf="telerikEnabled() && !viewerRuntimeReady()">
+          <i class="pi pi-spin pi-spinner"></i>
+          <span>Loading report viewer runtime...</span>
+        </div>
         <tr-viewer
-          *ngIf="telerikEnabled() && telerikReportSource()"
+          *ngIf="viewerRuntimeReady() && telerikEnabled() && telerikReportSource()"
           #telerikViewer
           [serviceUrl]="telerikServiceUrl()"
           [reportSource]="telerikReportSource()"

@@ -551,6 +551,13 @@ export const routes: Routes = [
             data: { permission: PERMISSION_KEYS.emailsManage, breadcrumb: 'Email Templates', icon: 'pi-copy' },
             loadComponent: () =>
               import('./crm/features/emails/pages/email-templates.page').then((m) => m.EmailTemplatesPage)
+          },
+          {
+            path: 'compose',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.emailsManage, breadcrumb: 'Compose Email', icon: 'pi-pencil' },
+            loadComponent: () =>
+              import('./crm/features/emails/pages/email-compose.page').then((m) => m.EmailComposePage)
           }
         ]
       },
