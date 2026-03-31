@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
-import { CrmLinkEntityType, CrmEmailLink, CrmEmailLinkRequest } from '../models/email.model';
+import { CrmLinkEntityType, CrmEmailLink, CrmEmailLinkRequest, CrmRecordLookupItem } from '../models/email.model';
 
 export interface CrmEmailLinkResponse {
   id: string;
@@ -42,5 +42,20 @@ export class CrmEmailLinkService {
 
   getMyLinks(): Observable<CrmEmailLinkResponse[]> {
     return this.http.get<CrmEmailLinkResponse[]>(`${this.baseUrl}/api/mailbox/links/mine`);
+  }
+
+  getRecordOptions(entityType: string, search?: string, selectedId?: string): Observable<CrmRecordLookupItem[]> {
+    const params = new URLSearchParams();
+    params.set('entityType', entityType);
+    if (search?.trim()) {
+      params.set('search', search.trim());
+    }
+    if (selectedId?.trim()) {
+      params.set('selectedId', selectedId.trim());
+    }
+
+    return this.http.get<CrmRecordLookupItem[]>(
+      `${this.baseUrl}/api/mailbox/record-options?${params.toString()}`
+    );
   }
 }

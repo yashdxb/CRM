@@ -15,7 +15,7 @@ import { AvatarModule } from 'primeng/avatar';
 import { MenuModule } from 'primeng/menu';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 
-import { MailboxFolder, MailboxFolderType, MailboxEmail, CrmLinkEntityType } from '../models/email.model';
+import { MailboxFolder, MailboxFolderType, MailboxEmail, CrmLinkEntityType, CrmRecordLookupItem } from '../models/email.model';
 import { MailboxService } from '../services/mailbox.service';
 import { CrmEmailLinkService } from '../services/crm-email-link.service';
 import { UiStateService } from '../../../../core/ui-state/ui-state.service';
@@ -78,11 +78,13 @@ export class EmailsPage implements OnInit, OnDestroy {
   protected showLinkDialog = false;
   protected linkEntityType: CrmLinkEntityType | '' = '';
   protected linkEntityId = '';
+  protected linkRecordOptions: CrmRecordLookupItem[] = [];
+  protected linkRecordLoading = false;
   protected linkNote = '';
   protected readonly linkEntityTypeOptions = [
     { label: 'Lead', value: 'Lead' },
     { label: 'Contact', value: 'Contact' },
-    { label: 'Account', value: 'Account' },
+    { label: 'Customer', value: 'Account' },
     { label: 'Opportunity', value: 'Opportunity' }
   ];
 
@@ -340,12 +342,35 @@ export class EmailsPage implements OnInit, OnDestroy {
   openLinkDialog(): void {
     this.linkEntityType = '';
     this.linkEntityId = '';
+    this.linkRecordOptions = [];
     this.linkNote = '';
     this.showLinkDialog = true;
   }
 
   closeLinkDialog(): void {
     this.showLinkDialog = false;
+  }
+
+  onLinkEntityTypeChange(entityType: CrmLinkEntityType | ''): void {
+    this.linkEntityType = entityType;
+    this.linkEntityId = '';
+    this.linkRecordOptions = [];
+
+    if (!entityType) {
+      return;
+    }
+
+    this.linkRecordLoading = true;
+    this.crmLinkService.getRecordOptions(entityType).subscribe({
+      next: (options) => {
+        this.linkRecordOptions = options;
+        this.linkRecordLoading = false;
+      },
+      error: () => {
+        this.linkRecordLoading = false;
+        this.toastService.show('error', 'Failed to load CRM records');
+      }
+    });
   }
 
   linkEmailToCrm(): void {

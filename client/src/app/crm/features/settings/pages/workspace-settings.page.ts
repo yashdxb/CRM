@@ -1,4 +1,4 @@
-import { NgFor, NgIf } from '@angular/common';
+import { NgClass, NgFor, NgIf } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -13,7 +13,7 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { TextareaModule } from 'primeng/textarea';
 
 import { WorkspaceSettingsService } from '../services/workspace-settings.service';
-import { VerticalPresetConfiguration, WorkspaceSettings } from '../models/workspace-settings.model';
+import { RecordNumberingPolicy, VerticalPresetConfiguration, WorkspaceSettings } from '../models/workspace-settings.model';
 import { AppToastService } from '../../../../core/app-toast.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
@@ -30,6 +30,15 @@ interface Option<T = string> {
   value: T;
 }
 
+interface RecordNumberingRow {
+  moduleKey: string;
+  label: string;
+  description: string;
+  statusLabel: string;
+  statusTone: 'success' | 'contrast';
+  prefixControlName: 'recordNumberPrefixLeads' | 'recordNumberPrefixDeals' | 'recordNumberPrefixCustomers';
+}
+
 @Component({
   selector: 'app-workspace-settings-page',
   standalone: true,
@@ -41,6 +50,7 @@ interface Option<T = string> {
     InputNumberModule,
     InputTextModule,
     SelectModule,
+    NgClass,
     NgFor,
     NgIf,
     FormsModule,
@@ -110,6 +120,9 @@ export class WorkspaceSettingsPage {
     scoreImmediateUrgencyFrom: [80, [Validators.min(5), Validators.max(99)]],
     supportingDocsMaxPerRecord: [10, [Validators.min(1), Validators.max(100)]],
     supportingDocsMaxFileSizeMb: [10, [Validators.min(1), Validators.max(100)]],
+    recordNumberPrefixLeads: ['LEA-', [Validators.required, Validators.maxLength(12)]],
+    recordNumberPrefixDeals: ['DEAL-', [Validators.required, Validators.maxLength(12)]],
+    recordNumberPrefixCustomers: ['CUS-', [Validators.required, Validators.maxLength(12)]],
     featureProperties: [false],
     featureAuthEntra: [false],
     featureRealtimeDashboard: [false],
@@ -143,6 +156,33 @@ export class WorkspaceSettingsPage {
     { controlName: 'featureEmailDeliveryNotifications', inputId: 'ws-email-delivery-notifications', label: 'Alert and notification emails' },
     { controlName: 'featureEmailDeliveryMailbox', inputId: 'ws-email-delivery-mailbox', label: 'Mailbox and manual send actions' }
   ] as const;
+
+  protected readonly recordNumberingRows: RecordNumberingRow[] = [
+    {
+      moduleKey: 'Leads',
+      label: 'Leads',
+      description: 'Generated immediately when a lead is created.',
+      statusLabel: 'Active now',
+      statusTone: 'success',
+      prefixControlName: 'recordNumberPrefixLeads'
+    },
+    {
+      moduleKey: 'Deals',
+      label: 'Deals',
+      description: 'Prefix can be prepared now and activated when deal numbering is enabled.',
+      statusLabel: 'Prepared',
+      statusTone: 'contrast',
+      prefixControlName: 'recordNumberPrefixDeals'
+    },
+    {
+      moduleKey: 'Customers',
+      label: 'Customers',
+      description: 'Prefix can be prepared now and activated when customer numbering is enabled.',
+      statusLabel: 'Prepared',
+      statusTone: 'contrast',
+      prefixControlName: 'recordNumberPrefixCustomers'
+    }
+  ];
 
   constructor() {
     this.settingsForm.get('featureEmailDelivery')?.valueChanges.subscribe((enabled) => {
@@ -242,6 +282,7 @@ export class WorkspaceSettingsPage {
         maxFileSizeMb: Number(payload.supportingDocsMaxFileSizeMb ?? 10),
         allowedExtensions: ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.png', '.jpg', '.jpeg', '.webp']
       },
+      recordNumberingPolicies: this.buildRecordNumberingPolicies(payload),
       featureFlags: {
         properties: !!payload.featureProperties,
         'auth.entra': !!payload.featureAuthEntra,
@@ -302,6 +343,9 @@ export class WorkspaceSettingsPage {
       scoreImmediateUrgencyFrom: settings.assistantActionScoringPolicy?.thresholds?.immediateUrgencyFrom ?? 80,
       supportingDocsMaxPerRecord: settings.supportingDocumentPolicy?.maxDocumentsPerRecord ?? 10,
       supportingDocsMaxFileSizeMb: settings.supportingDocumentPolicy?.maxFileSizeMb ?? 10,
+      recordNumberPrefixLeads: this.resolveRecordNumberingPolicy(settings.recordNumberingPolicies, 'Leads', 'LEA-').prefix,
+      recordNumberPrefixDeals: this.resolveRecordNumberingPolicy(settings.recordNumberingPolicies, 'Deals', 'DEAL-').prefix,
+      recordNumberPrefixCustomers: this.resolveRecordNumberingPolicy(settings.recordNumberingPolicies, 'Customers', 'CUS-').prefix,
       featureProperties: this.resolveFeatureFlag(settings.featureFlags, 'properties'),
       featureAuthEntra: this.resolveFeatureFlag(settings.featureFlags, 'auth.entra'),
       featureRealtimeDashboard: this.resolveFeatureFlag(settings.featureFlags, 'realtime.dashboard'),
@@ -405,6 +449,38 @@ export class WorkspaceSettingsPage {
 
     const effective = this.effectiveFeatureFlags()[key];
     return typeof effective === 'boolean' ? effective : defaultValue;
+  }
+
+  private buildRecordNumberingPolicies(payload: ReturnType<typeof this.settingsForm.getRawValue>): RecordNumberingPolicy[] {
+    return [
+      {
+        moduleKey: 'Leads',
+        prefix: (payload.recordNumberPrefixLeads || 'LEA-').trim(),
+        enabled: true,
+        padding: 6
+      },
+      {
+        moduleKey: 'Deals',
+        prefix: (payload.recordNumberPrefixDeals || 'DEAL-').trim(),
+        enabled: false,
+        padding: 6
+      },
+      {
+        moduleKey: 'Customers',
+        prefix: (payload.recordNumberPrefixCustomers || 'CUS-').trim(),
+        enabled: false,
+        padding: 6
+      }
+    ];
+  }
+
+  private resolveRecordNumberingPolicy(
+    policies: RecordNumberingPolicy[] | null | undefined,
+    moduleKey: string,
+    defaultPrefix: string
+  ): RecordNumberingPolicy {
+    return policies?.find((policy) => policy.moduleKey === moduleKey)
+      ?? { moduleKey, prefix: defaultPrefix, enabled: moduleKey === 'Leads', padding: 6 };
   }
 
 }

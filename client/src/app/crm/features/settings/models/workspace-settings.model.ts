@@ -18,6 +18,7 @@ export interface WorkspaceSettings {
   decisionEscalationPolicy?: DecisionEscalationPolicy | null;
   supportingDocumentPolicy?: SupportingDocumentPolicy | null;
   dealHealthScoringPolicy?: DealHealthScoringPolicy | null;
+  recordNumberingPolicies?: RecordNumberingPolicy[] | null;
   featureFlags?: Record<string, boolean> | null;
   reportDesignerRequiredPermission?: string | null;
 }
@@ -39,8 +40,16 @@ export interface UpdateWorkspaceSettingsRequest {
   decisionEscalationPolicy?: DecisionEscalationPolicy | null;
   supportingDocumentPolicy?: SupportingDocumentPolicy | null;
   dealHealthScoringPolicy?: DealHealthScoringPolicy | null;
+  recordNumberingPolicies?: RecordNumberingPolicy[] | null;
   featureFlags?: Record<string, boolean> | null;
   reportDesignerRequiredPermission?: string | null;
+}
+
+export interface RecordNumberingPolicy {
+  moduleKey: string;
+  prefix: string;
+  enabled: boolean;
+  padding: number;
 }
 
 export interface ApplyVerticalPresetRequest {

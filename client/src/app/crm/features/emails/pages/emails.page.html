@@ -313,14 +313,35 @@
           optionLabel="label"
           optionValue="value"
           [(ngModel)]="linkEntityType"
+          (ngModelChange)="onLinkEntityTypeChange($event)"
           placeholder="Select type"
           class="w-full"
           appendTo="body"
         ></p-select>
       </div>
       <div class="link-field">
-        <label>Entity ID</label>
-        <input pInputText [(ngModel)]="linkEntityId" placeholder="Enter entity ID (GUID)" class="w-full" />
+        <label>Record Name</label>
+        <p-select
+          [options]="linkRecordOptions"
+          optionLabel="label"
+          optionValue="id"
+          [(ngModel)]="linkEntityId"
+          placeholder="Select a record"
+          class="w-full"
+          appendTo="body"
+          [filter]="true"
+          [loading]="linkRecordLoading"
+          [disabled]="!linkEntityType"
+        >
+          <ng-template pTemplate="item" let-item>
+            <div class="entity-record-option">
+              <span class="entity-record-option__label">{{ item.label }}</span>
+              @if (item.subtitle) {
+                <small class="entity-record-option__subtitle">{{ item.subtitle }}</small>
+              }
+            </div>
+          </ng-template>
+        </p-select>
       </div>
       <div class="link-field">
         <label>Note (optional)</label>

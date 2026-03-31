@@ -275,6 +275,39 @@
 
           <section class="form-card">
             <h3 class="section-title section-title--info">
+              <i class="pi pi-hashtag"></i>
+              Record Numbering
+            </h3>
+            <p class="section-description">Define tenant-level prefixes for business-facing CRM record numbers. Leads are active now; other modules can be prepared in advance.</p>
+
+            <div class="form-grid">
+              <div class="numbering-row" *ngFor="let row of recordNumberingRows">
+                <div class="numbering-row__meta">
+                  <div class="numbering-row__title">
+                    <strong>{{ row.label }}</strong>
+                    <span class="status-badge" [ngClass]="row.statusTone === 'success' ? 'status-badge--success' : 'status-badge--info'">
+                      {{ row.statusLabel }}
+                    </span>
+                  </div>
+                  <p>{{ row.description }}</p>
+                  <small class="field-hint">Generated format: prefix + six-digit sequence. Example: {{ settingsForm.get(row.prefixControlName)?.value || 'PREFIX-' }}000001</small>
+                </div>
+                <div class="numbering-row__input">
+                  <label [for]="'ws-' + row.moduleKey.toLowerCase() + '-prefix'">{{ row.label }} prefix</label>
+                  <input
+                    pInputText
+                    [id]="'ws-' + row.moduleKey.toLowerCase() + '-prefix'"
+                    [formControlName]="row.prefixControlName"
+                    [placeholder]="row.label + ' prefix'"
+                    class="w-full"
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="form-card">
+            <h3 class="section-title section-title--info">
               <i class="pi pi-sliders-h"></i>
               AI Action Scoring
             </h3>

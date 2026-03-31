@@ -49,7 +49,6 @@ export class ReportsPage implements AfterViewInit {
   });
 
   protected readonly telerikEnabled = signal(false);
-  protected readonly viewerRuntimeReady = signal(false);
   protected readonly telerikServiceUrl = signal('');
   protected readonly telerikReportSource = signal<Record<string, unknown> | null>(null);
 
@@ -73,7 +72,6 @@ export class ReportsPage implements AfterViewInit {
   }
 
   constructor() {
-    void this.ensureViewerRuntime();
     this.loadReportServerConfig();
     this.refresh();
   }
@@ -138,13 +136,6 @@ export class ReportsPage implements AfterViewInit {
     const selected = this.selectedReport();
     const config = this.reportServerConfig();
     if (!selected || !config?.reportServiceUrl) {
-      return;
-    }
-
-    if (!this.viewerRuntimeReady()) {
-      void this.ensureViewerRuntime()
-        .then(() => this.applySelectedReportFilters())
-        .catch(() => undefined);
       return;
     }
 
@@ -463,49 +454,6 @@ export class ReportsPage implements AfterViewInit {
     }
 
     return `${this.apiBaseUrl}/${servicePath.replace(/^\/+/, '')}`;
-  }
-
-  private async ensureViewerRuntime(): Promise<void> {
-    if (this.viewerRuntimeReady()) {
-      return;
-    }
-
-    await this.loadViewerScript('/assets/vendor/telerikReportViewer.kendo.min.js');
-    await this.loadViewerScript('/assets/vendor/telerikReportViewer.min.js');
-    this.viewerRuntimeReady.set(true);
-  }
-
-  private async loadViewerScript(path: string): Promise<void> {
-    const assetUrl = new URL(path, window.location.origin).toString();
-    const existing = document.querySelector(`script[src="${assetUrl}"]`) as HTMLScriptElement | null;
-
-    if (existing) {
-      if (existing.dataset['loaded'] === 'true') {
-        return;
-      }
-
-      await new Promise<void>((resolve, reject) => {
-        existing.addEventListener('load', () => resolve(), { once: true });
-        existing.addEventListener('error', () => reject(new Error(`Failed to load ${path}.`)), { once: true });
-      });
-      return;
-    }
-
-    await new Promise<void>((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = assetUrl;
-      script.async = false;
-      script.onload = () => {
-        script.dataset['loaded'] = 'true';
-        resolve();
-      };
-      script.onerror = () => reject(new Error(`Failed to load ${path}.`));
-      document.body.appendChild(script);
-    }).catch((error) => {
-      const message = error instanceof Error ? error.message : 'Failed to initialize Telerik report viewer runtime.';
-      this.toast.show('error', message);
-      throw error;
-    });
   }
 
   private normalizeTelerikViewerState(): void {

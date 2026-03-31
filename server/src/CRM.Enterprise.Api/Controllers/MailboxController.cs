@@ -3,8 +3,11 @@ using CRM.Enterprise.Application.Emails;
 using CRM.Enterprise.Application.Notifications;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Domain.Enums;
+using CRM.Enterprise.Application.Tenants;
+using CRM.Enterprise.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace CRM.Enterprise.Api.Controllers;
@@ -21,6 +24,8 @@ public class MailboxController : ControllerBase
     private readonly IMailboxProxyService _proxyService;
     private readonly ICrmEmailLinkService _linkService;
     private readonly IWorkspaceEmailDeliveryPolicy _emailDeliveryPolicy;
+    private readonly CrmDbContext _dbContext;
+    private readonly ITenantProvider _tenantProvider;
     private readonly ILogger<MailboxController> _logger;
 
     public MailboxController(
@@ -28,12 +33,16 @@ public class MailboxController : ControllerBase
         IMailboxProxyService proxyService,
         ICrmEmailLinkService linkService,
         IWorkspaceEmailDeliveryPolicy emailDeliveryPolicy,
+        CrmDbContext dbContext,
+        ITenantProvider tenantProvider,
         ILogger<MailboxController> logger)
     {
         _mailboxService = mailboxService;
         _proxyService = proxyService;
         _linkService = linkService;
         _emailDeliveryPolicy = emailDeliveryPolicy;
+        _dbContext = dbContext;
+        _tenantProvider = tenantProvider;
         _logger = logger;
     }
 
@@ -722,10 +731,153 @@ public class MailboxController : ControllerBase
         return Ok(links.Select(MapLinkResponse));
     }
 
+    [HttpGet("record-options")]
+    public async Task<ActionResult<IEnumerable<CrmRecordLookupItem>>> GetRecordOptions(
+        [FromQuery] string entityType,
+        [FromQuery] string? search,
+        [FromQuery] Guid? selectedId,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(entityType))
+        {
+            return BadRequest("Entity type is required.");
+        }
+
+        var tenantId = _tenantProvider.TenantId;
+        var term = search?.Trim();
+        var take = 100;
+
+        switch (NormalizeEntityType(entityType))
+        {
+            case "Lead":
+                var leadQuery = _dbContext.Leads
+                    .AsNoTracking()
+                    .Where(item => item.TenantId == tenantId && !item.IsDeleted);
+                if (selectedId.HasValue)
+                {
+                    leadQuery = leadQuery.Where(item => item.Id == selectedId.Value);
+                }
+                if (!string.IsNullOrWhiteSpace(term))
+                {
+                    leadQuery = leadQuery.Where(item =>
+                        item.LeadNumber.Contains(term) ||
+                        (item.FirstName + " " + item.LastName).Contains(term) ||
+                        (item.Email ?? string.Empty).Contains(term) ||
+                        (item.CompanyName ?? string.Empty).Contains(term));
+                }
+
+                var leads = await leadQuery
+                    .OrderByDescending(item => item.CreatedAtUtc)
+                    .Take(take)
+                    .Select(item => new CrmRecordLookupItem(
+                        item.Id,
+                        $"{item.LeadNumber} · {(item.FirstName + " " + item.LastName).Trim()}",
+                        string.Join(" · ", new[] { item.Email, item.CompanyName }.Where(value => !string.IsNullOrWhiteSpace(value)))))
+                    .ToListAsync(cancellationToken);
+                return Ok(leads);
+
+            case "Contact":
+                var contactQuery = _dbContext.Contacts
+                    .AsNoTracking()
+                    .Where(item => item.TenantId == tenantId && !item.IsDeleted);
+                if (selectedId.HasValue)
+                {
+                    contactQuery = contactQuery.Where(item => item.Id == selectedId.Value);
+                }
+                if (!string.IsNullOrWhiteSpace(term))
+                {
+                    contactQuery = contactQuery.Where(item =>
+                        (item.FirstName + " " + item.LastName).Contains(term) ||
+                        (item.Email ?? string.Empty).Contains(term) ||
+                        (item.JobTitle ?? string.Empty).Contains(term));
+                }
+
+                var contacts = await contactQuery
+                    .OrderBy(item => item.FirstName)
+                    .ThenBy(item => item.LastName)
+                    .Take(take)
+                    .Select(item => new CrmRecordLookupItem(
+                        item.Id,
+                        (item.FirstName + " " + item.LastName).Trim(),
+                        string.Join(" · ", new[] { item.Email, item.JobTitle }.Where(value => !string.IsNullOrWhiteSpace(value)))))
+                    .ToListAsync(cancellationToken);
+                return Ok(contacts);
+
+            case "Account":
+                var accountQuery = _dbContext.Accounts
+                    .AsNoTracking()
+                    .Where(item => item.TenantId == tenantId && !item.IsDeleted);
+                if (selectedId.HasValue)
+                {
+                    accountQuery = accountQuery.Where(item => item.Id == selectedId.Value);
+                }
+                if (!string.IsNullOrWhiteSpace(term))
+                {
+                    accountQuery = accountQuery.Where(item =>
+                        item.Name.Contains(term) ||
+                        (item.AccountNumber ?? string.Empty).Contains(term) ||
+                        (item.Website ?? string.Empty).Contains(term));
+                }
+
+                var accounts = await accountQuery
+                    .OrderBy(item => item.Name)
+                    .Take(take)
+                    .Select(item => new CrmRecordLookupItem(
+                        item.Id,
+                        item.Name,
+                        string.Join(" · ", new[] { item.AccountNumber, item.Website }.Where(value => !string.IsNullOrWhiteSpace(value)))))
+                    .ToListAsync(cancellationToken);
+                return Ok(accounts);
+
+            case "Opportunity":
+                var opportunityQuery = _dbContext.Opportunities
+                    .AsNoTracking()
+                    .Include(item => item.Stage)
+                    .Where(item => item.TenantId == tenantId && !item.IsDeleted);
+                if (selectedId.HasValue)
+                {
+                    opportunityQuery = opportunityQuery.Where(item => item.Id == selectedId.Value);
+                }
+                if (!string.IsNullOrWhiteSpace(term))
+                {
+                    opportunityQuery = opportunityQuery.Where(item =>
+                        item.Name.Contains(term) ||
+                        (item.Stage != null && item.Stage.Name.Contains(term)));
+                }
+
+                var opportunities = await opportunityQuery
+                    .OrderByDescending(item => item.CreatedAtUtc)
+                    .Take(take)
+                    .Select(item => new CrmRecordLookupItem(
+                        item.Id,
+                        item.Name,
+                        string.Join(" · ", new[]
+                        {
+                            item.Stage != null ? item.Stage.Name : null,
+                            item.Amount > 0 ? item.Amount.ToString("0.##") : null
+                        }.Where(value => !string.IsNullOrWhiteSpace(value)))))
+                    .ToListAsync(cancellationToken);
+                return Ok(opportunities);
+        }
+
+        return BadRequest($"Unsupported entity type: {entityType}");
+    }
+
     private static CrmEmailLinkResponse MapLinkResponse(CrmEmailLinkDto dto) => new(
         Id: dto.Id, ConnectionId: dto.ConnectionId, ExternalMessageId: dto.ExternalMessageId,
         ConversationId: dto.ConversationId, Subject: dto.Subject, FromEmail: dto.FromEmail,
         FromName: dto.FromName, ReceivedAtUtc: dto.ReceivedAtUtc, Provider: dto.Provider,
         RelatedEntityType: dto.RelatedEntityType, RelatedEntityId: dto.RelatedEntityId,
         LinkedByUserId: dto.LinkedByUserId, Note: dto.Note, CreatedAtUtc: dto.CreatedAtUtc);
+
+    private static string NormalizeEntityType(string entityType) =>
+        entityType.Trim().ToLowerInvariant() switch
+        {
+            "customer" => "Account",
+            "account" => "Account",
+            "lead" => "Lead",
+            "contact" => "Contact",
+            "opportunity" => "Opportunity",
+            _ => entityType.Trim()
+        };
 }

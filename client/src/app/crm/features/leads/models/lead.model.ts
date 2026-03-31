@@ -21,6 +21,7 @@ export interface LeadCadenceChannelOption {
 
 export interface Lead {
   id: string;
+  leadNumber: string;
   name: string;
   company: string;
   status: LeadStatus;

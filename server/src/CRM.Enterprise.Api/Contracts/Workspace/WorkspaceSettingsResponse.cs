@@ -28,5 +28,6 @@ public record WorkspaceSettingsResponse(
     DecisionEscalationPolicy DecisionEscalationPolicy,
     SupportingDocumentPolicy SupportingDocumentPolicy,
     DealHealthScoringPolicy DealHealthScoringPolicy,
+    IReadOnlyList<RecordNumberingPolicy> RecordNumberingPolicies,
     IReadOnlyDictionary<string, bool>? FeatureFlags,
     string? ReportDesignerRequiredPermission);

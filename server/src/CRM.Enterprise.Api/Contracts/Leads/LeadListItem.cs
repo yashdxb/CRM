@@ -5,6 +5,7 @@ namespace CRM.Enterprise.Api.Contracts.Leads;
 
 public record LeadListItem(
     Guid Id,
+    string LeadNumber,
     string Name,
     string Company,
     string Status,

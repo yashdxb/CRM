@@ -29,6 +29,7 @@ public sealed class LeadService : ILeadService
     private readonly ITenantProvider _tenantProvider;
     private readonly ILeadScoringService _leadScoringService;
     private readonly ILeadConversationScoreService _leadConversationScoreService;
+    private readonly IRecordNumberAllocator _recordNumberAllocator;
     private readonly IAuditEventService _auditEvents;
     private readonly IMediator _mediator;
     private readonly IActivityService _activityService;
@@ -39,6 +40,7 @@ public sealed class LeadService : ILeadService
         ITenantProvider tenantProvider,
         ILeadScoringService leadScoringService,
         ILeadConversationScoreService leadConversationScoreService,
+        IRecordNumberAllocator recordNumberAllocator,
         IAuditEventService auditEvents,
         IMediator mediator,
         IActivityService activityService)
@@ -47,6 +49,7 @@ public sealed class LeadService : ILeadService
         _tenantProvider = tenantProvider;
         _leadScoringService = leadScoringService;
         _leadConversationScoreService = leadConversationScoreService;
+        _recordNumberAllocator = recordNumberAllocator;
         _auditEvents = auditEvents;
         _mediator = mediator;
         _activityService = activityService;
@@ -66,6 +69,7 @@ public sealed class LeadService : ILeadService
         {
             var term = request.Search.ToLower();
             query = query.Where(l =>
+                l.LeadNumber.ToLower().Contains(term) ||
                 (l.FirstName + " " + l.LastName).ToLower().Contains(term) ||
                 (l.Email ?? string.Empty).ToLower().Contains(term) ||
                 (l.Phone ?? string.Empty).ToLower().Contains(term) ||
@@ -188,6 +192,7 @@ public sealed class LeadService : ILeadService
             .Select(l => new
             {
                 l.Id,
+                l.LeadNumber,
                 l.FirstName,
                 l.LastName,
                 l.CompanyName,
@@ -284,6 +289,7 @@ public sealed class LeadService : ILeadService
 
             return new LeadListItemDto(
                 l.Id,
+                l.LeadNumber,
                 $"{l.FirstName} {l.LastName}".Trim(),
                 l.CompanyName ?? string.Empty,
                 l.Status,
@@ -398,6 +404,7 @@ public sealed class LeadService : ILeadService
 
         return new LeadListItemDto(
             lead.Id,
+            lead.LeadNumber,
             $"{lead.FirstName} {lead.LastName}".Trim(),
             lead.CompanyName ?? string.Empty,
             lead.Status?.Name ?? "New",
@@ -895,7 +902,7 @@ public sealed class LeadService : ILeadService
         if (duplicate is not null)
         {
             return LeadOperationResult<LeadListItemDto>.Fail(
-                $"Duplicate lead detected. Existing lead: {duplicate.FirstName} {duplicate.LastName} ({duplicate.CompanyName ?? "No company"}) [{duplicate.Id}].");
+                $"Duplicate lead detected. Existing lead: {duplicate.FirstName} {duplicate.LastName} ({duplicate.CompanyName ?? "No company"}) [{duplicate.LeadNumber}].");
         }
         var assignment = await ResolveOwnerAssignmentAsync(request.OwnerId, request.Territory, request.AssignmentStrategy, cancellationToken);
         if (!TryNormalizeStatusOrDefault(request.Status, out var normalizedCreateStatus, out var normalizeCreateError))
@@ -932,6 +939,7 @@ public sealed class LeadService : ILeadService
         var now = DateTime.UtcNow;
         var lead = new Lead
         {
+            LeadNumber = await _recordNumberAllocator.AllocateAsync(RecordNumberingModules.Leads, cancellationToken),
             FirstName = request.FirstName,
             LastName = request.LastName,
             Email = request.Email,
@@ -1027,6 +1035,7 @@ public sealed class LeadService : ILeadService
 
         var dto = new LeadListItemDto(
             lead.Id,
+            lead.LeadNumber,
             $"{lead.FirstName} {lead.LastName}".Trim(),
             lead.CompanyName ?? string.Empty,
             resolvedStatusName ?? "New",
@@ -1104,7 +1113,7 @@ public sealed class LeadService : ILeadService
         if (duplicate is not null)
         {
             return LeadOperationResult<bool>.Fail(
-                $"Duplicate lead detected. Existing lead: {duplicate.FirstName} {duplicate.LastName} ({duplicate.CompanyName ?? "No company"}) [{duplicate.Id}].");
+                $"Duplicate lead detected. Existing lead: {duplicate.FirstName} {duplicate.LastName} ({duplicate.CompanyName ?? "No company"}) [{duplicate.LeadNumber}].");
         }
         var lead = await _dbContext.Leads.FirstOrDefaultAsync(l => l.Id == id && !l.IsDeleted, cancellationToken);
         if (lead is null)

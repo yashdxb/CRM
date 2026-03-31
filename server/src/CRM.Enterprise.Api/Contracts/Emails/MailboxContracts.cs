@@ -294,3 +294,9 @@ public record CrmEmailLinkResponse(
     string? Note,
     DateTime CreatedAtUtc
 );
+
+public record CrmRecordLookupItem(
+    Guid Id,
+    string Label,
+    string? Subtitle
+);

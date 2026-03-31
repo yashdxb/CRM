@@ -176,7 +176,7 @@ public sealed class PipelineByStageTelerikReport : Report
         {
             Value = "Open opportunities grouped by sales stage • Total pipeline value & deal distribution",
             Location = new PointU(Unit.Cm(0), Unit.Cm(1.8)),
-            Size = new SizeU(Unit.Cm(18), Unit.Cm(0.6)),
+            Size = new SizeU(Unit.Cm(ContentWidthCm), Unit.Cm(0.6)),
             Style =
             {
                 Font = { Size = Unit.Point(10) },

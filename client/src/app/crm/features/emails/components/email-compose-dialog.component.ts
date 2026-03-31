@@ -1,4 +1,5 @@
-import { Component, EventEmitter, inject, Input, OnChanges, OnInit, Output, signal, SimpleChanges } from '@angular/core';
+import { Component, DestroyRef, EventEmitter, inject, Input, OnChanges, OnInit, Output, signal, SimpleChanges } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DialogModule } from 'primeng/dialog';
@@ -8,13 +9,14 @@ import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
 import { EditorModule } from 'primeng/editor';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
-import { finalize, switchMap } from 'rxjs';
+import { distinctUntilChanged, finalize, switchMap } from 'rxjs';
 
 import { EmailDataService } from '../services/email-data.service';
-import { ComposeMode, EmailRelationType, EmailTemplateListItem, MailboxEmail, SendEmailRequest } from '../models/email.model';
+import { ComposeMode, CrmRecordLookupItem, EmailRelationType, EmailTemplateListItem, MailboxEmail, SendEmailRequest } from '../models/email.model';
 import { AppToastService } from '../../../../core/app-toast.service';
 import { MailboxService } from '../services/mailbox.service';
 import { EmailConnectionService } from '../../settings/services/email-connection.service';
+import { CrmEmailLinkService } from '../services/crm-email-link.service';
 
 interface RelatedEntityOption {
   label: string;
@@ -235,13 +237,25 @@ interface RelatedEntityOption {
                 </p-select>
               </div>
               <div class="field" *ngIf="form.value.relatedEntityType">
-                <label>Record ID</label>
-                <input
-                  pInputText
+                <label>Record Name</label>
+                <p-select
+                  appendTo="body"
+                  [options]="relatedRecordOptions()"
+                  optionLabel="label"
+                  optionValue="id"
                   formControlName="relatedEntityId"
-                  placeholder="Enter record ID..."
-                  class="w-full"
-                />
+                  placeholder="Select record..."
+                  [filter]="true"
+                  [loading]="relatedRecordLoading()"
+                  styleClass="w-full"
+                >
+                  <ng-template pTemplate="item" let-item>
+                    <div class="entity-record-option">
+                      <span class="entity-record-option__label">{{ item.label }}</span>
+                      <span class="entity-record-option__subtitle" *ngIf="item.subtitle">{{ item.subtitle }}</span>
+                    </div>
+                  </ng-template>
+                </p-select>
               </div>
             </div>
           </div>
@@ -460,6 +474,22 @@ interface RelatedEntityOption {
 
     .field-row .field {
       margin-bottom: 0;
+    }
+
+    .entity-record-option {
+      display: flex;
+      flex-direction: column;
+      gap: 0.1rem;
+    }
+
+    .entity-record-option__label {
+      font-weight: 600;
+      color: #111827;
+    }
+
+    .entity-record-option__subtitle {
+      color: #6b7280;
+      font-size: 0.75rem;
     }
 
     @media (max-width: 600px) {
@@ -687,9 +717,11 @@ interface RelatedEntityOption {
   `]
 })
 export class EmailComposeDialogComponent implements OnInit, OnChanges {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly emailService = inject(EmailDataService);
   private readonly mailboxService = inject(MailboxService);
   private readonly emailConnectionService = inject(EmailConnectionService);
+  private readonly crmLinkService = inject(CrmEmailLinkService);
   private readonly toast = inject(AppToastService);
 
   @Input() visible = false;
@@ -709,6 +741,8 @@ export class EmailComposeDialogComponent implements OnInit, OnChanges {
   protected readonly templates = signal<EmailTemplateListItem[]>([]);
   protected readonly selectedTemplateId = signal<string | null>(null);
   protected readonly sending = signal(false);
+  protected readonly relatedRecordOptions = signal<CrmRecordLookupItem[]>([]);
+  protected readonly relatedRecordLoading = signal(false);
 
   // Computed signals for header based on mode
   protected headerTitle = (): string => {
@@ -774,6 +808,7 @@ export class EmailComposeDialogComponent implements OnInit, OnChanges {
 
   ngOnInit(): void {
     this.loadTemplates();
+    this.bindRelatedRecordOptions();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -925,6 +960,44 @@ export class EmailComposeDialogComponent implements OnInit, OnChanges {
       relatedEntityId: this.defaultRelatedEntityId ?? null
     });
     this.selectedTemplateId.set(null);
+  }
+
+  private bindRelatedRecordOptions(): void {
+    this.form.controls.relatedEntityType.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef), distinctUntilChanged())
+      .subscribe((entityType) => {
+        if (!entityType) {
+          this.relatedRecordOptions.set([]);
+          this.relatedRecordLoading.set(false);
+          this.form.controls.relatedEntityId.setValue(null, { emitEvent: false });
+          return;
+        }
+
+        const selectedId = entityType === this.defaultRelatedEntityType
+          ? (this.form.controls.relatedEntityId.value ?? this.defaultRelatedEntityId ?? undefined)
+          : undefined;
+
+        if (entityType !== this.defaultRelatedEntityType) {
+          this.form.controls.relatedEntityId.setValue(null, { emitEvent: false });
+        }
+
+        this.loadRelatedRecordOptions(entityType, selectedId);
+      });
+  }
+
+  private loadRelatedRecordOptions(entityType: EmailRelationType, selectedId?: string): void {
+    this.relatedRecordLoading.set(true);
+    this.crmLinkService.getRecordOptions(entityType, undefined, selectedId).pipe(
+      finalize(() => this.relatedRecordLoading.set(false))
+    ).subscribe({
+      next: (options) => {
+        this.relatedRecordOptions.set(options);
+      },
+      error: () => {
+        this.relatedRecordOptions.set([]);
+        this.toast.show('error', 'Failed to load CRM records');
+      }
+    });
   }
 
   private buildQuotedReply(email: MailboxEmail): string {

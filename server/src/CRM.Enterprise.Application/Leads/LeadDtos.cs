@@ -2,6 +2,7 @@ namespace CRM.Enterprise.Application.Leads;
 
 public sealed record LeadListItemDto(
     Guid Id,
+    string LeadNumber,
     string Name,
     string CompanyName,
     string Status,

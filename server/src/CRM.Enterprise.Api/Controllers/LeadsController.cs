@@ -469,6 +469,7 @@ public class LeadsController : ControllerBase
     {
         return new LeadListItem(
             dto.Id,
+            dto.LeadNumber,
             dto.Name,
             dto.CompanyName,
             dto.Status,

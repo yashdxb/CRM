@@ -95,6 +95,7 @@ public class WorkspaceController : ControllerBase
             ResolveDecisionEscalationPolicy(tenant),
             ResolveSupportingDocumentPolicy(tenant),
             ResolveDealHealthScoringPolicy(tenant),
+            ResolveRecordNumberingPolicies(tenant),
             ResolveFeatureFlags(tenant),
             tenant.ReportDesignerRequiredPermission));
     }
@@ -159,6 +160,12 @@ public class WorkspaceController : ControllerBase
                 DealHealthScoringPolicyDefaults.Normalize(request.DealHealthScoringPolicy),
                 JsonOptions);
         }
+        if (request.RecordNumberingPolicies is not null)
+        {
+            tenant.RecordNumberingPolicyJson = JsonSerializer.Serialize(
+                RecordNumberingPolicyDefaults.Normalize(request.RecordNumberingPolicies),
+                JsonOptions);
+        }
         if (request.FeatureFlags is not null)
         {
             tenant.FeatureFlagsJson = JsonSerializer.Serialize(
@@ -195,6 +202,7 @@ public class WorkspaceController : ControllerBase
             ResolveDecisionEscalationPolicy(tenant),
             ResolveSupportingDocumentPolicy(tenant),
             ResolveDealHealthScoringPolicy(tenant),
+            ResolveRecordNumberingPolicies(tenant),
             ResolveFeatureFlags(tenant),
             tenant.ReportDesignerRequiredPermission));
     }
@@ -242,6 +250,7 @@ public class WorkspaceController : ControllerBase
             ResolveDecisionEscalationPolicy(tenant),
             ResolveSupportingDocumentPolicy(tenant),
             ResolveDealHealthScoringPolicy(tenant),
+            ResolveRecordNumberingPolicies(tenant),
             ResolveFeatureFlags(tenant),
             tenant.ReportDesignerRequiredPermission));
     }
@@ -303,6 +312,24 @@ public class WorkspaceController : ControllerBase
         catch (JsonException)
         {
             return AssistantActionScoringPolicyDefaults.CreateDefault();
+        }
+    }
+
+    private static IReadOnlyList<RecordNumberingPolicy> ResolveRecordNumberingPolicies(Tenant tenant)
+    {
+        if (string.IsNullOrWhiteSpace(tenant.RecordNumberingPolicyJson))
+        {
+            return RecordNumberingPolicyDefaults.CreateDefault();
+        }
+
+        try
+        {
+            var parsed = JsonSerializer.Deserialize<IReadOnlyList<RecordNumberingPolicy>>(tenant.RecordNumberingPolicyJson, JsonOptions);
+            return RecordNumberingPolicyDefaults.Normalize(parsed);
+        }
+        catch (JsonException)
+        {
+            return RecordNumberingPolicyDefaults.CreateDefault();
         }
     }
 

@@ -23,6 +23,7 @@ public class CrmDbContext : DbContext
     public DbSet<Contact> Contacts => Set<Contact>();
     public DbSet<ContactTag> ContactTags => Set<ContactTag>();
     public DbSet<Lead> Leads => Set<Lead>();
+    public DbSet<TenantRecordNumberCounter> TenantRecordNumberCounters => Set<TenantRecordNumberCounter>();
     public DbSet<LeadAssignmentRule> LeadAssignmentRules => Set<LeadAssignmentRule>();
     public DbSet<LeadStatus> LeadStatuses => Set<LeadStatus>();
     public DbSet<LeadStatusHistory> LeadStatusHistories => Set<LeadStatusHistory>();
@@ -188,6 +189,7 @@ public class CrmDbContext : DbContext
             .HasFilter("[IsDeleted] = 0")
             .IsUnique();
         modelBuilder.Entity<Lead>().ToTable("Leads", CrmSchema);
+        modelBuilder.Entity<TenantRecordNumberCounter>().ToTable("TenantRecordNumberCounters", CrmSchema);
         modelBuilder.Entity<LeadAssignmentRule>().ToTable("LeadAssignmentRules", CrmSchema);
         modelBuilder.Entity<LeadStatus>().ToTable("LeadStatuses", CrmSchema);
         modelBuilder.Entity<LeadStatus>()
@@ -242,8 +244,24 @@ public class CrmDbContext : DbContext
             .Property(l => l.AiConfidence)
             .HasPrecision(5, 4);
         modelBuilder.Entity<Lead>()
+            .Property(l => l.LeadNumber)
+            .HasMaxLength(40)
+            .IsRequired();
+        modelBuilder.Entity<Lead>()
+            .HasIndex(l => new { l.TenantId, l.LeadNumber })
+            .HasFilter("[IsDeleted] = 0")
+            .IsUnique();
+        modelBuilder.Entity<Lead>()
             .Property(l => l.ConversationScoreLabel)
             .HasMaxLength(32);
+        modelBuilder.Entity<TenantRecordNumberCounter>()
+            .Property(counter => counter.ModuleKey)
+            .HasMaxLength(80)
+            .IsRequired();
+        modelBuilder.Entity<TenantRecordNumberCounter>()
+            .HasIndex(counter => new { counter.TenantId, counter.ModuleKey })
+            .HasFilter("[IsDeleted] = 0")
+            .IsUnique();
         modelBuilder.Entity<Opportunity>().ToTable("Opportunities", CrmSchema);
         modelBuilder.Entity<OpportunityQuote>().ToTable("OpportunityQuotes", CrmSchema);
         modelBuilder.Entity<OpportunityQuoteLine>().ToTable("OpportunityQuoteLines", CrmSchema);

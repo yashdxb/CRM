@@ -97,6 +97,7 @@ public static class DependencyInjection
         services.AddScoped<IDatabaseInitializer, DatabaseInitializer>();
         services.AddScoped<ITenantProvider, TenantProvider>();
         services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
+        services.AddScoped<IRecordNumberAllocator, RecordNumberAllocator>();
         services.AddScoped<IIndustryPresetService, IndustryPresetService>();
         services.AddScoped<IDashboardReadService, DashboardReadService>();
         services.AddScoped<IDashboardLayoutService, DashboardLayoutService>();

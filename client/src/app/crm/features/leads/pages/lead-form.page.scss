@@ -195,6 +195,27 @@
       margin: 0;
     }
 
+    .lead-record-number {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 0.45rem;
+      margin-top: 0.55rem;
+      padding: 0.4rem 0.7rem;
+      border-radius: 999px;
+      background: rgba(var(--apple-blue), 0.08);
+      border: 1px solid rgba(var(--apple-blue), 0.16);
+      color: rgba(var(--apple-blue), 0.96);
+      width: fit-content;
+    }
+
+    .lead-record-number__label {
+      font-size: 0.74rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(var(--apple-secondary), 0.72);
+    }
+
     .lead-header-progress {
       --lead-header-score-color: #2563eb;
       display: flex;

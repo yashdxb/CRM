@@ -39,11 +39,6 @@
                 "glob": "**/*",
                 "input": "src/assets",
                 "output": "assets"
-              },
-              {
-                "glob": "telerikReportViewer*.js",
-                "input": "node_modules/@progress/telerik-jquery-report-viewer/dist/js",
-                "output": "assets/vendor"
               }
             ],
               "styles": [

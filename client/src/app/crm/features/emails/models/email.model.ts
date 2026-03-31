@@ -300,5 +300,11 @@ export interface CrmEmailLink {
   createdAtUtc: string;
 }
 
+export interface CrmRecordLookupItem {
+  id: string;
+  label: string;
+  subtitle?: string;
+}
+
 // Compose Mode for Reply/Forward
 export type ComposeMode = 'new' | 'reply' | 'replyAll' | 'forward';

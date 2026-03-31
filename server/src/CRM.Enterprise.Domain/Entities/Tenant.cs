@@ -25,6 +25,7 @@ public class Tenant : Entity
     public string? DecisionEscalationPolicyJson { get; set; }
     public string? SupportingDocumentPolicyJson { get; set; }
     public string? DealHealthScoringPolicyJson { get; set; }
+    public string? RecordNumberingPolicyJson { get; set; }
     public string? FeatureFlagsJson { get; set; }
     public string? ReportDesignerRequiredPermission { get; set; }
     public int? LeadFirstTouchSlaHours { get; set; }

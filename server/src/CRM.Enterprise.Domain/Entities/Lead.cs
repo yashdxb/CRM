@@ -4,6 +4,7 @@ namespace CRM.Enterprise.Domain.Entities;
 
 public class Lead : AuditableEntity
 {
+    public string LeadNumber { get; set; } = string.Empty;
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
     public string? Email { get; set; }

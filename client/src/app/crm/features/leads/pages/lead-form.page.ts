@@ -353,6 +353,7 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   protected conversationAiSemanticIntent = signal<string | null>(null);
   protected conversationAiToneJustification = signal<string | null>(null);
   protected conversionReadiness = signal<LeadConversionReadiness | null>(null);
+  protected leadNumber = signal<string | null>(null);
   protected serverNextEvidenceSuggestions = signal<string[]>([]);
   protected nextEvidenceSuggestions = signal<string[]>([]);
   protected qualificationFeedback = signal<{
@@ -1950,6 +1951,7 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
 
   private prefillFromLead(lead: Lead) {
     const [firstName, ...rest] = lead.name.split(' ');
+    this.leadNumber.set(lead.leadNumber ?? null);
     this.form = {
       firstName,
       lastName: rest.join(' '),

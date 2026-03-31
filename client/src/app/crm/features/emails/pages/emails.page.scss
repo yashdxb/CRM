@@ -1138,6 +1138,22 @@
         color: $gray-600;
       }
     }
+
+    .entity-record-option {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+
+    .entity-record-option__label {
+      color: $gray-900;
+      font-weight: 600;
+    }
+
+    .entity-record-option__subtitle {
+      color: $gray-500;
+      font-size: $font-size-xs;
+    }
   }
 
   .crm-link-dialog-footer {

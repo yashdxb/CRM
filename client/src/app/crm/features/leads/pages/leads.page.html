@@ -299,6 +299,7 @@
               </div>
               <div class="lead-meta">
                 <span class="lead-name">{{ lead.name }}</span>
+                <span class="lead-company" *ngIf="lead.leadNumber">{{ lead.leadNumber }}</span>
                 <span class="lead-company">{{ lead.company }}</span>
                 <span
                   class="lead-presence-chip"
@@ -436,6 +437,7 @@
                       </div>
                       <div class="lead-info">
                         <span class="name">{{ lead.name }}</span>
+                        <span class="company" *ngIf="lead.leadNumber">{{ lead.leadNumber }}</span>
                         <span class="company">{{ lead.company }}</span>
                         <span
                           class="lead-presence-chip"

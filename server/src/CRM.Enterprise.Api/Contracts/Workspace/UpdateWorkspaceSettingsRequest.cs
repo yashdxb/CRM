@@ -25,6 +25,7 @@ public record UpdateWorkspaceSettingsRequest(
     DecisionEscalationPolicy? DecisionEscalationPolicy,
     SupportingDocumentPolicy? SupportingDocumentPolicy,
     DealHealthScoringPolicy? DealHealthScoringPolicy,
+    IReadOnlyList<RecordNumberingPolicy>? RecordNumberingPolicies,
     IReadOnlyDictionary<string, bool>? FeatureFlags = null,
     string? ReportDesignerRequiredPermission = null);
 
