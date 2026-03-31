@@ -134,9 +134,36 @@ export class WorkspaceSettingsPage {
     reportDesignerRequiredPermission: ['Permissions.Administration.Manage']
   });
 
+  protected readonly emailDeliveryOptions = [
+    { controlName: 'featureEmailDeliveryInvites', inputId: 'ws-email-delivery-invites', label: 'Invite emails' },
+    { controlName: 'featureEmailDeliverySecurity', inputId: 'ws-email-delivery-security', label: 'Password and security emails' },
+    { controlName: 'featureEmailDeliveryApprovals', inputId: 'ws-email-delivery-approvals', label: 'Approval and workflow emails' },
+    { controlName: 'featureEmailDeliveryProposals', inputId: 'ws-email-delivery-proposals', label: 'Proposal and quote emails' },
+    { controlName: 'featureEmailDeliveryMarketing', inputId: 'ws-email-delivery-marketing', label: 'Marketing campaign emails' },
+    { controlName: 'featureEmailDeliveryNotifications', inputId: 'ws-email-delivery-notifications', label: 'Alert and notification emails' },
+    { controlName: 'featureEmailDeliveryMailbox', inputId: 'ws-email-delivery-mailbox', label: 'Mailbox and manual send actions' }
+  ] as const;
+
   constructor() {
     this.settingsForm.get('featureEmailDelivery')?.valueChanges.subscribe((enabled) => {
       if (enabled) {
+        const emailControls = [
+          'featureEmailDeliveryInvites',
+          'featureEmailDeliverySecurity',
+          'featureEmailDeliveryApprovals',
+          'featureEmailDeliveryProposals',
+          'featureEmailDeliveryMarketing',
+          'featureEmailDeliveryNotifications',
+          'featureEmailDeliveryMailbox'
+        ] as const;
+
+        const hasEnabledChild = emailControls.some((controlName) => !!this.settingsForm.get(controlName)?.value);
+        if (!hasEnabledChild) {
+          this.settingsForm.patchValue({
+            featureEmailDeliveryMailbox: true,
+            featureEmailDeliveryStatusNotifications: true
+          }, { emitEvent: false });
+        }
         return;
       }
 
@@ -159,6 +186,10 @@ export class WorkspaceSettingsPage {
     this.loadRoles();
     this.loadTenantContext();
     this.loadSettings();
+  }
+
+  protected emailDeliveryEnabled() {
+    return !!this.settingsForm.get('featureEmailDelivery')?.value;
   }
 
   protected loadSettings() {
