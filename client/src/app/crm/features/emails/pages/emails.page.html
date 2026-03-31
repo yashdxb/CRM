@@ -284,8 +284,8 @@
             </div>
           }
 
-          @if (selectedEmail()?.htmlBody) {
-            <div class="email-body" [innerHTML]="selectedEmail()?.htmlBody"></div>
+          @if (renderedEmailBody()) {
+            <div class="email-body email-body--html" [innerHTML]="renderedEmailBody()"></div>
           } @else if (selectedEmail()?.textBody) {
             <div class="email-body email-body--plain">{{ selectedEmail()?.textBody }}</div>
           } @else {

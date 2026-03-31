@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using CRM.Enterprise.Application.Emails;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Infrastructure.Persistence;
@@ -12,6 +13,15 @@ namespace CRM.Enterprise.Infrastructure.Emails;
 
 public sealed class MailboxProxyService : IMailboxProxyService
 {
+    private sealed record MicrosoftGraphEmailAddress(
+        [property: JsonPropertyName("address")] string Address,
+        [property: JsonPropertyName("name")]
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        string? Name);
+
+    private sealed record MicrosoftGraphRecipient(
+        [property: JsonPropertyName("emailAddress")] MicrosoftGraphEmailAddress EmailAddress);
+
     private readonly CrmDbContext _dbContext;
     private readonly IEmailConnectionService _connectionService;
     private readonly IHttpClientFactory _httpClientFactory;
@@ -386,19 +396,40 @@ public sealed class MailboxProxyService : IMailboxProxyService
 
     private async Task<ProxyMessageDetail?> SendMicrosoftAsync(HttpClient client, UserEmailConnection conn, SendMailRequest req, CancellationToken ct)
     {
-        var msg = new
+        var msg = new Dictionary<string, object?>
         {
-            subject = req.Subject,
-            body = new { contentType = "HTML", content = req.BodyHtml },
-            toRecipients = req.To.Select(r => new { emailAddress = new { address = r.Email, name = r.Name } }),
-            ccRecipients = req.Cc?.Select(r => new { emailAddress = new { address = r.Email, name = r.Name } }),
-            bccRecipients = req.Bcc?.Select(r => new { emailAddress = new { address = r.Email, name = r.Name } }),
-            importance = req.Importance.ToString().ToLower()
+            ["subject"] = req.Subject,
+            ["body"] = new { contentType = "HTML", content = req.BodyHtml },
+            ["toRecipients"] = req.To.Select(MapMicrosoftRecipient).ToList(),
+            ["importance"] = req.Importance.ToString().ToLowerInvariant()
         };
+
+        if (req.Cc is { Count: > 0 })
+        {
+            msg["ccRecipients"] = req.Cc.Select(MapMicrosoftRecipient).ToList();
+        }
+
+        if (req.Bcc is { Count: > 0 })
+        {
+            msg["bccRecipients"] = req.Bcc.Select(MapMicrosoftRecipient).ToList();
+        }
+
         var resp = await client.PostAsJsonAsync($"{GraphBase}/sendMail", new { message = msg, saveToSentItems = true }, ct);
+        if (!resp.IsSuccessStatusCode)
+        {
+            var errorBody = await resp.Content.ReadAsStringAsync(ct);
+            _logger.LogError(
+                "Microsoft Graph proxy sendMail failed for connection {ConnectionId} with status {StatusCode}. Response: {Response}",
+                conn.Id,
+                (int)resp.StatusCode,
+                errorBody);
+        }
         resp.EnsureSuccessStatusCode();
         return SyntheticDetail("sent-" + Guid.NewGuid().ToString("N"), conn, req.Subject, req.BodyHtml, req.To, req.Cc, req.Bcc, MailFolder.Sent);
     }
+
+    private static MicrosoftGraphRecipient MapMicrosoftRecipient(MailRecipientDto recipient)
+        => new(new MicrosoftGraphEmailAddress(recipient.Email, string.IsNullOrWhiteSpace(recipient.Name) ? null : recipient.Name));
 
     // ============ PRIVATE — GMAIL ============
 

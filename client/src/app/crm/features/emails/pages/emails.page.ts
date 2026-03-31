@@ -1,5 +1,6 @@
 import { DatePipe, NgClass } from '@angular/common';
 import { Component, computed, inject, OnInit, OnDestroy, HostListener, ElementRef } from '@angular/core';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -59,6 +60,7 @@ export class EmailsPage implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly elementRef = inject(ElementRef);
   private readonly uiState = inject(UiStateService);
+  private readonly sanitizer = inject(DomSanitizer);
   private routeSub?: Subscription;
 
   // State
@@ -214,6 +216,15 @@ export class EmailsPage implements OnInit, OnDestroy {
 
   selectEmail(email: MailboxEmail): void {
     this.mailbox.selectEmail(email.id);
+  }
+
+  protected renderedEmailBody(): SafeHtml | null {
+    const html = this.selectedEmail()?.htmlBody?.trim();
+    if (!html) {
+      return null;
+    }
+
+    return this.sanitizer.bypassSecurityTrustHtml(this.normalizeEmailHtml(html));
   }
 
   toggleStar(event: Event, email: MailboxEmail): void {
@@ -508,5 +519,15 @@ export class EmailsPage implements OnInit, OnDestroy {
 
   trackByFolder(index: number, folder: MailboxFolder): string {
     return folder.id;
+  }
+
+  private normalizeEmailHtml(html: string): string {
+    let content = html;
+    const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+    if (bodyMatch?.[1]) {
+      content = bodyMatch[1];
+    }
+
+    return `<div class="email-html-frame">${content}</div>`;
   }
 }

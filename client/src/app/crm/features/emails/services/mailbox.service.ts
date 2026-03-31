@@ -460,12 +460,17 @@ export class MailboxService {
   selectEmail(id: string): void {
     this.selectedEmailId.set(id);
     const summary = this.emails().find(e => e.id === id) ?? null;
-    this.selectedEmail.set(summary);
-    this.markAsRead(id, true);
+    const selectedSummary = summary && !summary.isRead ? { ...summary, isRead: true } : summary;
+    this.selectedEmail.set(selectedSummary);
+    if (summary && !summary.isRead) {
+      this.emails.update(emails => emails.map(e => e.id === id ? { ...e, isRead: true } : e));
+      this.updateFolderCounts();
+      this.markAsRead(id, true);
+    }
     this.getEmail(id).subscribe({
       next: (email) => {
         if (this.selectedEmailId() === id && email) {
-          this.selectedEmail.set(email);
+          this.selectedEmail.set(summary && !summary.isRead ? { ...email, isRead: true } : email);
         }
       }
     });
@@ -484,10 +489,17 @@ export class MailboxService {
     this.http.patch(
       `${this.baseUrl}/api/mailbox/messages/${encodeURIComponent(id)}`,
       { isRead }
-    ).subscribe(() => {
-      this.emails.update(emails => emails.map(e => e.id === id ? { ...e, isRead } : e));
-      this.selectedEmail.update(email => email?.id === id ? { ...email, isRead } : email);
-      this.updateFolderCounts();
+    ).subscribe({
+      next: () => {
+        this.emails.update(emails => emails.map(e => e.id === id ? { ...e, isRead } : e));
+        this.selectedEmail.update(email => email?.id === id ? { ...email, isRead } : email);
+        this.updateFolderCounts();
+        this.loadStats();
+      },
+      error: () => {
+        this.loadEmails();
+        this.loadStats();
+      }
     });
   }
   

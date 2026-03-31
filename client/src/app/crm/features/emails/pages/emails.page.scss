@@ -947,6 +947,7 @@
   font-size: $font-size-base;
   line-height: 1.7;
   color: $gray-700;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
 
   // Reset HTML email styles
   img {
@@ -980,14 +981,72 @@
     font-style: italic;
   }
 
+  table {
+    width: auto;
+    max-width: 100%;
+    border-collapse: collapse;
+    display: block;
+    overflow-x: auto;
+  }
+
+  td,
+  th {
+    padding: 0.45rem 0.65rem;
+    border: 1px solid $gray-200;
+    vertical-align: top;
+  }
+
+  hr {
+    border: 0;
+    border-top: 1px solid $gray-200;
+    margin: $space-4 0;
+  }
+
+  &.email-body--html {
+    background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+  }
+
   &.email-body--plain {
     white-space: pre-wrap;
-    font-family: $font-family-sans;
+    font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
   }
 
   &.email-body--empty {
     color: $gray-500;
   }
+}
+
+:host ::ng-deep .email-html-frame {
+  color: #334155;
+  font-family: "Segoe UI", Inter, Arial, sans-serif;
+  font-size: 0.96rem;
+  line-height: 1.72;
+}
+
+:host ::ng-deep .email-html-frame p,
+:host ::ng-deep .email-html-frame div,
+:host ::ng-deep .email-html-frame span,
+:host ::ng-deep .email-html-frame td,
+:host ::ng-deep .email-html-frame th {
+  max-width: 100%;
+  word-break: break-word;
+}
+
+:host ::ng-deep .email-html-frame img {
+  max-width: 100%;
+  height: auto;
+}
+
+:host ::ng-deep .email-html-frame a {
+  color: #2563eb;
+}
+
+:host ::ng-deep .email-html-frame blockquote {
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+  background: #f8fafc;
+  border-left: 4px solid #cbd5e1;
+  color: #475569;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

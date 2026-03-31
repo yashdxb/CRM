@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using CRM.Enterprise.Application.Emails;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Infrastructure.Persistence;
@@ -12,6 +13,15 @@ namespace CRM.Enterprise.Infrastructure.Emails;
 
 public sealed class MailboxSyncService : IMailboxSyncService
 {
+    private sealed record MicrosoftGraphEmailAddress(
+        [property: JsonPropertyName("address")] string Address,
+        [property: JsonPropertyName("name")]
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        string? Name);
+
+    private sealed record MicrosoftGraphRecipient(
+        [property: JsonPropertyName("emailAddress")] MicrosoftGraphEmailAddress EmailAddress);
+
     private readonly CrmDbContext _dbContext;
     private readonly IEmailConnectionService _connectionService;
     private readonly IDataProtector _protector;
@@ -1140,22 +1150,38 @@ public sealed class MailboxSyncService : IMailboxSyncService
         using var client = _httpClientFactory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
-        var message = new
+        var message = new Dictionary<string, object?>
         {
-            subject = request.Subject,
-            body = new { contentType = "HTML", content = request.BodyHtml },
-            toRecipients = request.To.Select(r => new { emailAddress = new { address = r.Email, name = r.Name } }),
-            ccRecipients = request.Cc?.Select(r => new { emailAddress = new { address = r.Email, name = r.Name } }),
-            bccRecipients = request.Bcc?.Select(r => new { emailAddress = new { address = r.Email, name = r.Name } }),
-            importance = request.Importance.ToString().ToLower()
+            ["subject"] = request.Subject,
+            ["body"] = new { contentType = "HTML", content = request.BodyHtml },
+            ["toRecipients"] = request.To.Select(MapMicrosoftRecipient).ToList(),
+            ["importance"] = request.Importance.ToString().ToLowerInvariant()
         };
+
+        if (request.Cc is { Count: > 0 })
+        {
+            message["ccRecipients"] = request.Cc.Select(MapMicrosoftRecipient).ToList();
+        }
+
+        if (request.Bcc is { Count: > 0 })
+        {
+            message["bccRecipients"] = request.Bcc.Select(MapMicrosoftRecipient).ToList();
+        }
 
         var response = await client.PostAsJsonAsync(
             "https://graph.microsoft.com/v1.0/me/sendMail",
             new { message, saveToSentItems = true },
             cancellationToken);
-
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+            _logger.LogError(
+                "Microsoft Graph sendMail failed for connection {ConnectionId} with status {StatusCode}. Response: {Response}",
+                connectionId,
+                (int)response.StatusCode,
+                errorBody);
+            response.EnsureSuccessStatusCode();
+        }
 
         // Create local record
         var connection = await _dbContext.UserEmailConnections.FirstAsync(c => c.Id == connectionId, cancellationToken);
@@ -1185,6 +1211,9 @@ public sealed class MailboxSyncService : IMailboxSyncService
 
         return MapToDetailDto(localMessage);
     }
+
+    private static MicrosoftGraphRecipient MapMicrosoftRecipient(MailRecipientDto recipient)
+        => new(new MicrosoftGraphEmailAddress(recipient.Email, string.IsNullOrWhiteSpace(recipient.Name) ? null : recipient.Name));
 
     private async Task<MailMessageDto?> SendViaGmailAsync(
         Guid connectionId,
