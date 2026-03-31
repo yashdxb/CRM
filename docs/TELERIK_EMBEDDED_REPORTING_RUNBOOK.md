@@ -110,6 +110,33 @@ Important rule:
 - generated `.trdp` files are **runtime artifacts**
 - they should not be treated as source-controlled environment-agnostic truth
 - do not rely on locally generated `.trdp` files as deployable artifacts
+- the runtime-generated workspace folder is:
+  - `server/src/CRM.Enterprise.Api/Reports/CRM/`
+- that folder should stay out of git because the files inside it are:
+  - created on demand by the API
+  - patched per environment with the active SQL connection string
+  - patched per request/session with tenant-specific defaults like `TenantId`
+
+### Git policy
+
+Current recommendation:
+- **ignore** `server/src/CRM.Enterprise.Api/Reports/CRM/`
+- **ignore** `temp/`
+
+Reason:
+- those files are local or hosted runtime output
+- they are not stable authored templates
+- committing them risks shipping environment-mutated artifacts instead of the code that generates them
+
+What should be committed instead:
+- the report-generation code
+- the curated report library metadata
+- the Telerik CLR report definitions used as the canonical source
+
+What should not be committed by default:
+- generated `.trdp` packages under `Reports/CRM`
+- locally patched packages containing concrete dev or prod connection strings
+- temporary report export/debug files
 
 ---
 
@@ -165,6 +192,27 @@ Generic case:
     - `ReportDescription`
     - `Header1..Header4`
 
+### Classification of `Reports/CRM/*.trdp`
+
+Current files under `server/src/CRM.Enterprise.Api/Reports/CRM/` such as:
+- `pipeline-by-stage.trdp`
+- `open-opportunities-by-owner.trdp`
+- `lead-conversion-summary.trdp`
+- `team-performance.trdp`
+
+are not hand-maintained source assets.
+
+They are generated workspace copies derived from:
+- `PipelineByStageTelerikReport`
+- `EmbeddedLibraryTelerikReport`
+- report library metadata from `ReportLibraryService`
+
+So the operational classification is:
+- **canonical source**: code + metadata
+- **generated editable workspace artifact**: `Reports/CRM/*.trdp`
+
+If the product later needs true versioned Telerik designer templates, create a separate committed template directory and keep `Reports/CRM/` runtime-only.
+
 ---
 
 ## 6) Connection String and Tenant Patching
@@ -212,6 +260,24 @@ It is an environment-patched runtime file.
 This is why:
 - local generated `.trdp` files must not be committed as deployable truth
 - Azure must regenerate or re-patch those files inside the Azure environment
+
+## 7.1) Recommended Source-Control Model
+
+Best-practice model for this repo:
+
+1. Keep source-controlled report logic in:
+   - CLR Telerik report classes
+   - curated report metadata
+   - report packaging / patching services
+2. Treat `Reports/CRM/` as writable runtime storage only.
+3. If a future report should be maintained primarily in Telerik Designer and versioned in git:
+   - store a clean canonical `.trdp` in a dedicated committed template path
+   - do not use the mutable runtime workspace path as that canonical location
+
+This separation avoids:
+- accidental commit of dev/prod connection strings
+- tenant-patched report definitions leaking into source control
+- confusion between authored assets and generated output
 
 ---
 
@@ -322,4 +388,3 @@ Use Report Server later when:
 Current recommendation:
 - author in CRM workspace now
 - keep Report Server optional and later
-
