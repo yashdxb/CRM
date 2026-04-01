@@ -114,6 +114,16 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 - Future evolution path:
   - the workspace is the operational seed for broader `PIMI - RMP` capability
   - v1 does not attempt full governance/compliance risk register behavior
+  - phased roadmap:
+    - `Phase 1`: stabilize the guidance workspace as the manager/operator risk triage surface
+    - `Phase 2`: add actionability such as assign, snooze, dismiss, escalate, and create follow-up activity from a risk row
+    - `Phase 3`: add tenant-configurable weighting and threshold controls per module
+    - `Phase 4`: add historical risk trend and outcome analytics so teams can measure whether risks were resolved or ignored
+    - `Phase 5`: expand toward `PIMI - RMP` only after the CRM guidance/action model is proven
+- Product boundary:
+  - keep `Risk Intelligence` narrow and action-oriented
+  - do not rebuild a separate duplicate risk CRUD/register product in the CRM at this stage
+  - other modules must continue to surface embedded risk indicators; the workspace is the consolidation and guidance layer, not the only place risk exists
 
 ### MCP Integration Judgment (Canonical)
 - Recommendation: `Yes later`, `not now as a primary product investment`.

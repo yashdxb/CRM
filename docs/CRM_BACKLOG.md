@@ -486,6 +486,21 @@ MoSCoW: Must
 - Product direction:
   - This workspace is the current operational guidance surface.
   - It is also the intended growth path toward future `PIMI - RMP` expansion.
+- Next-phase roadmap:
+  - `Phase 2`: actionable operations from a risk row
+    - assign / reassign owner
+    - create follow-up activity
+    - snooze / dismiss / mark reviewed
+    - direct escalation into approval / SLA flows
+  - `Phase 3`: configurable risk model
+    - module-specific thresholds
+    - weighted risk factors
+    - saved views by manager/team/module
+  - `Phase 4`: historical intelligence
+    - trend lines
+    - resolved vs ignored tracking
+    - team effectiveness against risk backlog
+  - `Phase 5`: broaden into `PIMI - RMP` only after the above phases are stable and useful
 
 11) Hierarchy-level dashboard packs (H1/H2/H3...) + reset
 MoSCoW: Should

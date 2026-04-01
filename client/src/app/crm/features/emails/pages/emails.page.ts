@@ -1,6 +1,6 @@
 import { DatePipe, NgClass } from '@angular/common';
-import { Component, computed, inject, OnInit, OnDestroy, HostListener, ElementRef } from '@angular/core';
-import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { Component, computed, inject, OnInit, OnDestroy, HostListener, ElementRef, SecurityContext } from '@angular/core';
+import { DomSanitizer } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -227,13 +227,33 @@ export class EmailsPage implements OnInit, OnDestroy {
     this.mailbox.selectEmail(email.id);
   }
 
-  protected renderedEmailBody(): SafeHtml | null {
+  protected renderedEmailBody(): string | null {
     const html = this.selectedEmail()?.htmlBody?.trim();
     if (!html) {
       return null;
     }
 
-    return this.sanitizer.bypassSecurityTrustHtml(this.normalizeEmailHtml(html));
+    return this.normalizeEmailHtml(html);
+  }
+
+  protected onEmailFrameLoad(event: Event): void {
+    const frame = event.target as HTMLIFrameElement | null;
+    const doc = frame?.contentDocument;
+    if (!frame || !doc) {
+      return;
+    }
+
+    const body = doc.body;
+    const html = doc.documentElement;
+    const height = Math.max(
+      body?.scrollHeight ?? 0,
+      body?.offsetHeight ?? 0,
+      html?.scrollHeight ?? 0,
+      html?.offsetHeight ?? 0,
+      480
+    );
+
+    frame.style.height = `${Math.ceil(height)}px`;
   }
 
   toggleStar(event: Event, email: MailboxEmail): void {
@@ -546,12 +566,58 @@ export class EmailsPage implements OnInit, OnDestroy {
   }
 
   private normalizeEmailHtml(html: string): string {
-    let content = html;
-    const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-    if (bodyMatch?.[1]) {
-      content = bodyMatch[1];
-    }
+    const sanitized = this.sanitizer.sanitize(SecurityContext.HTML, html) ?? html;
+    const parser = new DOMParser();
+    const sourceDoc = parser.parseFromString(sanitized, 'text/html');
 
-    return `<div class="email-html-frame">${content}</div>`;
+    sourceDoc.querySelectorAll('script, base').forEach(node => node.remove());
+    sourceDoc.querySelectorAll<HTMLElement>('*').forEach(node => {
+      for (const attr of [...node.attributes]) {
+        if (attr.name.toLowerCase().startsWith('on')) {
+          node.removeAttribute(attr.name);
+        }
+      }
+    });
+
+    const bodyContent = sourceDoc.body?.innerHTML?.trim() || sanitized;
+    const headContent = sourceDoc.head?.innerHTML?.trim() ?? '';
+
+    return `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    ${headContent}
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: #ffffff;
+      }
+
+      body {
+        color: #334155;
+        font-family: "Segoe UI", Inter, Arial, sans-serif;
+        line-height: 1.6;
+      }
+
+      img {
+        max-width: 100%;
+        height: auto;
+      }
+
+      table {
+        max-width: 100%;
+      }
+
+      a {
+        color: #2563eb;
+      }
+    </style>
+  </head>
+  <body>
+    ${bodyContent}
+  </body>
+</html>`;
   }
 }

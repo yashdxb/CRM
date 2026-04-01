@@ -285,7 +285,15 @@
           }
 
           @if (renderedEmailBody()) {
-            <div class="email-body email-body--html" [innerHTML]="renderedEmailBody()"></div>
+            <div class="email-body email-body--html">
+              <iframe
+                class="email-body-frame"
+                sandbox="allow-popups allow-popups-to-escape-sandbox"
+                [attr.srcdoc]="renderedEmailBody()"
+                (load)="onEmailFrameLoad($event)"
+                title="Email content"
+              ></iframe>
+            </div>
           } @else if (selectedEmail()?.textBody) {
             <div class="email-body email-body--plain">{{ selectedEmail()?.textBody }}</div>
           } @else {

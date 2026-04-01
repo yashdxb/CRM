@@ -1004,6 +1004,7 @@
 
   &.email-body--html {
     background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+    padding: $space-3;
   }
 
   &.email-body--plain {
@@ -1016,37 +1017,13 @@
   }
 }
 
-:host ::ng-deep .email-html-frame {
-  color: #334155;
-  font-family: "Segoe UI", Inter, Arial, sans-serif;
-  font-size: 0.96rem;
-  line-height: 1.72;
-}
-
-:host ::ng-deep .email-html-frame p,
-:host ::ng-deep .email-html-frame div,
-:host ::ng-deep .email-html-frame span,
-:host ::ng-deep .email-html-frame td,
-:host ::ng-deep .email-html-frame th {
-  max-width: 100%;
-  word-break: break-word;
-}
-
-:host ::ng-deep .email-html-frame img {
-  max-width: 100%;
-  height: auto;
-}
-
-:host ::ng-deep .email-html-frame a {
-  color: #2563eb;
-}
-
-:host ::ng-deep .email-html-frame blockquote {
-  margin: 1rem 0;
-  padding: 0.75rem 1rem;
-  background: #f8fafc;
-  border-left: 4px solid #cbd5e1;
-  color: #475569;
+.email-body-frame {
+  display: block;
+  width: 100%;
+  min-height: 480px;
+  border: 0;
+  border-radius: $radius-md;
+  background: #fff;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

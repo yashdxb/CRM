@@ -304,6 +304,11 @@
   - `pending-sync` | `done` | Guidance workspace UI with priority risks, watchlist, evidence, and recommended actions | tags: module:risk-intelligence, now
   - `pending-sync` | `done` | Drill-through links back to leads, deals, and Decision Inbox | tags: module:risk-intelligence, now
   - `pending-sync` | `done` | Product decision documented as guidance workspace and PIMI-RMP growth path | tags: module:risk-intelligence, now
+  - `pending-sync` | `next` | Risk Intelligence row actions: assign, snooze, dismiss, create follow-up activity | tags: module:risk-intelligence, phase-2
+  - `pending-sync` | `next` | Risk Intelligence escalation hooks into approval and SLA execution surfaces | tags: module:risk-intelligence, phase-2
+  - `pending-sync` | `later` | Tenant-configurable risk weighting and threshold controls by module | tags: module:risk-intelligence, phase-3
+  - `pending-sync` | `later` | Historical risk trends and resolved-vs-ignored outcome analytics | tags: module:risk-intelligence, phase-4
+  - `pending-sync` | `later` | Expand Risk Intelligence toward broader PIMI-RMP capability after CRM guidance maturity | tags: module:risk-intelligence, phase-5
 
 ### Deal Approvals & Decision Inbox (`86e041wz3`)
 - Status: `done`

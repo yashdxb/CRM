@@ -105,6 +105,7 @@ Each feature keeps its own `models`, `services`, and `pages` folders to align wi
 - MCP is considered a later CRM integration surface, not a near-term primary architecture change. The current recommendation is to stabilize CRM workflows, permissions, and auditability first, then introduce read-only MCP tools before any constrained write tools.
 - Reporting endpoints (pipeline, lead conversion, activities) will rely on SQL views to keep the OLTP schema normalized while delivering fast queries.
 - Embedded Telerik report authoring is hosted inside CRM through `Report Workspace`; the implementation and Azure/runtime notes are documented in `docs/TELERIK_EMBEDDED_REPORTING_RUNBOOK.md`.
+- `Risk Intelligence` is now a top-level operational guidance workspace in CRM. The current scope is compact early warning + recommended action; the documented future path is phased actionability, configuration, and historical intelligence before any broader `PIMI - RMP` expansion.
 - Future AI services plug in via background jobs + event publishing so the MVP can launch without AI yet still capture the history those models need.
 
 ### Running the backend locally
