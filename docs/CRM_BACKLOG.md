@@ -118,6 +118,46 @@ Purpose: Use this to validate the full product flow without changing execution p
 ### 2) Leads (Capture → Qualify → Convert)
 - Lead lifecycle (CRUD + workflow + conversion + assignment rules)
 - Lead outcomes enforced (Disqualified / Nurture / Qualified)
+
+---
+
+## Marketing Module Direction (Lean v1)
+
+Status: PARTIAL
+
+Positioning:
+- Keep Marketing practical and operational in v1.
+- Do not expand immediately into a full automation suite.
+- Treat ERP-level marketing growth as later-stage expansion after the core campaign and attribution operating model is stable.
+
+Must Have:
+- Campaign registry with create/edit/archive
+- Campaign detail with audience membership
+- Member types limited to CRM-relevant people records first:
+  - leads
+  - contacts
+- Campaign email operations:
+  - draft
+  - schedule
+  - send
+  - recipient status tracking
+- Attribution summary tied to influenced opportunities/pipeline/revenue
+- Explainability for why an opportunity is attributed
+- Campaign health and recommendation/action-center guidance
+
+Should Have:
+- Audience segmentation / saved filters
+- Better campaign email authoring experience
+- Simple nurture or follow-up sequences
+- Clearer influenced-opportunity drill-through
+- Better reporting exports and operational rollups for managers
+
+Later:
+- Full journey automation
+- Multi-step campaign workflows
+- Omnichannel orchestration
+- Advanced segmentation and dynamic audiences
+- Broader ERP-level governance, budgeting, and automation controls
 - Lead qualification discipline (CQVS = Company fit, Qualification readiness, Value/Problem severity, Stakeholder access; weakest signal, confidence)
 - Lead conversion (Account + Contact + Opportunity + activity transfer)
 - Lead auto-close after conversion

@@ -67,9 +67,15 @@
 
 ### [LATER] Marketing Automation Suite (`86e041x95`)
 - Status: `backlog`
-- Tags: future, later
+- Tags: future, later, module:marketing
+- Scope note:
+  - This epic is for post-v1 expansion only.
+  - It should begin after the lean campaign-management and attribution operating model is stable.
 - Stories:
-  - `86e041x98` | `backlog` | Multi-step campaign workflows | tags: -
+  - `86e041x98` | `backlog` | Multi-step campaign workflows | tags: module:marketing, later
+  - `local-marketing-later-1` | `pending-sync` | Cross-channel journey orchestration | tags: module:marketing, later
+  - `local-marketing-later-2` | `pending-sync` | Dynamic segmentation and audience refresh rules | tags: module:marketing, later
+  - `local-marketing-later-3` | `pending-sync` | ERP-level campaign governance, budgeting, and automation controls | tags: module:marketing, later
 
 ### [LATER] Mobile Native & Multi-Language (`86e041xa1`)
 - Status: `backlog`
@@ -115,12 +121,19 @@
   - `86e041x7f` | `done` | Record merge wizard | tags: -
 
 ### [NEXT] Email Marketing Campaigns (`86e041x7y`)
-- Status: `backlog`
-- Tags: future, next
+- Status: `in progress`
+- Tags: future, next, module:marketing
+- Scope note:
+  - Treat this epic as the lean, effective marketing-operating layer for CRM.
+  - v1 should focus on campaign email execution, audience membership, attribution, and operator guidance.
+  - Do not broaden it into a full journey-automation suite yet.
 - Stories:
-  - `86e041x82` | `backlog` | Audience segmentation | tags: -
-  - `86e041x81` | `backlog` | Email campaign builder | tags: -
-  - `86e041x9d` | `backlog` | Lead nurturing sequences | tags: -
+  - `86e041x81` | `backlog` | Email campaign builder improvements for practical campaign sends | tags: module:marketing, must-have
+  - `86e041x82` | `backlog` | Audience segmentation and saved filters | tags: module:marketing, should-have
+  - `86e041x9d` | `backlog` | Simple lead/contact nurture sequences | tags: module:marketing, should-have
+  - `local-marketing-v1-1` | `pending-sync` | Campaign email send, schedule, recipient tracking, and unsubscribe operations are the minimum viable email-marketing surface | tags: module:marketing, must-have
+  - `local-marketing-v1-2` | `pending-sync` | Attribution summary must show influenced opportunities, influenced pipeline, and won revenue | tags: module:marketing, must-have
+  - `local-marketing-v1-3` | `pending-sync` | Campaign health and recommendations must remain action-oriented and visible to marketing operators | tags: module:marketing, must-have
 
 ### [NEXT] Forecasting Engine (`86e041x6y`)
 - Status: `backlog`
@@ -346,6 +359,9 @@
 ### Marketing & Campaigns (`86e041wzy`)
 - Status: `done`
 - Tags: built, feature
+- Product note:
+  - The built module should be positioned as a practical campaign operations workspace, not as a complete automation platform.
+  - It already covers the most important operating surfaces for a lean CRM marketing function.
 - Stories:
   - `86e04290h` | `done` | Attribution explainability trace and reason visibility | tags: -
   - `86e04290n` | `done` | Attribution model comparison with delta indicators | tags: -
@@ -358,6 +374,7 @@
   - `86e04290t` | `done` | Marketing recommendation decision flow and action worklist handoff | tags: -
   - `86e041x0g` | `done` | Marketing settings configuration | tags: -
   - `86e04290e` | `done` | Next best action recommendations with confidence and evidence | tags: -
+  - `local-marketing-done-1` | `pending-sync` | Campaign operations are usable now as a lean CRM marketing workspace | tags: module:marketing, built
 
 ### Module: Contacts | #1 Clickable email/phone/LinkedIn links (`86e0cg0d0`)
 - Status: `backlog`

@@ -249,42 +249,9 @@
           <ng-template #monitorOnlyState>
             <strong>No urgent AI actions right now.</strong>
           </ng-template>
-          <span>Risk diagnostics remain visible below when monitoring is still required.</span>
+          <span>Use the Risk Intelligence card for guidance and watchlist review.</span>
         </div>
       </ng-template>
-
-      <div class="ai-diagnostics-shell" *ngIf="assistantDiagnosticItems().length">
-        <div class="ai-diagnostics-head">
-          <div>
-            <span class="ai-diagnostics-kicker">Diagnostics</span>
-            <h3 class="ai-diagnostics-title">Execution diagnostics behind the queue</h3>
-          </div>
-          <span class="card-badge" *ngIf="assistantMonitorOnlyCount()">{{ assistantMonitorOnlyCount() }} monitor only</span>
-        </div>
-
-        <div class="ai-diagnostics-list">
-          <article class="ai-diagnostic-item" *ngFor="let item of assistantDiagnosticItems()" [ngClass]="riskIntelligenceSeverityClass(item.severity)">
-            <div class="ai-diagnostic-rail">
-              <span class="risk-severity-pill" [ngClass]="riskIntelligenceSeverityClass(item.severity)">
-                <i class="pi pi-exclamation-triangle"></i>
-                {{ riskIntelligenceSeverityLabel(item.severity) }}
-              </span>
-            </div>
-            <div class="ai-diagnostic-main">
-              <div class="ai-diagnostic-heading">
-                <h4>{{ item.label }}</h4>
-                <span class="risk-intelligence-count">{{ item.count }} active signals</span>
-              </div>
-              <p class="ai-diagnostic-impact">{{ item.impact }}</p>
-              <div class="ai-diagnostic-meta">
-                <span class="meta-chip">{{ assistantDiagnosticModeLabel(item) }}</span>
-                <span class="meta-chip" *ngIf="item.linkedActionTitle">Recommended action: {{ item.recommendedAction }}</span>
-                <span class="meta-chip" *ngIf="!item.linkedActionTitle">Recommended action: {{ item.recommendedAction }}</span>
-              </div>
-            </div>
-          </article>
-        </div>
-      </div>
 
       <div class="assistant-undo-strip" *ngIf="assistantUndoVisible">
         <span>{{ assistantUndoMessage }}</span>
@@ -507,6 +474,82 @@
             </div>
             <div class="truth-subtext">
               Based on current lead qualification signals.
+            </div>
+          </div>
+        </ng-container>
+
+        <ng-container *ngSwitchCase="'risk-register'">
+          <div class="card-header">
+            <div class="risk-intelligence-title-block">
+              <h3 class="card-title">
+                <i class="pi pi-shield"></i>
+                Risk Intelligence
+              </h3>
+              <span class="risk-intelligence-subtitle">Top CRM risks ranked by urgency, with owner context and the next recommended action.</span>
+            </div>
+            <div class="card-actions">
+              <span class="card-badge">{{ summary().riskRegisterCount }}</span>
+              <ng-container *ngTemplateOutlet="cardControls; context: { $implicit: cardId }"></ng-container>
+            </div>
+          </div>
+          <div class="card-body risk-intelligence-body">
+            <div class="risk-intelligence-panel" *ngIf="riskIntelligenceItems().length; else emptyRiskFlags">
+              <div class="risk-intelligence-overview">
+                <div class="risk-intelligence-overview-copy">
+                  <span class="risk-intelligence-kicker">Early warning</span>
+                  <p>Use this card to understand what is at risk, why it is risky, and where managers or owners should act first.</p>
+                </div>
+                <div class="risk-intelligence-summary" *ngIf="riskIntelligenceSummary().length">
+                  <span
+                    class="risk-summary-pill"
+                    *ngFor="let item of riskIntelligenceSummary()"
+                    [ngClass]="item.severity"
+                  >
+                    {{ item.label }} · {{ item.count }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="risk-intelligence-list">
+                <article
+                  class="risk-intelligence-item"
+                  *ngFor="let item of riskIntelligenceItems()"
+                  [ngClass]="riskIntelligenceSeverityClass(item.severity)"
+                >
+                  <div class="risk-intelligence-rail">
+                    <span class="risk-severity-pill" [ngClass]="riskIntelligenceSeverityClass(item.severity)">
+                      <i class="pi pi-exclamation-triangle"></i>
+                      {{ riskIntelligenceSeverityLabel(item.severity) }}
+                    </span>
+                  </div>
+
+                  <div class="risk-intelligence-main">
+                    <div class="risk-intelligence-head">
+                      <div class="risk-intelligence-heading">
+                        <h4>{{ item.label }}</h4>
+                        <span class="risk-intelligence-count">{{ item.count }} active signals</span>
+                      </div>
+                    </div>
+                    <div class="risk-intelligence-meta">
+                      <span><strong>Why:</strong> {{ item.impact }}</span>
+                      <span><strong>Recommended action:</strong> {{ item.recommendedAction }}</span>
+                    </div>
+                  </div>
+
+                  <div class="risk-intelligence-actions">
+                    <button
+                      pButton
+                      type="button"
+                      class="risk-action-btn"
+                      [ngClass]="riskIntelligenceSeverityClass(item.severity)"
+                      (click)="openRiskIntelligence(item)"
+                    >
+                      <i class="pi pi-arrow-right"></i>
+                      Open workspace
+                    </button>
+                  </div>
+                </article>
+              </div>
             </div>
           </div>
         </ng-container>

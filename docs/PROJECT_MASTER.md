@@ -118,6 +118,47 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
     - `Phase 1`: stabilize the guidance workspace as the manager/operator risk triage surface
     - `Phase 2`: add actionability such as assign, snooze, dismiss, escalate, and create follow-up activity from a risk row
     - `Phase 3`: add tenant-configurable weighting and threshold controls per module
+
+### Marketing Module (Canonical)
+- The current CRM `Marketing` module is intentionally **lean**.
+- It is not positioned as a full marketing automation suite in v1.
+- Its near-term role is:
+  - manage campaigns
+  - manage campaign audiences
+  - operate campaign emails
+  - measure campaign influence on opportunities, pipeline, and revenue
+  - surface practical next-best-action guidance for marketing operators
+- The minimum effective user value is:
+  - create and manage a campaign
+  - attach leads and contacts as members
+  - send or schedule campaign emails
+  - track recipients, opens, clicks, bounces, and unsubscribe state
+  - see which opportunities and revenue were influenced
+  - review recommendations and act on them
+- v1 must stay operational and practical, not decorative.
+- v1 must answer:
+  - what campaign ran
+  - who was targeted
+  - what happened
+  - what revenue or pipeline was influenced
+  - what should marketing do next
+- Current v1 must-have scope:
+  - campaign registry and detail
+  - lead/contact campaign membership
+  - campaign email draft, schedule, send, and recipient tracking
+  - attribution summary with explainability
+  - campaign health and action-center recommendations
+- Current v1 should-have scope:
+  - saved audience filters / segmentation
+  - reusable campaign email builder improvements
+  - simple nurture sequencing
+  - stronger drill-down from influenced opportunities to source campaign evidence
+- Later ERP-level growth can extend this into:
+  - multi-step marketing automation
+  - richer segmentation
+  - journey orchestration
+  - cross-channel campaign execution
+  - deeper budgeting, ROI, and operating governance
     - `Phase 4`: add historical risk trend and outcome analytics so teams can measure whether risks were resolved or ignored
     - `Phase 5`: expand toward `PIMI - RMP` only after the CRM guidance/action model is proven
 - Product boundary:

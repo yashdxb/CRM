@@ -729,13 +729,13 @@ export class DashboardPage implements OnInit {
   private roleDefaultHiddenCharts = new Set<ChartId>();
   protected roleDefaultLevel: number | null = null;
   protected readonly activePackName = signal<string>('H1 Pack');
-  // Keep legacy cards in persisted layouts/templates if needed, but suppress them from the dashboard UI.
-  private readonly uiSuppressedCardIds = new Set<string>(['risk-register']);
+  private readonly uiSuppressedCardIds = new Set<string>();
   // Locked size map so customize layout never inflates card heights.
   private readonly defaultCardSizes: Record<string, 'sm' | 'md' | 'lg'> = {
     'ai-orchestration': 'lg',
     pipeline: 'lg',
     'truth-metrics': 'md',
+    'risk-register': 'md',
     'execution-guide': 'sm',
     'confidence-forecast': 'sm',
     'forecast-scenarios': 'sm',
@@ -995,13 +995,13 @@ export class DashboardPage implements OnInit {
   protected assistantSubtitle(): string {
     const scope = (this.assistantInsights().scope || '').toLowerCase();
     if (scope === 'team' || scope === 'all') {
-      return 'Execution blockers ranked for action, with risk diagnostics folded in for team-level recovery and governance.';
+      return 'Execution blockers ranked for action across the current team scope, separate from Risk Intelligence guidance.';
     }
-    return 'Execution blockers ranked for action, with risk diagnostics folded in for daily rep follow-through.';
+    return 'Execution blockers ranked for action for the current seller scope, separate from Risk Intelligence guidance.';
   }
 
   protected assistantExecutionHealthy(): boolean {
-    return this.assistantActions().length === 0 && this.assistantDiagnosticItems().length === 0;
+    return this.assistantActions().length === 0;
   }
 
   protected assistantDiagnosticModeLabel(item: AssistantDiagnosticItem): string {
@@ -2627,6 +2627,7 @@ export class DashboardPage implements OnInit {
     fallback: string[]
   ): string[] {
     const hidden = new Set(hiddenCards ?? []);
+    hidden.delete('risk-register');
     const visibleFallback = fallback.filter(id => !hidden.has(id));
     const visibleOrder = (order ?? []).filter(id => !hidden.has(id));
     return this.normalizeLayout(visibleOrder, visibleFallback);
