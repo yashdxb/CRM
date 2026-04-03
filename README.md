@@ -107,6 +107,7 @@ Each feature keeps its own `models`, `services`, and `pages` folders to align wi
 - Embedded Telerik report authoring is hosted inside CRM through `Report Workspace`; the implementation and Azure/runtime notes are documented in `docs/TELERIK_EMBEDDED_REPORTING_RUNBOOK.md`.
 - `Risk Intelligence` is now a top-level operational guidance workspace in CRM. The current scope is compact early warning + recommended action; the documented future path is phased actionability, configuration, and historical intelligence before any broader `PIMI - RMP` expansion.
 - `Marketing` should be treated as a lean campaign-operations module first: campaigns, audience membership, campaign emails, attribution, and practical next-best-action guidance. Full automation/journey behavior is a later expansion, not the current v1 target.
+- Benchmark and competitive positioning output is standardized through `scripts/generate_current_codebase_benchmark_pdf.py`; the benchmark standard and evidence rules are documented in `docs/BENCHMARK_REPORT_STANDARD.md`.
 - Future AI services plug in via background jobs + event publishing so the MVP can launch without AI yet still capture the history those models need.
 
 ### Running the backend locally

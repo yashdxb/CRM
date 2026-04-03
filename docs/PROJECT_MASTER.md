@@ -510,6 +510,11 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 ## 13) Roadmap & Benchmark (Current)
 Reference: ClickUp `CRM Backlog` list (`901710720381`) and generated mirror `docs/USER_STORIES.md`.
 
+Benchmark report standard:
+- The current benchmark format, evidence rules, competitor set, and maintenance expectations are defined in `docs/BENCHMARK_REPORT_STANDARD.md`.
+- Standard benchmark artifact: `scripts/generate_current_codebase_benchmark_pdf.py` -> `output/pdf/North_Edge_CRM_Current_Codebase_Benchmark_Report.pdf`
+- Supporting inventory artifact: `scripts/generate_feature_inventory_pdf.py` -> `output/pdf/North_Edge_CRM_Feature_Inventory.pdf`
+
 ### Positioning Goal
 Win on **execution discipline**, **speed to value**, and **AI‑guided next steps** rather than feature parity with enterprise CRMs.
 

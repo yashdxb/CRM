@@ -79,6 +79,7 @@ Important:
 | `docs/AI_ASSISTANT_ACTION_EXECUTION_BLUEPRINT.md` | Reference / Mapping | No | Active | Engineering | Design/implementation blueprint |
 | `docs/AI_ASSISTANT_KNOWLEDGE_QUICK_START.md` | Operational Guide | No | Active | Engineering/RevOps | Quick start for AI knowledge feeding |
 | `docs/AI_KNOWLEDGE_FEEDING_GUIDE.md` | Operational Guide | No | Active | Engineering/RevOps | End-to-end AI knowledge feeding guide |
+| `docs/BENCHMARK_REPORT_STANDARD.md` | Operational Guide | No | Active | Product/Engineering | Standard structure and evidence rules for benchmark PDFs |
 | `docs/COMPONENT_STYLE_GUIDE.md` | Operational Guide | No | Active | Design/Engineering | Component/page style reference |
 | `docs/STYLE_GUIDE.md` | Operational Guide | No | Active | Design/Engineering | General style guidance |
 | `docs/MOBILE_IMPLEMENTATION_SUMMARY.md` | Operational Guide | No | Active | Engineering | Mobile implementation summary and delivered infra |
