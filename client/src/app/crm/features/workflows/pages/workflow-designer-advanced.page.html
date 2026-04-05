@@ -18,11 +18,11 @@
       </div>
 
       <div class="page-header__actions">
-        <button pButton type="button" severity="secondary" [outlined]="true" label="Simple Builder" icon="pi pi-table" routerLink="/app/workflows/designer"></button>
-        <button pButton type="button" severity="secondary" [outlined]="true" label="Legacy Builder" icon="pi pi-history" routerLink="/app/workflows/designer/legacy"></button>
-        <button pButton type="button" severity="secondary" [outlined]="true" label="Cancel" icon="pi pi-times" (click)="cancelChanges()"></button>
-        <button pButton type="button" severity="secondary" label="Save Draft" icon="pi pi-save" (click)="saveDraft()"></button>
-        <button pButton type="button" label="Publish" icon="pi pi-send" [disabled]="!canPublish()" (click)="publish()"></button>
+        <button pButton type="button" styleClass="wf-btn wf-btn--nav" severity="secondary" [outlined]="true" label="Simple Builder" icon="pi pi-table" routerLink="/app/workflows/designer"></button>
+        <button pButton type="button" styleClass="wf-btn wf-btn--nav" severity="secondary" [outlined]="true" label="Legacy Builder" icon="pi pi-history" routerLink="/app/workflows/designer/legacy"></button>
+        <button pButton type="button" styleClass="wf-btn wf-btn--neutral" severity="secondary" [outlined]="true" label="Cancel" icon="pi pi-times" (click)="cancelChanges()"></button>
+        <button pButton type="button" styleClass="wf-btn wf-btn--draft" severity="secondary" label="Save Draft" icon="pi pi-save" (click)="saveDraft()"></button>
+        <button pButton type="button" styleClass="wf-btn wf-btn--publish" label="Publish" icon="pi pi-send" [disabled]="!canPublish()" (click)="publish()"></button>
       </div>
     </div>
   </header>
@@ -114,7 +114,7 @@
               <h2>Model entry conditions with readable rule groups.</h2>
             </div>
             <div class="card-header__actions">
-              <button pButton type="button" severity="secondary" icon="pi pi-plus" label="Add Group" (click)="addConditionGroup()"></button>
+              <button pButton type="button" styleClass="wf-btn wf-btn--add" severity="secondary" icon="pi pi-plus" label="Add Group" (click)="addConditionGroup()"></button>
             </div>
           </div>
         </ng-template>
@@ -149,12 +149,13 @@
                   formControlName="combinator"
                 ></p-select>
               </div>
-              <button
-                pButton
-                type="button"
+                <button
+                  pButton
+                  type="button"
+                  styleClass="wf-btn wf-btn--danger"
                   severity="secondary"
                   [outlined]="true"
-                icon="pi pi-trash"
+                  icon="pi pi-trash"
                 label="Remove Group"
                 (click)="removeConditionGroup(groupIndex)"
               ></button>
@@ -226,7 +227,7 @@
             </div>
 
             <div class="panel-actions">
-              <button pButton type="button" severity="secondary" icon="pi pi-plus" label="Add Condition" (click)="addCondition(groupIndex)"></button>
+              <button pButton type="button" styleClass="wf-btn wf-btn--add" severity="secondary" icon="pi pi-plus" label="Add Condition" (click)="addCondition(groupIndex)"></button>
             </div>
           </p-panel>
         </div>
@@ -241,8 +242,8 @@
               <p class="section-helper">Each step shows who approves, how long they have, and what happens if they miss the SLA.</p>
             </div>
             <div class="card-header__actions">
-              <button pButton type="button" severity="secondary" icon="pi pi-plus" label="Add Step" (click)="addSequentialStep()"></button>
-              <button pButton type="button" severity="secondary" [outlined]="true" icon="pi pi-sitemap" label="Add Parallel Group" (click)="addParallelGroup()"></button>
+              <button pButton type="button" styleClass="wf-btn wf-btn--add" severity="secondary" icon="pi pi-plus" label="Add Step" (click)="addSequentialStep()"></button>
+              <button pButton type="button" styleClass="wf-btn wf-btn--group" severity="secondary" [outlined]="true" icon="pi pi-sitemap" label="Add Parallel Group" (click)="addParallelGroup()"></button>
             </div>
           </div>
         </ng-template>
@@ -388,7 +389,7 @@
                         <span class="chip chip--warning">{{ approverControl.get('escalationRule')?.value }}</span>
                       </div>
                     </div>
-                    <button pButton type="button" severity="secondary" [text]="true" icon="pi pi-trash" (click)="removeParallelApprover(stepIndex, approverIndex)"></button>
+                    <button pButton type="button" styleClass="wf-btn-icon wf-btn-icon--danger" severity="secondary" [text]="true" icon="pi pi-trash" (click)="removeParallelApprover(stepIndex, approverIndex)"></button>
                   </div>
 
                   <div class="step-grid step-grid--compact">
@@ -421,7 +422,7 @@
               </div>
 
               <div class="panel-actions">
-                <button pButton type="button" severity="secondary" icon="pi pi-plus" label="Add Parallel Approver" (click)="addParallelApprover(stepIndex)"></button>
+                <button pButton type="button" styleClass="wf-btn wf-btn--add" severity="secondary" icon="pi pi-plus" label="Add Parallel Approver" (click)="addParallelApprover(stepIndex)"></button>
               </div>
             </div>
 

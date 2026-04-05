@@ -126,6 +126,96 @@
 }
 
 :host ::ng-deep {
+  .wf-btn.p-button {
+    border-radius: 12px;
+    border-width: 1px;
+    font-weight: 700;
+    box-shadow: none;
+    transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease, transform 0.16s ease;
+  }
+
+  .wf-btn.p-button:not(:disabled):hover {
+    transform: translateY(-1px);
+  }
+
+  .wf-btn--nav.p-button {
+    background: #314a74;
+    border-color: #314a74;
+    color: #ffffff;
+  }
+
+  .wf-btn--nav.p-button:not(:disabled):hover,
+  .wf-btn--nav.p-button:not(:disabled):focus {
+    background: #263a5a;
+    border-color: #263a5a;
+    color: #ffffff;
+  }
+
+  .wf-btn--neutral.p-button {
+    background: #5e6b82;
+    border-color: #5e6b82;
+    color: #ffffff;
+  }
+
+  .wf-btn--neutral.p-button:not(:disabled):hover,
+  .wf-btn--neutral.p-button:not(:disabled):focus {
+    background: #4a566b;
+    border-color: #4a566b;
+    color: #ffffff;
+  }
+
+  .wf-btn--draft.p-button {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #ffffff;
+  }
+
+  .wf-btn--draft.p-button:not(:disabled):hover,
+  .wf-btn--draft.p-button:not(:disabled):focus {
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+    color: #ffffff;
+  }
+
+  .wf-btn--publish.p-button {
+    background: #14804a;
+    border-color: #14804a;
+    color: #ffffff;
+  }
+
+  .wf-btn--publish.p-button:not(:disabled):hover,
+  .wf-btn--publish.p-button:not(:disabled):focus {
+    background: #0f6a3d;
+    border-color: #0f6a3d;
+    color: #ffffff;
+  }
+
+  .wf-btn--add.p-button {
+    background: #0f766e;
+    border-color: #0f766e;
+    color: #ffffff;
+  }
+
+  .wf-btn--add.p-button:not(:disabled):hover,
+  .wf-btn--add.p-button:not(:disabled):focus {
+    background: #0b5f59;
+    border-color: #0b5f59;
+    color: #ffffff;
+  }
+
+  .wf-btn--group.p-button {
+    background: #5b4acb;
+    border-color: #5b4acb;
+    color: #ffffff;
+  }
+
+  .wf-btn--group.p-button:not(:disabled):hover,
+  .wf-btn--group.p-button:not(:disabled):focus {
+    background: #493bb0;
+    border-color: #493bb0;
+    color: #ffffff;
+  }
+
   .registry-card .p-card-body,
   .builder-card .p-card-body,
   .sidebar-card .p-card-body {

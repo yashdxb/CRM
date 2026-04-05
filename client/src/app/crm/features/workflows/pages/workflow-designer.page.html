@@ -21,6 +21,7 @@
         <button
           pButton
           type="button"
+          styleClass="wf-btn wf-btn--nav"
           severity="secondary"
           [outlined]="true"
           label="Advanced Builder"
@@ -30,15 +31,16 @@
         <button
           pButton
           type="button"
+          styleClass="wf-btn wf-btn--nav"
           severity="secondary"
           [outlined]="true"
           label="Legacy Canvas"
           icon="pi pi-history"
           routerLink="/app/workflows/designer/legacy"
         ></button>
-        <button pButton type="button" severity="secondary" [outlined]="true" label="Cancel" icon="pi pi-times" (click)="cancelChanges()"></button>
-        <button pButton type="button" severity="secondary" label="Save Draft" icon="pi pi-save" (click)="saveDraft()"></button>
-        <button pButton type="button" label="Publish" icon="pi pi-send" [disabled]="!canPublish()" (click)="publish()"></button>
+        <button pButton type="button" styleClass="wf-btn wf-btn--neutral" severity="secondary" [outlined]="true" label="Cancel" icon="pi pi-times" (click)="cancelChanges()"></button>
+        <button pButton type="button" styleClass="wf-btn wf-btn--draft" severity="secondary" label="Save Draft" icon="pi pi-save" (click)="saveDraft()"></button>
+        <button pButton type="button" styleClass="wf-btn wf-btn--publish" label="Publish" icon="pi pi-send" [disabled]="!canPublish()" (click)="publish()"></button>
       </div>
     </div>
   </header>
@@ -188,8 +190,8 @@
               <h2>{{ conditionSummary() }}</h2>
             </div>
             <div class="card-header__actions">
-              <button pButton type="button" severity="secondary" size="small" icon="pi pi-plus" label="Add Condition" (click)="showMockAction('Add condition')"></button>
-              <button pButton type="button" severity="secondary" [outlined]="true" size="small" icon="pi pi-layer-group" label="Add Group" (click)="showMockAction('Add group')"></button>
+              <button pButton type="button" styleClass="wf-btn wf-btn--add" severity="secondary" size="small" icon="pi pi-plus" label="Add Condition" (click)="showMockAction('Add condition')"></button>
+              <button pButton type="button" styleClass="wf-btn wf-btn--group" severity="secondary" [outlined]="true" size="small" icon="pi pi-layer-group" label="Add Group" (click)="showMockAction('Add group')"></button>
             </div>
           </div>
         </ng-template>
@@ -236,8 +238,8 @@
               <h2>Who approves, in what order, and what happens if they do not respond.</h2>
             </div>
             <div class="card-header__actions">
-              <button pButton type="button" severity="secondary" size="small" icon="pi pi-plus" label="Add Step" (click)="showMockAction('Add step')"></button>
-              <button pButton type="button" severity="secondary" [outlined]="true" size="small" icon="pi pi-sitemap" label="Add Parallel Group" (click)="showMockAction('Add parallel group')"></button>
+              <button pButton type="button" styleClass="wf-btn wf-btn--add" severity="secondary" size="small" icon="pi pi-plus" label="Add Step" (click)="showMockAction('Add step')"></button>
+              <button pButton type="button" styleClass="wf-btn wf-btn--group" severity="secondary" [outlined]="true" size="small" icon="pi pi-sitemap" label="Add Parallel Group" (click)="showMockAction('Add parallel group')"></button>
             </div>
           </div>
         </ng-template>
