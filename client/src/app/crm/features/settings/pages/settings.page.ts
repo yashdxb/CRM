@@ -411,7 +411,10 @@ export class SettingsPage {
     }
 
     this.dataService.resendInvite(user.id).subscribe({
-      next: () => this.raiseToast('success', 'Invite resent'),
+      next: (response) => {
+        this.raiseToast(response.inviteEmailSent ? 'success' : 'error', response.message);
+        this.loadUsers();
+      },
       error: () => this.raiseToast('error', 'Unable to resend invite')
     });
   }

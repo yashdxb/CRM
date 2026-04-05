@@ -109,6 +109,14 @@ export interface UserDetailResponse {
   dashboardPackType: string;
   roleIds: string[];
   roles: string[];
+  inviteEmailSent?: boolean | null;
+  inviteDeliveryMessage?: string | null;
+}
+
+export interface InviteDeliveryResponse {
+  inviteEmailSent: boolean;
+  message: string;
+  lastInviteSentAtUtc?: string | null;
 }
 
 export interface UserSearchRequest {

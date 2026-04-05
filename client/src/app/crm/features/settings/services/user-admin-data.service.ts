@@ -9,6 +9,7 @@ import {
   SecurityLevelDefinition,
   UpsertSecurityLevelRequest,
   DashboardPackOptionsResponse,
+  InviteDeliveryResponse,
   UpdateUserDashboardPackRequest,
   ResetPasswordRequest,
   RoleSummary,
@@ -137,7 +138,7 @@ export class UserAdminDataService {
   }
 
   resendInvite(id: string) {
-    return this.http.post<void>(`${this.baseUrl}/api/users/${id}/resend-invite`, {});
+    return this.http.post<InviteDeliveryResponse>(`${this.baseUrl}/api/users/${id}/resend-invite`, {});
   }
 
   activate(id: string) {

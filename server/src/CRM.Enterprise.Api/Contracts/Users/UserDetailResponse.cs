@@ -19,4 +19,6 @@ public record UserDetailResponse(
     string DashboardPackName,
     string DashboardPackType,
     IReadOnlyList<Guid> RoleIds,
-    IReadOnlyList<string> Roles);
+    IReadOnlyList<string> Roles,
+    bool? InviteEmailSent = null,
+    string? InviteDeliveryMessage = null);

@@ -173,9 +173,13 @@ export class InviteUserPage {
 
     this.saving.set(true);
     this.dataService.create(payload).subscribe({
-      next: () => {
+      next: (response) => {
         this.saving.set(false);
-        this.raiseStatus('success', 'User invited successfully.');
+        const inviteEmailSent = response.inviteEmailSent !== false;
+        this.raiseStatus(
+          inviteEmailSent ? 'success' : 'error',
+          response.inviteDeliveryMessage?.trim() || (inviteEmailSent ? 'User invited successfully.' : 'User created, but invite email failed.')
+        );
         this.form.reset({
           fullName: '',
           email: '',

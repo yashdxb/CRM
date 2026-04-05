@@ -397,7 +397,23 @@ public class UsersController : ControllerBase
         }
 
         var detail = await BuildDetailResponseAsync(user.Id, cancellationToken);
-        return CreatedAtAction(nameof(GetUser), new { id = user.Id }, detail);
+        if (detail is null)
+        {
+            return StatusCode(500, "User was created but the response could not be loaded.");
+        }
+
+        var inviteDeliveryMessage = inviteSent
+            ? "Invite email sent."
+            : "User created, but invite email could not be delivered.";
+
+        return CreatedAtAction(
+            nameof(GetUser),
+            new { id = user.Id },
+            detail with
+            {
+                InviteEmailSent = inviteSent,
+                InviteDeliveryMessage = inviteDeliveryMessage
+            });
     }
 
     [HttpPut("{id:guid}")]
@@ -514,7 +530,11 @@ public class UsersController : ControllerBase
             user.LastInviteSentAtUtc = DateTime.UtcNow;
             await _dbContext.SaveChangesAsync(cancellationToken);
         }
-        return NoContent();
+
+        return Ok(new InviteDeliveryResponse(
+            inviteSent,
+            inviteSent ? "Invite email sent." : "Invite email could not be delivered.",
+            inviteSent ? user.LastInviteSentAtUtc : user.LastInviteSentAtUtc));
     }
 
     [HttpPost("{id:guid}/activate")]
