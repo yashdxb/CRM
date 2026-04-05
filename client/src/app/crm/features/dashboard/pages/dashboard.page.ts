@@ -989,15 +989,15 @@ export class DashboardPage implements OnInit {
     if (normalizedKey === 'overdue-activities') {
       return 'Open activities already past due. Source: active execution backlog for the selected scope.';
     }
-    return `${label}: live orchestration snapshot metric for the selected scope.`;
+    return `${label}: live recommendation metric for the selected scope.`;
   }
 
   protected assistantSubtitle(): string {
     const scope = (this.assistantInsights().scope || '').toLowerCase();
     if (scope === 'team' || scope === 'all') {
-      return 'Execution blockers ranked for action across the current team scope, separate from Risk Intelligence guidance.';
+      return 'Priority-driven recommendations to resolve critical sales risk across the current team scope.';
     }
-    return 'Execution blockers ranked for action for the current seller scope, separate from Risk Intelligence guidance.';
+    return 'Priority-driven recommendations to resolve critical sales risk for the current seller scope.';
   }
 
   protected assistantExecutionHealthy(): boolean {

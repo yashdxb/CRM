@@ -345,6 +345,7 @@
   - `86e041wx9` | `done` | Lead assignment rules | tags: -
   - `86e041wwt` | `done` | Lead list with search and filtering | tags: -
   - `86e041wwz` | `done` | Lead qualification scoring (CQVS model) | tags: -
+  - `pending-sync` | `done` | Module: Leads / Settings | Qualification factors configurable from Workspace Settings using the controlled six-factor catalog | tags: done, module:leads, module:settings, now
   - `86e09xd45` | `done` | Module: Leads | Accessibility: aria-labels on leads list | tags: done, module:leads, now
   - `86e09xd3d` | `done` | Module: Leads | Add help text to qualification factor fields | tags: done, module:leads, now
   - `86e09xd32` | `done` | Module: Leads | Client-side attachment upload validation | tags: done, module:leads, now

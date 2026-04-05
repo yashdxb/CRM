@@ -118,9 +118,30 @@ export class LeadAssignmentPage implements OnInit {
     this.router.navigate(['/app/settings/lead-assignment']);
   }
 
+  protected updateForm<K extends keyof UpsertLeadAssignmentRuleRequest>(key: K, value: UpsertLeadAssignmentRuleRequest[K]) {
+    this.form.update((current) => ({
+      ...current,
+      [key]: value
+    }));
+  }
+
+  protected onTypeChange(type: LeadAssignmentRuleType) {
+    this.form.update((current) => ({
+      ...current,
+      type,
+      territory: type === 'Territory' ? current.territory : null,
+      assignedUserId: type === 'Territory' ? current.assignedUserId : null
+    }));
+  }
+
   protected saveRule() {
     if (!this.canSave()) return;
-    const payload = this.form();
+    const current = this.form();
+    const payload: UpsertLeadAssignmentRuleRequest = {
+      ...current,
+      territory: current.type === 'Territory' ? current.territory : null,
+      assignedUserId: current.type === 'Territory' ? current.assignedUserId : null
+    };
     const editId = this.editingId();
     if (editId) {
       this.assignmentService.update(editId, payload).subscribe({

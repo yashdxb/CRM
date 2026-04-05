@@ -2618,6 +2618,15 @@ public class DashboardReadService : IDashboardReadService
             .Distinct()
             .ToListAsync(cancellationToken);
 
+        if (teamUserIds.Count <= 1)
+        {
+            teamUserIds = await _dbContext.Users
+                .AsNoTracking()
+                .Where(u => u.TenantId == userInfo.TenantId && !u.IsDeleted && u.IsActive)
+                .Select(u => u.Id)
+                .ToListAsync(cancellationToken);
+        }
+
         if (!teamUserIds.Contains(userId.Value))
         {
             teamUserIds.Add(userId.Value);

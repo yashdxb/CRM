@@ -1772,6 +1772,9 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - Settings allow `defaultThreshold`, `managerApprovalBelow`, and `blockBelow`.
     - Lead conversion is blocked below `blockBelow` unless override is allowed.
     - Override requires reason when `requireOverrideReason` is enabled.
+    - Qualification factor catalog is tenant-configurable across the controlled six-factor model.
+    - Admin can activate/deactivate factors, rename labels, set required factors, and control factor order.
+    - Lead scoring and qualification gating honor active factors only.
 - Opportunities | As a Sales Rep, I want alerts for deals with no next step or no activity in X days so I can recover risk early. (ClickUp: 86dzp8xdx, Status: COMPLETED) Flow: 04A
   - Acceptance criteria:
     - Idle-deal alerts respect `idleDeal`, `idleDealNoNextStep`, and `idleDealNoActivity` settings.

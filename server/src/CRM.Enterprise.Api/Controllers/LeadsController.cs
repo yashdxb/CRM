@@ -514,6 +514,7 @@ public class LeadsController : ControllerBase
             dto.EconomicBuyerEvidence,
             dto.IcpFit,
             dto.IcpFitEvidence,
+            dto.CustomQualificationFactors.Select(item => new CustomQualificationFactorItem(item.Key, item.Value, item.Evidence)),
             dto.QualificationConfidence,
             dto.QualificationConfidenceLabel,
             dto.TruthCoverage,
@@ -530,6 +531,7 @@ public class LeadsController : ControllerBase
             dto.ConversationSignalAvailable,
             dto.ConversationAiDimensionScore,
             dto.ConversationAiToneLabel,
+            dto.ConversationAiSentiment,
             dto.ConversationAiBuyingReadiness,
             dto.ConversationAiSemanticIntent,
             dto.ConversationAiToneJustification,
@@ -695,7 +697,11 @@ public class LeadsController : ControllerBase
             request.EconomicBuyer,
             request.EconomicBuyerEvidence,
             request.IcpFit,
-            request.IcpFitEvidence);
+            request.IcpFitEvidence,
+            request.CustomQualificationFactors?.Select(item => new CRM.Enterprise.Application.Leads.LeadCustomQualificationFactorValue(
+                item.Key,
+                item.Value,
+                item.Evidence)).ToArray());
     }
 
     private static LeadDuplicateCheckResponse ToApiDuplicateCheck(LeadDuplicateCheckResultDto result)

@@ -799,6 +799,24 @@ $status-lost: #ef4444;
   }
 }
 
+.filter-chip__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.08);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.filter-chip.active .filter-chip__count {
+  background: rgba(255, 255, 255, 0.22);
+  color: inherit;
+}
+
 .chip-dot {
   width: 8px;
   height: 8px;
@@ -1018,30 +1036,16 @@ $status-lost: #ef4444;
   background: rgba(59, 130, 246, 0.12);
 }
 
-.lead-score {
-  min-width: 32px;
-  height: 32px;
-  display: flex;
+.lead-score-gauge {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 700;
-
-  &.high {
-    background: rgba($status-qualified, 0.12);
-    color: color.adjust($status-qualified, $lightness: -10%);
-  }
-
-  &.medium {
-    background: rgba($warning, 0.12);
-    color: color.adjust($warning, $lightness: -10%);
-  }
-
-  &.low {
-    background: rgba($status-lost, 0.12);
-    color: color.adjust($status-lost, $lightness: -5%);
-  }
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.82));
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.06);
 }
 
 .lead-card-body {
@@ -1554,6 +1558,30 @@ $status-lost: #ef4444;
     color: $gray-700;
   }
 
+  .coach-chip--signal[data-tone="healthy"] {
+    border-color: rgba(16, 185, 129, 0.32);
+    background: rgba(16, 185, 129, 0.10);
+    color: #065f46;
+  }
+
+  .coach-chip--signal[data-tone="risk"] {
+    border-color: rgba(239, 68, 68, 0.32);
+    background: rgba(239, 68, 68, 0.10);
+    color: #991b1b;
+  }
+
+  .coach-chip--signal[data-tone="weak"] {
+    border-color: rgba(245, 158, 11, 0.32);
+    background: rgba(245, 158, 11, 0.12);
+    color: #92400e;
+  }
+
+  .coach-chip--signal[data-tone="neutral"] {
+    border-color: rgba(148, 163, 184, 0.28);
+    background: rgba(241, 245, 249, 0.88);
+    color: #334155;
+  }
+
   .coach-chip[data-status="New"] { border-color: rgba(6, 182, 212, 0.35); background: rgba(6, 182, 212, 0.10); }
   .coach-chip[data-status="Contacted"] { border-color: rgba(245, 158, 11, 0.35); background: rgba(245, 158, 11, 0.10); }
   .coach-chip[data-status="Nurture"] { border-color: rgba(245, 158, 11, 0.35); background: rgba(245, 158, 11, 0.10); }
@@ -1642,6 +1670,37 @@ $status-lost: #ef4444;
     margin: 0 0 10px;
     text-transform: uppercase;
     letter-spacing: 0.06em;
+  }
+
+  .coach-signal-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .coach-next-action {
+    border: 1px solid rgba(59, 130, 246, 0.18);
+    background: linear-gradient(135deg, rgba(239, 246, 255, 0.9) 0%, rgba(255, 255, 255, 0.88) 100%);
+    border-radius: 14px;
+    padding: 12px;
+  }
+
+  .coach-next-action__label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #1d4ed8;
+  }
+
+  .coach-next-action p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.45;
+    color: $gray-800;
   }
 
   .coach-hint {
@@ -1826,6 +1885,14 @@ $status-lost: #ef4444;
     box-shadow: 0 12px 24px rgba(99, 102, 241, 0.16);
   }
 
+  .coach-action-btn--convert.p-button {
+    border-color: rgba(16, 185, 129, 0.28);
+  }
+
+  .coach-action-btn--compose.p-button {
+    border-color: rgba(59, 130, 246, 0.26);
+  }
+
   // Ensure the sticky footer doesn't cover the last section.
   .p-drawer-content {
     padding-bottom: 82px;
@@ -2005,32 +2072,21 @@ $status-lost: #ef4444;
 .score-indicator {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
 }
 
-.score-bar {
-  width: 60px;
-  height: 6px;
-  background: rgba(0, 0, 0, 0.06);
-  border-radius: 3px;
-  overflow: hidden;
-
-  .score-fill {
-    height: 100%;
-    border-radius: 3px;
-    transition: width 0.3s ease;
-
-    &.high { background: linear-gradient(90deg, $status-qualified 0%, color.adjust($status-qualified, $lightness: -5%) 100%); }
-    &.medium { background: linear-gradient(90deg, $warning 0%, color.adjust($warning, $lightness: -5%) 100%); }
-    &.low { background: linear-gradient(90deg, $status-lost 0%, color.adjust($status-lost, $lightness: -5%) 100%); }
+:host ::ng-deep .lead-score-gauge__knob {
+  .p-knob-text {
+    font-size: 0.9rem;
+    font-weight: 900;
+    fill: #0f172a;
   }
 }
 
-.score-value {
-  font-size: 13px;
-  font-weight: 600;
-  color: $gray-700;
-  min-width: 24px;
+:host ::ng-deep .lead-score-gauge__knob--table {
+  .p-knob-text {
+    font-size: 0.86rem;
+  }
 }
 
 .owner-cell {
@@ -2591,8 +2647,9 @@ $status-lost: #ef4444;
     color: rgba(255, 255, 255, 0.4);
   }
 
-  .score-value {
-    color: rgba(255, 255, 255, 0.9);
+  .lead-score-gauge {
+    background: linear-gradient(180deg, rgba(30, 41, 59, 0.72), rgba(15, 23, 42, 0.66));
+    border-color: rgba(148, 163, 184, 0.18);
   }
 
   .owner-cell .owner-name {

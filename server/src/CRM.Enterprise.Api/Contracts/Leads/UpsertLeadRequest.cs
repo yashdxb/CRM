@@ -45,4 +45,10 @@ public class UpsertLeadRequest
     public string? EconomicBuyerEvidence { get; set; }
     public string? IcpFit { get; set; }
     public string? IcpFitEvidence { get; set; }
+    public IReadOnlyList<CustomQualificationFactorItem>? CustomQualificationFactors { get; set; }
 }
+
+public sealed record CustomQualificationFactorItem(
+    string Key,
+    string? Value,
+    string? Evidence);

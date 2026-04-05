@@ -23,6 +23,7 @@ import { ReferenceDataService } from '../../../../core/services/reference-data.s
 import {
   QualificationModifierRule,
   QualificationExposureWeight,
+  QualificationFactorDefinition,
   QualificationFactorEvidenceRule,
   QualificationPolicy,
   WorkspaceSettings
@@ -61,6 +62,7 @@ export class QualificationPolicyPage {
   private static readonly accordionStateKey = 'qualification-policy-accordion';
   private static readonly defaultAccordionPanels = [
     'thresholds',
+    'qualification-factors',
     'evidence-enforcement',
     'factor-evidence',
     'modifiers',
@@ -125,6 +127,11 @@ export class QualificationPolicyPage {
     { key: 'problem', label: 'Problem severity' },
     { key: 'economicBuyer', label: 'Economic buyer' },
     { key: 'icpFit', label: 'ICP fit' }
+  ];
+
+  protected readonly customFactorValueTypeOptions: Option<'singleSelect' | 'text'>[] = [
+    { label: 'Single select', value: 'singleSelect' },
+    { label: 'Free text', value: 'text' }
   ];
 
   private loadedSettings: WorkspaceSettings | null = null;
@@ -218,8 +225,91 @@ export class QualificationPolicyPage {
         : QualificationPolicyPage.defaultPolicy().minimumEvidenceCoveragePercent,
       evidenceSources: this.normalizeEvidenceSources(policy.evidenceSources)
     };
-    normalized.factorEvidenceRules = this.normalizeFactorEvidenceRules(policy.factorEvidenceRules, normalized.evidenceSources);
+    normalized.factors = this.normalizeFactors(policy.factors);
+    normalized.factorEvidenceRules = this.normalizeFactorEvidenceRules(policy.factorEvidenceRules, normalized.evidenceSources, normalized.factors);
     this.qualificationPolicy.set(normalized);
+  }
+
+  protected qualificationFactors() {
+    return [...(this.qualificationPolicy().factors ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  }
+
+  protected activeQualificationFactorsCount(): number {
+    return this.qualificationFactors().filter((factor) => factor.isActive).length;
+  }
+
+  protected requiredQualificationFactorsCount(): number {
+    return this.qualificationFactors().filter((factor) => factor.isActive && factor.isRequired).length;
+  }
+
+  protected updateQualificationFactor(key: string, patch: Partial<QualificationFactorDefinition>) {
+    const current = this.qualificationPolicy();
+    const next = (current.factors ?? []).map((factor) => {
+      if (factor.key !== key) {
+        return factor;
+      }
+
+      return {
+        ...factor,
+        ...patch,
+        displayLabel: (patch.displayLabel ?? factor.displayLabel ?? '').trim() || factor.displayLabel
+      };
+    });
+
+    this.qualificationPolicy.set({
+      ...current,
+      factors: this.normalizeFactors(next)
+    });
+    this.syncFactorEvidenceRulesToCatalog();
+  }
+
+  protected addCustomQualificationFactor() {
+    const current = this.qualificationPolicy();
+    const nextKey = this.nextCustomFactorKey();
+    const nextOrder = this.nextQualificationFactorOrder();
+    this.qualificationPolicy.set({
+      ...current,
+      factors: this.normalizeFactors([
+        ...(current.factors ?? []),
+        {
+          key: nextKey,
+          displayLabel: 'Custom qualification factor',
+          isActive: true,
+          isRequired: false,
+          order: nextOrder,
+          factorType: 'custom',
+          valueType: 'singleSelect',
+          includeInScore: false,
+          options: ['Unknown / not assessed', 'Observed', 'Confirmed', 'Blocked']
+        }
+      ])
+    });
+    this.syncFactorEvidenceRulesToCatalog();
+  }
+
+  protected removeCustomQualificationFactor(key: string) {
+    const current = this.qualificationPolicy();
+    this.qualificationPolicy.set({
+      ...current,
+      factors: (current.factors ?? []).filter((factor) => factor.key !== key),
+      factorEvidenceRules: (current.factorEvidenceRules ?? []).filter((rule) => rule.factorKey !== key)
+    });
+  }
+
+  protected updateQualificationFactorOptions(key: string, value: string) {
+    const options = value
+      .split(/\r?\n|,/)
+      .map((item) => item.trim())
+      .filter((item, index, all) => item.length > 0 && all.findIndex((candidate) => candidate.toLowerCase() === item.toLowerCase()) === index);
+    this.updateQualificationFactor(key, { options });
+  }
+
+  protected qualificationFactorOptionsText(factor: QualificationFactorDefinition): string {
+    return (factor.options ?? []).join('\n');
+  }
+
+  protected isCustomQualificationFactor(factor: QualificationFactorDefinition): boolean {
+    return factor.factorType === 'custom';
   }
 
   protected addModifierRule() {
@@ -278,7 +368,10 @@ export class QualificationPolicyPage {
   }
 
   protected requiredFactorEvidenceCount() {
-    return (this.qualificationPolicy().factorEvidenceRules ?? []).filter((rule) => rule.requireEvidence).length;
+    const active = new Set(this.qualificationFactors().filter((factor) => factor.isActive).map((factor) => factor.key));
+    return (this.qualificationPolicy().factorEvidenceRules ?? [])
+      .filter((rule) => active.has(rule.factorKey) && rule.requireEvidence)
+      .length;
   }
 
   protected removeModifierRule(index: number) {
@@ -341,7 +434,7 @@ export class QualificationPolicyPage {
     const current = this.qualificationPolicy();
     return (
       current.factorEvidenceRules?.find((rule) => rule.factorKey === key) ??
-      QualificationPolicyPage.defaultFactorEvidenceRules(current.evidenceSources).find((rule) => rule.factorKey === key) ?? {
+      QualificationPolicyPage.defaultFactorEvidenceRules(current.evidenceSources, current.factors ?? []).find((rule) => rule.factorKey === key) ?? {
         factorKey: key,
         requireEvidence: false,
         allowedEvidenceSources: ['No evidence yet']
@@ -459,9 +552,10 @@ export class QualificationPolicyPage {
 
   private normalizeFactorEvidenceRules(
     rules: QualificationFactorEvidenceRule[] | null | undefined,
-    catalog: string[]
+    catalog: string[],
+    factors: QualificationFactorDefinition[]
   ): QualificationFactorEvidenceRule[] {
-    const defaults = QualificationPolicyPage.defaultFactorEvidenceRules(catalog);
+    const defaults = QualificationPolicyPage.defaultFactorEvidenceRules(catalog, factors);
     const byKey = new Map((rules ?? []).map((rule) => [rule.factorKey, rule]));
     return defaults.map((def) => {
       const configured = byKey.get(def.factorKey);
@@ -474,13 +568,57 @@ export class QualificationPolicyPage {
     });
   }
 
+  private normalizeFactors(factors: QualificationFactorDefinition[] | null | undefined): QualificationFactorDefinition[] {
+    const defaults = QualificationPolicyPage.defaultPolicy().factors;
+    const byKey = new Map((factors ?? []).map((factor) => [factor.key, factor]));
+    const normalizedSystem: QualificationFactorDefinition[] = defaults
+      .map((factor) => {
+        const configured = byKey.get(factor.key);
+        if (!configured) {
+          return factor;
+        }
+
+        return {
+          ...factor,
+          ...configured,
+          displayLabel: (configured.displayLabel ?? '').trim() || factor.displayLabel,
+          order: Number.isFinite(configured.order) ? Math.max(1, Math.round(configured.order)) : factor.order,
+          factorType: 'system' as const,
+          valueType: 'singleSelect' as const,
+          includeInScore: true,
+          options: []
+        };
+      })
+      .sort((a, b) => a.order - b.order || a.displayLabel.localeCompare(b.displayLabel));
+
+    const normalizedCustom: QualificationFactorDefinition[] = (factors ?? [])
+      .filter((factor) => factor.factorType === 'custom' && !defaults.some((item) => item.key === factor.key))
+      .map((factor, index) => ({
+        key: this.normalizeCustomFactorKey(factor.key || `custom_factor_${index + 1}`),
+        displayLabel: (factor.displayLabel ?? '').trim() || `Custom factor ${index + 1}`,
+        isActive: factor.isActive ?? true,
+        isRequired: factor.isRequired ?? false,
+        order: Number.isFinite(factor.order) ? Math.max(1, Math.round(factor.order)) : 100 + (index * 10),
+        factorType: 'custom' as const,
+        valueType: factor.valueType === 'text' ? 'text' as const : 'singleSelect' as const,
+        includeInScore: false,
+        options: factor.valueType === 'text'
+          ? []
+          : this.normalizeCustomFactorOptions(factor.options)
+      }))
+      .sort((a, b) => a.order - b.order || a.displayLabel.localeCompare(b.displayLabel));
+
+    return [...normalizedSystem, ...normalizedCustom]
+      .sort((a, b) => a.order - b.order || a.displayLabel.localeCompare(b.displayLabel));
+  }
+
   private syncFactorEvidenceRulesToCatalog() {
     const current = this.qualificationPolicy();
     const catalog = this.normalizeEvidenceSources(current.evidenceSources);
     this.qualificationPolicy.set({
       ...current,
       evidenceSources: catalog,
-      factorEvidenceRules: this.normalizeFactorEvidenceRules(current.factorEvidenceRules, catalog)
+      factorEvidenceRules: this.normalizeFactorEvidenceRules(current.factorEvidenceRules, catalog, current.factors ?? [])
     });
   }
 
@@ -506,7 +644,15 @@ export class QualificationPolicyPage {
       showCqvsInLeadList: false,
       requireEvidenceBeforeQualified: true,
       minimumEvidenceCoveragePercent: 50,
-      factorEvidenceRules: QualificationPolicyPage.defaultFactorEvidenceRules(defaultEvidenceSources),
+      factors: [
+        { key: 'budget', displayLabel: 'Budget availability', isActive: true, isRequired: true, order: 10, factorType: 'system', valueType: 'singleSelect', includeInScore: true, options: [] },
+        { key: 'readiness', displayLabel: 'Readiness to spend', isActive: true, isRequired: false, order: 20, factorType: 'system', valueType: 'singleSelect', includeInScore: true, options: [] },
+        { key: 'timeline', displayLabel: 'Buying timeline', isActive: true, isRequired: true, order: 30, factorType: 'system', valueType: 'singleSelect', includeInScore: true, options: [] },
+        { key: 'problem', displayLabel: 'Problem severity', isActive: true, isRequired: true, order: 40, factorType: 'system', valueType: 'singleSelect', includeInScore: true, options: [] },
+        { key: 'economicBuyer', displayLabel: 'Economic buyer', isActive: true, isRequired: true, order: 50, factorType: 'system', valueType: 'singleSelect', includeInScore: true, options: [] },
+        { key: 'icpFit', displayLabel: 'ICP fit', isActive: true, isRequired: false, order: 60, factorType: 'system', valueType: 'singleSelect', includeInScore: true, options: [] }
+      ],
+      factorEvidenceRules: QualificationPolicyPage.defaultFactorEvidenceRules(defaultEvidenceSources, []),
       thresholdRules: [],
       modifiers: [
         { key: 'competitive', delta: 10 },
@@ -561,12 +707,12 @@ export class QualificationPolicyPage {
     ];
   }
 
-  private static defaultFactorEvidenceRules(catalog: string[]): QualificationFactorEvidenceRule[] {
+  private static defaultFactorEvidenceRules(catalog: string[], configuredFactors: QualificationFactorDefinition[]): QualificationFactorEvidenceRule[] {
     const source = catalog;
     const pick = (...names: string[]) =>
       source.filter((item) => names.some((name) => name.toLowerCase() === item.toLowerCase()));
 
-    return [
+    const defaults = [
       { factorKey: 'budget', requireEvidence: true, allowedEvidenceSources: pick('No evidence yet', 'Customer call', 'Call notes', 'Discovery call notes', 'Discovery meeting notes', 'Email confirmation', 'Buyer email', 'Written confirmation', 'Proposal feedback') },
       { factorKey: 'readiness', requireEvidence: false, allowedEvidenceSources: pick('No evidence yet', 'Customer call', 'Call notes', 'Discovery call notes', 'Meeting notes', 'Email confirmation', 'Chat transcript', 'Internal plan mention') },
       { factorKey: 'timeline', requireEvidence: true, allowedEvidenceSources: pick('No evidence yet', 'Customer call', 'Call notes', 'Discovery meeting notes', 'Meeting notes', 'Email confirmation', 'Buyer email', 'Written confirmation', 'Proposal feedback') },
@@ -574,5 +720,46 @@ export class QualificationPolicyPage {
       { factorKey: 'economicBuyer', requireEvidence: true, allowedEvidenceSources: pick('No evidence yet', 'Customer call', 'Meeting notes', 'Email from buyer', 'Buyer email', 'Written confirmation', 'Org chart reference') },
       { factorKey: 'icpFit', requireEvidence: false, allowedEvidenceSources: pick('No evidence yet', 'Account research', 'Org chart reference', 'Third-party confirmation', 'Historical / prior deal', 'Customer call') }
     ];
+
+    const custom = configuredFactors
+      .filter((factor) => factor.factorType === 'custom')
+      .map((factor) => ({
+        factorKey: factor.key,
+        requireEvidence: factor.isRequired,
+        allowedEvidenceSources: [...source]
+      }));
+
+    return [...defaults, ...custom];
+  }
+
+  private nextCustomFactorKey(): string {
+    const existing = new Set((this.qualificationPolicy().factors ?? []).map((factor) => factor.key.toLowerCase()));
+    for (let index = 1; index <= 999; index += 1) {
+      const candidate = `custom_factor_${index}`;
+      if (!existing.has(candidate.toLowerCase())) {
+        return candidate;
+      }
+    }
+    return `custom_factor_${Date.now()}`;
+  }
+
+  private nextQualificationFactorOrder(): number {
+    const existing = (this.qualificationPolicy().factors ?? []).map((factor) => factor.order ?? 0);
+    return (existing.length ? Math.max(...existing) : 0) + 10;
+  }
+
+  private normalizeCustomFactorKey(key: string): string {
+    return (key ?? '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '') || `custom_factor_${Date.now()}`;
+  }
+
+  private normalizeCustomFactorOptions(options: string[] | null | undefined): string[] {
+    const normalized = (options ?? [])
+      .map((item) => (item ?? '').trim())
+      .filter((item, index, all) => item.length > 0 && all.findIndex((candidate) => candidate.toLowerCase() === item.toLowerCase()) === index);
+    return normalized.length ? normalized : ['Unknown / not assessed', 'Observed', 'Confirmed', 'Blocked'];
   }
 }

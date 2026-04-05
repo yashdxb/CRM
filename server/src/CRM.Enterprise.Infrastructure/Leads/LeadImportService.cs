@@ -112,7 +112,8 @@ public sealed class LeadImportService : ILeadImportService
                 EconomicBuyer: null,
                 EconomicBuyerEvidence: null,
                 IcpFit: null,
-                IcpFitEvidence: null);
+                IcpFitEvidence: null,
+                CustomQualificationFactors: null);
 
             var resolvedOwnerId = await ResolveOwnerIdAsync(ownerId, territory, assignmentStrategy, cancellationToken);
             var score = ResolveLeadScore(request);

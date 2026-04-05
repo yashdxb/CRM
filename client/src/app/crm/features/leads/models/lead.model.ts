@@ -66,6 +66,7 @@ export interface Lead {
   economicBuyerEvidence?: string;
   icpFit?: string;
   icpFitEvidence?: string;
+  customQualificationFactors?: LeadCustomQualificationFactorValue[];
   qualificationConfidence?: number;
   qualificationConfidenceLabel?: string;
   truthCoverage?: number;
@@ -82,10 +83,17 @@ export interface Lead {
   conversationSignalAvailable?: boolean;
   conversationAiDimensionScore?: number | null;
   conversationAiToneLabel?: string | null;
+  conversationAiSentiment?: string | null;
   conversationAiBuyingReadiness?: string | null;
   conversationAiSemanticIntent?: string | null;
   conversationAiToneJustification?: string | null;
   conversionReadiness?: LeadConversionReadiness;
+}
+
+export interface LeadCustomQualificationFactorValue {
+  key: string;
+  value?: string | null;
+  evidence?: string | null;
 }
 
 export interface LeadConversionReadiness {
@@ -103,7 +111,17 @@ export interface LeadConversionReadiness {
 export interface LeadSearchRequest {
   search?: string;
   status?: LeadStatus;
-  conversationView?: 'weak_signal' | 'no_signal' | 'coaching_queue' | 'engaged_but_unqualified' | 'manager_review' | 'at_risk' | 'ready_to_convert';
+  conversationView?:
+    | 'weak_signal'
+    | 'low_conversation_score'
+    | 'no_signal'
+    | 'negative_or_cautious_tone'
+    | 'high_buying_intent'
+    | 'coaching_queue'
+    | 'engaged_but_unqualified'
+    | 'manager_review'
+    | 'at_risk'
+    | 'ready_to_convert';
   sortBy?: 'newest' | 'lead_score_desc' | 'conversation_desc' | 'conversation_asc' | 'qualification_desc' | 'readiness_desc';
   page?: number;
   pageSize?: number;

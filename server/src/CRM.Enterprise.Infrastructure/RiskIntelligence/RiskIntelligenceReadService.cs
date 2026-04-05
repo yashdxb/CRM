@@ -23,17 +23,12 @@ public sealed class RiskIntelligenceReadService : IRiskIntelligenceReadService
 
     public async Task<RiskIntelligenceWorkspaceDto> GetWorkspaceAsync(Guid userId, CancellationToken cancellationToken)
     {
-        var summaryTask = _dashboardReadService.GetSummaryAsync(userId, cancellationToken);
-        var managerTask = _dashboardReadService.GetManagerPipelineHealthAsync(userId, cancellationToken);
-        var insightsTask = _assistantChatService.GetInsightsAsync(userId, cancellationToken);
-        var decisionsTask = _decisionInboxService.GetInboxAsync("Pending", null, cancellationToken);
-
-        await Task.WhenAll(summaryTask, managerTask, insightsTask, decisionsTask);
-
-        var summary = await summaryTask;
-        var manager = await managerTask;
-        var insights = await insightsTask;
-        var decisions = await decisionsTask;
+        // These read services share the same scoped DbContext. Running them in parallel
+        // triggers EF Core concurrency errors on a single context instance.
+        var summary = await _dashboardReadService.GetSummaryAsync(userId, cancellationToken);
+        var manager = await _dashboardReadService.GetManagerPipelineHealthAsync(userId, cancellationToken);
+        var insights = await _assistantChatService.GetInsightsAsync(userId, cancellationToken);
+        var decisions = await _decisionInboxService.GetInboxAsync("Pending", null, cancellationToken);
         var nowUtc = DateTime.UtcNow;
 
         var priorityItems = new List<RiskGuidanceItemDto>();
@@ -127,7 +122,13 @@ public sealed class RiskIntelligenceReadService : IRiskIntelligenceReadService
 
     private static RiskGuidanceItemDto MapAssistantAction(AssistantInsightsAction action)
     {
-        var entityLabel = action.Entities.FirstOrDefault()?.Trim();
+        var entityLabel = action.Entities
+            .Select(entity => entity?.Trim())
+            .FirstOrDefault(entity =>
+                !string.IsNullOrWhiteSpace(entity) &&
+                !entity.Contains(" ID:", StringComparison.OrdinalIgnoreCase));
+
+        entityLabel ??= action.Entities.FirstOrDefault()?.Trim();
         if (string.IsNullOrWhiteSpace(entityLabel))
         {
             entityLabel = action.Title;

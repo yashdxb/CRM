@@ -36,40 +36,44 @@ public sealed class RecordNumberAllocator : IRecordNumberAllocator
         const int maxAttempts = 3;
         for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
-            await using var transaction = await _dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
             try
             {
-                var counter = await _dbContext.TenantRecordNumberCounters
-                    .FirstOrDefaultAsync(
-                        item => item.TenantId == tenantId
-                            && item.ModuleKey == moduleKey
-                            && !item.IsDeleted,
-                        cancellationToken);
-
-                var sequence = counter?.NextValue ?? 1;
-                if (counter is null)
+                var executionStrategy = _dbContext.Database.CreateExecutionStrategy();
+                return await executionStrategy.ExecuteAsync(async () =>
                 {
-                    _dbContext.TenantRecordNumberCounters.Add(new TenantRecordNumberCounter
+                    await using var transaction = await _dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+
+                    var counter = await _dbContext.TenantRecordNumberCounters
+                        .FirstOrDefaultAsync(
+                            item => item.TenantId == tenantId
+                                && item.ModuleKey == moduleKey
+                                && !item.IsDeleted,
+                            cancellationToken);
+
+                    var sequence = counter?.NextValue ?? 1;
+                    if (counter is null)
                     {
-                        TenantId = tenantId,
-                        ModuleKey = moduleKey,
-                        NextValue = sequence + 1,
-                        CreatedAtUtc = DateTime.UtcNow
-                    });
-                }
-                else
-                {
-                    counter.NextValue = sequence + 1;
-                    counter.UpdatedAtUtc = DateTime.UtcNow;
-                }
+                        _dbContext.TenantRecordNumberCounters.Add(new TenantRecordNumberCounter
+                        {
+                            TenantId = tenantId,
+                            ModuleKey = moduleKey,
+                            NextValue = sequence + 1,
+                            CreatedAtUtc = DateTime.UtcNow
+                        });
+                    }
+                    else
+                    {
+                        counter.NextValue = sequence + 1;
+                        counter.UpdatedAtUtc = DateTime.UtcNow;
+                    }
 
-                await _dbContext.SaveChangesAsync(cancellationToken);
-                await transaction.CommitAsync(cancellationToken);
-                return $"{policy.Prefix}{sequence.ToString($"D{policy.Padding}")}";
+                    await _dbContext.SaveChangesAsync(cancellationToken);
+                    await transaction.CommitAsync(cancellationToken);
+                    return $"{policy.Prefix}{sequence.ToString($"D{policy.Padding}")}";
+                });
             }
             catch (DbUpdateException) when (attempt < maxAttempts)
             {
-                await transaction.RollbackAsync(cancellationToken);
                 _dbContext.ChangeTracker.Clear();
             }
         }

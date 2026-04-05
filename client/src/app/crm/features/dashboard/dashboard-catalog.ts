@@ -5,7 +5,7 @@ export type DashboardChartCatalogItem = { id: DashboardChartId; label: string; i
 
 // Single source of truth for dashboard packs + customize layout.
 export const DASHBOARD_CARD_CATALOG: DashboardCatalogItem[] = [
-  { id: 'ai-orchestration', label: 'AI Execution Orchestration', icon: 'pi pi-bolt' },
+  { id: 'ai-orchestration', label: 'AI Recommendations', icon: 'pi pi-bolt' },
   { id: 'pipeline', label: 'Pipeline by Stage', icon: 'pi pi-filter' },
   { id: 'truth-metrics', label: 'Truth Metrics', icon: 'pi pi-verified' },
   { id: 'risk-register', label: 'Risk Intelligence', icon: 'pi pi-shield' },

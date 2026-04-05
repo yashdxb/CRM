@@ -49,7 +49,13 @@ public sealed record LeadUpsertRequest(
     string? EconomicBuyer,
     string? EconomicBuyerEvidence,
     string? IcpFit,
-    string? IcpFitEvidence);
+    string? IcpFitEvidence,
+    IReadOnlyList<LeadCustomQualificationFactorValue>? CustomQualificationFactors);
+
+public sealed record LeadCustomQualificationFactorValue(
+    string Key,
+    string? Value,
+    string? Evidence);
 
 public sealed record LeadConversionRequest(
     bool CreateAccount,

@@ -263,7 +263,8 @@
             (click)="onConversationViewChange(option.value)"
             [attr.aria-label]="'Conversation filter: ' + option.label"
           >
-            {{ option.label }}
+            <span>{{ option.label }}</span>
+            <span class="filter-chip__count">{{ conversationFilterCount(option.value) }}</span>
           </button>
         </div>
         <p-select appendTo="body"
@@ -311,9 +312,22 @@
                   {{ leadPresenceCount(lead.id) }} viewing
                 </span>
               </div>
-              <div class="lead-score" [class.high]="displayScore(lead) >= 70" [class.medium]="displayScore(lead) >= 40 && displayScore(lead) < 70" [class.low]="displayScore(lead) < 40">
-                {{ displayScore(lead) }}
-              </div>
+            <div class="lead-score-gauge" pTooltip="{{ overallScoreHint(lead) }}" tooltipPosition="top">
+              <p-knob
+                [ngModel]="displayScore(lead)"
+                [readonly]="true"
+                [valueTemplate]="'{value}'"
+                [size]="54"
+                [strokeWidth]="7"
+                [showValue]="true"
+                [min]="0"
+                [max]="100"
+                [valueColor]="leadScoreColor(lead)"
+                rangeColor="rgba(148, 163, 184, 0.20)"
+                textColor="#0f172a"
+                styleClass="lead-score-gauge__knob"
+              ></p-knob>
+            </div>
             </div>
             <div class="lead-card-body">
               <div class="lead-detail" *ngIf="lead.email">
@@ -538,15 +552,21 @@
                     </div>
                   </td>
                   <td class="td-score">
-                    <div class="score-indicator">
-                      <div class="score-bar">
-                        <div class="score-fill" 
-                             [class.high]="displayScore(lead) >= 70" 
-                             [class.medium]="displayScore(lead) >= 40 && displayScore(lead) < 70" 
-                             [class.low]="displayScore(lead) < 40"
-                             [style.width.%]="displayScore(lead)"></div>
-                      </div>
-                      <span class="score-value">{{ displayScore(lead) }}</span>
+                    <div class="score-indicator" pTooltip="{{ overallScoreHint(lead) }}" tooltipPosition="top">
+                      <p-knob
+                        [ngModel]="displayScore(lead)"
+                        [readonly]="true"
+                        [valueTemplate]="'{value}'"
+                        [size]="56"
+                        [strokeWidth]="8"
+                        [showValue]="true"
+                        [min]="0"
+                        [max]="100"
+                        [valueColor]="leadScoreColor(lead)"
+                        rangeColor="rgba(148, 163, 184, 0.18)"
+                        textColor="#0f172a"
+                        styleClass="lead-score-gauge__knob lead-score-gauge__knob--table"
+                      ></p-knob>
                     </div>
                   </td>
                   <td class="td-owner">
@@ -825,6 +845,20 @@
       </div>
     </section>
 
+    <section class="coach-block coach-block--conversation-summary">
+      <h3 class="coach-block__title">Conversation Guidance</h3>
+      <div class="coach-signal-strip">
+        <span class="coach-chip coach-chip--signal" [attr.data-tone]="conversationStatusTone(lead)">{{ conversationStatusPill(lead) }}</span>
+        <span class="coach-chip coach-chip--signal" [attr.data-tone]="conversationStatusTone(lead)">{{ coachToneLabel(lead) }}</span>
+        <span class="coach-chip coach-chip--signal" [attr.data-tone]="matchesConversationView(lead, 'high_buying_intent') ? 'healthy' : 'weak'">{{ coachBuyingReadinessLabel(lead) }}</span>
+        <span class="coach-chip coach-chip--signal" [attr.data-tone]="matchesConversationView(lead, 'high_buying_intent') ? 'healthy' : 'neutral'">{{ coachSemanticIntentLabel(lead) }}</span>
+      </div>
+      <div class="coach-next-action">
+        <span class="coach-next-action__label">Recommended next action</span>
+        <p>{{ conversationRecommendedAction(lead) }}</p>
+      </div>
+    </section>
+
     <section class="coach-block" *ngIf="lead.conversionReadiness as readiness">
       <h3 class="coach-block__title">Conversion Readiness</h3>
       <div class="weakest-row">
@@ -913,6 +947,10 @@
           <i class="pi pi-pencil"></i>
           <span>Edit lead</span>
         </button>
+        <button *ngIf="lead.email" pButton type="button" class="coach-action-btn coach-action-btn--compose" (click)="composeToLead(lead)">
+          <i class="pi pi-envelope"></i>
+          <span>Compose email</span>
+        </button>
         <button *ngIf="canRecycleLead(lead)" pButton type="button" class="coach-action-btn coach-action-btn--log" (click)="recycleLead(lead)">
           <i class="pi pi-refresh"></i>
           <span>Recycle</span>
@@ -920,6 +958,10 @@
         <button pButton type="button" class="coach-action-btn coach-action-btn--log" (click)="onLogActivity(lead)">
           <i class="pi pi-calendar-plus"></i>
           <span>Log activity</span>
+        </button>
+        <button *ngIf="canShowCoachConvert(lead)" pButton type="button" class="coach-action-btn coach-action-btn--convert" (click)="onConvert(lead)">
+          <i class="pi pi-bolt"></i>
+          <span>Convert</span>
         </button>
       </div>
     </footer>

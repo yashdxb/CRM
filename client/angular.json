@@ -28,7 +28,8 @@
               "google-libphonenumber",
               "quill-delta",
               "jquery",
-              "@progress/telerik-jquery-report-viewer"
+              "@progress/telerik-jquery-report-viewer",
+              "@babel/runtime/regenerator"
             ],
             "assets": [
               {
@@ -66,8 +67,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "66kB",
-                  "maximumError": "102kB"
+                  "maximumWarning": "105kB",
+                  "maximumError": "130kB"
                 }
               ],
               "outputHashing": "all"

@@ -583,6 +583,8 @@ Win on **execution discipline**, **speed to value**, and **AI‑guided next step
 **On qualification:**
 - Create Account + Contact + Opportunity
 - Transfer activities/notes; lock lead as “Converted”
+ - Qualification factors are tenant-configurable from Workspace Settings using a controlled six-factor catalog.
+ - Admins can activate/deactivate factors, rename display labels, mark factors required, and set factor order without changing the underlying lead schema.
 **Required data:**
 - Opportunity name, value, close date, initial stage
 

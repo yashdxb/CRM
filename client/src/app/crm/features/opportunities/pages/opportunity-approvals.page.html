@@ -13,24 +13,36 @@
         <span class="badge-dot"></span>
         <span>Decision Inbox</span>
       </div>
-      <h1 class="hero-title">{{ pageTitle() }}</h1>
+      <h1 class="hero-title">
+        <span class="hero-title__gradient">Pending Action</span>
+        <span class="hero-title__light">Center</span>
+      </h1>
       <p class="hero-description">{{ heroDescription() }}</p>
       <p class="hero-subtitle">{{ queueSubtitle() }}</p>
     </div>
 
     <div class="hero-utility">
-      <div class="hero-chip-row">
-        <div class="hero-chip tone-danger">
-          <span class="hero-chip-value">{{ kpis().urgent }}</span>
-          <span class="hero-chip-label">urgent</span>
+      <div class="hero-visual-stack">
+        <div class="hero-visual-card hero-visual-card--danger">
+          <div class="hero-visual-card__icon">
+            <i class="pi pi-bolt"></i>
+          </div>
+          <div class="hero-visual-card__content">
+            <span class="hero-visual-card__label">Urgent queue</span>
+            <strong class="hero-visual-card__value">{{ kpis().urgent }}</strong>
+            <span class="hero-visual-card__meta">{{ kpis().dueToday }} due today</span>
+          </div>
         </div>
-        <div class="hero-chip tone-warn">
-          <span class="hero-chip-value">{{ kpis().dueToday }}</span>
-          <span class="hero-chip-label">due today</span>
-        </div>
-        <div class="hero-chip tone-cyan">
-          <span class="hero-chip-value">{{ formatCompactCurrency(kpis().totalAmount) }}</span>
-          <span class="hero-chip-label">pending value</span>
+
+        <div class="hero-visual-card hero-visual-card--info">
+          <div class="hero-visual-card__icon">
+            <i class="pi pi-wallet"></i>
+          </div>
+          <div class="hero-visual-card__content">
+            <span class="hero-visual-card__label">Pending value</span>
+            <strong class="hero-visual-card__value">{{ formatCompactCurrency(kpis().totalAmount) }}</strong>
+            <span class="hero-visual-card__meta">{{ kpis().pending }} approvals in play</span>
+          </div>
         </div>
       </div>
 
@@ -39,6 +51,16 @@
         <span>Refresh</span>
       </button>
     </div>
+  </section>
+
+  <section class="command-metric-grid">
+    <article
+      *ngFor="let metric of commandMetrics()"
+      class="command-metric-card"
+      [ngClass]="'command-metric-card--' + metric.tone">
+      <span class="command-metric-card__label">{{ metric.label }}</span>
+      <strong class="command-metric-card__value">{{ metric.value }}</strong>
+    </article>
   </section>
 
   <section class="control-shell liquid-card">
@@ -258,7 +280,7 @@
                 pButton
                 type="button"
                 class="secondary-action"
-                label="Info"
+                label="Request Info"
                 icon="pi pi-comment"
                 [disabled]="isActioning(item.id)"
                 (click)="requestInfo(item)"
@@ -295,76 +317,107 @@
 
         <ng-template #tableMode>
           <div class="approval-table">
-            <article
-              *ngFor="let item of lane.items; trackBy: trackByApprovalId"
-              class="approval-row liquid-subcard"
-              [class.is-selected]="isSelected(item)"
-              (click)="selectDecision(item)"
-            >
-              <div class="approval-row__main">
-                <div class="approval-row__title-wrap">
-                  <div class="approval-row__title-line">
-                    <h3 class="approval-row__title">{{ item.opportunityName }}</h3>
-                    <span *ngIf="isMyDecision(item)" class="ownership-pill">My queue</span>
-                  </div>
-                  <p class="approval-row__subtitle">
-                    {{ item.accountName }} · {{ compactWorkflowLabel(item) }} · {{ requesterLabel(item) }}
-                  </p>
-                  <p class="approval-row__summary">{{ tableRowSummary(item) }}</p>
-                </div>
-              </div>
+            <p-table
+              [value]="lane.items"
+              dataKey="id"
+              styleClass="approval-data-table"
+              [tableStyle]="{ 'min-width': '100%' }">
+              <ng-template pTemplate="header">
+                <tr>
+                  <th>Deal</th>
+                  <th>Requester</th>
+                  <th>Value</th>
+                  <th>Risk</th>
+                  <th>Priority</th>
+                  <th>SLA</th>
+                  <th>Actions</th>
+                </tr>
+              </ng-template>
 
-              <div class="approval-row__metrics">
-                <span class="row-chip row-chip--value">{{ amountLabel(item) }}</span>
-                <span class="row-chip" [attr.data-tone]="(item.riskLevel || 'low').toLowerCase()">
-                  <i class="pi pi-shield" aria-hidden="true"></i>
-                  {{ riskLabel(item) }}
-                </span>
-                <span class="row-chip" [attr.data-tone]="(item.priority || 'normal').toLowerCase()">
-                  <i class="pi pi-flag-fill" aria-hidden="true"></i>
-                  {{ priorityLabel(item) }}
-                </span>
-                <span class="row-chip" [attr.data-tone]="item.slaStatus">
-                  <i class="pi pi-stopwatch" aria-hidden="true"></i>
-                  {{ slaLabel(item) }}
-                </span>
-              </div>
-
-              <div class="approval-row__actions" (click)="$event.stopPropagation()">
-                <button
-                  pButton
-                  type="button"
-                  class="secondary-action secondary-action--compact"
-                  label="Info"
-                  [disabled]="isActioning(item.id)"
-                  (click)="requestInfo(item)"
-                ></button>
-                <button
-                  pButton
-                  type="button"
-                  class="secondary-action secondary-action--compact"
-                  label="Details"
-                  (click)="openOpportunity(item)"
-                ></button>
-                <button
-                  pButton
-                  type="button"
-                  class="reject-action reject-action--compact"
-                  label="Reject"
-                  [disabled]="isActioning(item.id)"
-                  (click)="decide(item, false)"
-                ></button>
-                <button
-                  pButton
-                  type="button"
-                  class="approve-action approve-action--compact"
-                  label="Approve"
-                  [loading]="isActioning(item.id)"
-                  [disabled]="isActioning(item.id)"
-                  (click)="decide(item, true)"
-                ></button>
-              </div>
-            </article>
+              <ng-template pTemplate="body" let-item>
+                <tr
+                  class="approval-data-row"
+                  [class.is-selected]="isSelected(item)"
+                  (click)="selectDecision(item)">
+                  <td>
+                    <div class="approval-data-cell approval-data-cell--deal">
+                      <strong>{{ item.opportunityName }}</strong>
+                      <span>{{ item.accountName }} · {{ compactWorkflowLabel(item) }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="approval-data-cell">
+                      <span>{{ requesterLabel(item) }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="approval-data-cell">
+                      <span class="row-chip row-chip--value">{{ amountLabel(item) }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="approval-data-cell">
+                      <span class="row-chip" [attr.data-tone]="(item.riskLevel || 'low').toLowerCase()">
+                        <i class="pi pi-shield" aria-hidden="true"></i>
+                        {{ riskLabel(item) }}
+                      </span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="approval-data-cell">
+                      <span class="row-chip" [attr.data-tone]="(item.priority || 'normal').toLowerCase()">
+                        <i class="pi pi-flag-fill" aria-hidden="true"></i>
+                        {{ priorityLabel(item) }}
+                      </span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="approval-data-cell">
+                      <span class="row-chip" [attr.data-tone]="item.slaStatus">
+                        <i class="pi pi-stopwatch" aria-hidden="true"></i>
+                        {{ slaLabel(item) }}
+                      </span>
+                    </div>
+                  </td>
+                  <td (click)="$event.stopPropagation()">
+                    <div class="approval-data-actions">
+                      <button
+                        pButton
+                        type="button"
+                        class="secondary-action secondary-action--compact"
+                        label="Request Info"
+                        [disabled]="isActioning(item.id)"
+                        (click)="requestInfo(item)"
+                      ></button>
+                      <button
+                        pButton
+                        type="button"
+                        class="secondary-action secondary-action--compact"
+                        label="Details"
+                        (click)="openOpportunity(item)"
+                      ></button>
+                      <button
+                        pButton
+                        type="button"
+                        class="reject-action reject-action--compact"
+                        label="Reject"
+                        [disabled]="isActioning(item.id)"
+                        (click)="decide(item, false)"
+                      ></button>
+                      <button
+                        pButton
+                        type="button"
+                        class="approve-action approve-action--compact"
+                        label="Approve"
+                        [loading]="isActioning(item.id)"
+                        [disabled]="isActioning(item.id)"
+                        (click)="decide(item, true)"
+                      ></button>
+                    </div>
+                  </td>
+                </tr>
+              </ng-template>
+            </p-table>
           </div>
         </ng-template>
       </article>

@@ -31,6 +31,7 @@ import { map, Observable } from 'rxjs';
 import {
   Lead,
   LeadAssignmentStrategy,
+  LeadCustomQualificationFactorValue,
   LeadConversionReadiness,
   LeadDuplicateCheckCandidate,
   LeadDuplicateCheckResponse,
@@ -53,12 +54,13 @@ import { WorkspaceSettingsService } from '../../settings/services/workspace-sett
 import {
   BrokerageLeadProfileCatalog,
   LeadDispositionPolicy,
+  QualificationFactorDefinition,
   QualificationPolicy,
   SupportingDocumentPolicy,
   VerticalPresetConfiguration
 } from '../../settings/models/workspace-settings.model';
 import { AttachmentDataService, AttachmentItem } from '../../../../shared/services/attachment-data.service';
-import { computeLeadScore, computeQualificationRawScore, LeadDataWeight, LeadScoreResult } from './lead-scoring.util';
+import { computeLeadScore, computeQualificationRawScore, LeadDataWeight, LeadScoreResult, QualificationFactorConfig } from './lead-scoring.util';
 import { Activity } from '../../activities/models/activity.model';
 import { ActivityDataService } from '../../activities/services/activity-data.service';
 import { CrmEventsService } from '../../../../core/realtime/crm-events.service';
@@ -120,6 +122,9 @@ interface OptionItem {
   icon: string;
   tone: 'unknown' | 'assumed' | 'verified' | 'invalid' | 'neutral';
 }
+
+type QualificationFactorKey = 'budget' | 'readiness' | 'timeline' | 'problem' | 'economicBuyer' | 'icpFit';
+
 interface PhoneTypeOption {
   label: string;
   value: string;
@@ -349,6 +354,7 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   protected conversationSignalAvailable = signal(false);
   protected conversationAiDimensionScore = signal<number | null>(null);
   protected conversationAiToneLabel = signal<string | null>(null);
+  protected conversationAiSentiment = signal<string | null>(null);
   protected conversationAiBuyingReadiness = signal<string | null>(null);
   protected conversationAiSemanticIntent = signal<string | null>(null);
   protected conversationAiToneJustification = signal<string | null>(null);
@@ -578,7 +584,8 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
       economicBuyer: this.form.economicBuyer,
       economicBuyerEvidence: this.form.economicBuyerEvidence,
       icpFit: this.form.icpFit,
-      icpFitEvidence: this.form.icpFitEvidence
+      icpFitEvidence: this.form.icpFitEvidence,
+      customQualificationFactors: this.form.customQualificationFactors
     };
     return JSON.stringify(snapshotData);
   }
@@ -736,8 +743,9 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
 
   protected qualificationInlineError(): string | null {
     if (this.form.status !== 'Qualified') return null;
-    if (this.countQualificationFactors() < 3) {
-      return '3 qualification factors required to qualify.';
+    const minimum = this.minimumRequiredQualificationFactors();
+    if (this.countQualificationFactors() < minimum) {
+      return `${minimum} qualification factor${minimum === 1 ? '' : 's'} required to qualify.`;
     }
     if (this.requiresEvidenceBeforeQualified() && this.truthCoveragePercent() < this.minimumEvidenceCoveragePercent()) {
       return `Evidence coverage must be at least ${this.minimumEvidenceCoveragePercent()}% to qualify.`;
@@ -1260,8 +1268,9 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
         return 'Log a completed call, email, or meeting to unlock this step';
       case 'Qualified': {
         const missing: string[] = [];
+        const minimum = this.minimumRequiredQualificationFactors();
         if (!hasFirstTouch) missing.push('log an activity');
-        if (qualFactors < 3) missing.push(`complete ${3 - qualFactors} more qualification factor${3 - qualFactors > 1 ? 's' : ''}`);
+        if (qualFactors < minimum) missing.push(`complete ${minimum - qualFactors} more qualification factor${minimum - qualFactors > 1 ? 's' : ''}`);
         if (!hasQualNotes) missing.push('add qualification notes');
         if (!meetsEvidence) missing.push('add evidence to meet coverage threshold');
         return `To unlock: ${missing.join(', ')}`;
@@ -1933,7 +1942,7 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
       case 'LEAD_STATUS_REQUIRES_DISCOVERY_MEETING':
         return 'Complete or schedule a discovery meeting before setting the lead to Qualified.';
       case 'LEAD_STATUS_REQUIRES_QUALIFICATION_FACTORS':
-        return 'Select at least 3 qualification factors before setting the lead to Qualified.';
+        return `Select at least ${this.minimumRequiredQualificationFactors()} qualification factors before setting the lead to Qualified.`;
       case 'LEAD_STATUS_REQUIRES_QUALIFICATION_NOTES':
         return 'Add qualification notes before setting the lead to Qualified.';
       case 'LEAD_STATUS_REQUIRES_EVIDENCE_COVERAGE':
@@ -1991,7 +2000,12 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
       economicBuyer: lead.economicBuyer || 'Unknown / not identified',
       economicBuyerEvidence: lead.economicBuyerEvidence || 'No evidence yet',
       icpFit: lead.icpFit || 'Unknown / not assessed',
-      icpFitEvidence: lead.icpFitEvidence || 'No evidence yet'
+      icpFitEvidence: lead.icpFitEvidence || 'No evidence yet',
+      customQualificationFactors: (lead.customQualificationFactors ?? []).map((factor) => ({
+        key: factor.key,
+        value: factor.value ?? '',
+        evidence: factor.evidence ?? 'No evidence yet'
+      }))
     };
     // Always derive score from current lead inputs to avoid stale persisted values.
     this.form.score = this.computeAutoScore();
@@ -2013,6 +2027,7 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     this.conversationSignalAvailable.set(lead.conversationSignalAvailable === true);
     this.conversationAiDimensionScore.set(lead.conversationAiDimensionScore ?? null);
     this.conversationAiToneLabel.set(lead.conversationAiToneLabel ?? null);
+    this.conversationAiSentiment.set(lead.conversationAiSentiment ?? null);
     this.conversationAiBuyingReadiness.set(lead.conversationAiBuyingReadiness ?? null);
     this.conversationAiSemanticIntent.set(lead.conversationAiSemanticIntent ?? null);
     this.conversationAiToneJustification.set(lead.conversationAiToneJustification ?? null);
@@ -2418,8 +2433,9 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
         reasons.push('Log a completed activity before moving this lead to Qualified.');
       }
 
-      if (qualFactors < 3) {
-        reasons.push(`Complete ${3 - qualFactors} more qualification factor${3 - qualFactors > 1 ? 's' : ''}.`);
+      const minimum = this.minimumRequiredQualificationFactors();
+      if (qualFactors < minimum) {
+        reasons.push(`Complete ${minimum - qualFactors} more qualification factor${minimum - qualFactors > 1 ? 's' : ''}.`);
       }
       if (!hasQualNotes) {
         reasons.push('Add qualification notes.');
@@ -2537,7 +2553,8 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
       economicBuyer: 'Unknown / not identified',
       economicBuyerEvidence: 'No evidence yet',
       icpFit: 'Unknown / not assessed',
-      icpFitEvidence: 'No evidence yet'
+      icpFitEvidence: 'No evidence yet',
+      customQualificationFactors: []
     };
   }
 
@@ -3197,15 +3214,15 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   }
 
   protected computeAutoScore(): number {
-    return computeLeadScore(this.form, this.leadDataWeights).finalLeadScore;
+    return computeLeadScore(this.form, this.leadDataWeights, this.activeQualificationFactorConfigs()).finalLeadScore;
   }
 
   private computeQualificationScore(): number | null {
-    return computeQualificationRawScore(this.form);
+    return computeQualificationRawScore(this.form, this.activeQualificationFactorConfigs());
   }
 
   private scoreSnapshot(): LeadScoreResult {
-    return computeLeadScore(this.form, this.leadDataWeights);
+    return computeLeadScore(this.form, this.leadDataWeights, this.activeQualificationFactorConfigs());
   }
 
   private getBudgetScore(value?: string | null): number {
@@ -3365,7 +3382,8 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
       return Math.round(serverConfidence * 100);
     }
     const count = this.countQualificationFactors();
-    return Math.round((count / 6) * 100);
+    const scoreBearing = Math.max(1, this.activeQualificationFactors().filter((factor) => factor.includeInScore).length);
+    return Math.round((Math.min(count, scoreBearing) / scoreBearing) * 100);
   }
 
   protected qualificationConfidenceDisplayLabel(): string {
@@ -3433,15 +3451,15 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     if (factorCount === 0) return 'No qualification factors selected yet.';
     const qualificationScore = this.scoreSnapshot().qualificationScore100;
     const coverage = this.truthCoveragePercent();
-    return `Qualification in progress: ${qualificationScore}/100 with ${factorCount}/6 factors and ${coverage}% evidence coverage.`;
+    return `Qualification in progress: ${qualificationScore}/100 with ${factorCount}/${this.activeQualificationFactorCount()} active factors and ${coverage}% evidence coverage.`;
   }
 
   protected qualificationFactorsSelectedLabel(): string {
-    return `${this.countQualificationFactors()} / 6`;
+    return `${this.countQualificationFactors()} / ${this.activeQualificationFactorCount()}`;
   }
 
   protected qualificationFactorsBadgeLabel(): string {
-    return `${this.countQualificationFactors()}/6 selected`;
+    return `${this.countQualificationFactors()}/${this.activeQualificationFactorCount()} selected`;
   }
 
   protected qualificationFactorsBadgeTone(): 'high' | 'medium' | 'low' | 'none' {
@@ -3453,7 +3471,7 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   }
 
   protected qualificationRequiredBadgeLabel(): string | null {
-    const remaining = Math.max(0, 3 - this.countQualificationFactors());
+    const remaining = Math.max(0, this.minimumRequiredQualificationFactors() - this.countQualificationFactors());
     return remaining > 0 ? `${remaining} more to qualify` : null;
   }
 
@@ -3657,7 +3675,7 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
       case 'New':
         return hasFirstTouch ? 'First outreach logged' : 'Awaiting first outreach';
       case 'Contacted':
-        return hasFirstTouch && qualFactors >= 3 && hasQualNotes && meetsEvidence
+        return hasFirstTouch && qualFactors >= this.minimumRequiredQualificationFactors() && hasQualNotes && meetsEvidence
           ? 'Ready for qualification'
           : 'Discovery in progress';
       case 'Nurture':
@@ -3701,8 +3719,8 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
       return 'Qualification notes are required when qualifying a lead.';
     }
 
-    if (this.form.status === 'Qualified' && this.countQualificationFactors() < 3) {
-      return 'At least 3 qualification factors are required before marking a lead as Qualified.';
+    if (this.form.status === 'Qualified' && this.countQualificationFactors() < this.minimumRequiredQualificationFactors()) {
+      return `At least ${this.minimumRequiredQualificationFactors()} qualification factors are required before marking a lead as Qualified.`;
     }
 
     if (this.form.status === 'Nurture' && !this.form.nurtureFollowUpAtUtc) {
@@ -3729,15 +3747,204 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   }
 
   private countQualificationFactors(): number {
-    const factors = [
-      this.form.budgetAvailability,
-      this.form.readinessToSpend,
-      this.form.buyingTimeline,
-      this.form.problemSeverity,
-      this.form.economicBuyer,
-      this.form.icpFit
-    ];
+    const factors = this.activeQualificationFactors().map((factor) => this.formValueForFactor(factor.key));
     return factors.filter((value) => this.isMeaningfulFactor(value)).length;
+  }
+
+  protected isQualificationFactorActive(key: string): boolean {
+    return this.activeQualificationFactors().some((factor) => factor.key === key);
+  }
+
+  protected qualificationFactorLabel(key: string, fallback: string): string {
+    return this.allQualificationFactors().find((factor) => factor.key === key)?.displayLabel ?? fallback;
+  }
+
+  protected minimumRequiredQualificationFactors(): number {
+    const activeFactors = this.activeQualificationFactors();
+    if (!activeFactors.length) {
+      return 0;
+    }
+
+    const configuredRequired = activeFactors.filter((factor) => factor.isRequired).length;
+    return configuredRequired > 0 ? configuredRequired : Math.min(3, activeFactors.length);
+  }
+
+  protected activeQualificationFactorCount(): number {
+    return this.activeQualificationFactors().length;
+  }
+
+  protected customQualificationFactors(): QualificationFactorDefinition[] {
+    return this.activeQualificationFactors().filter((factor) => factor.factorType === 'custom');
+  }
+
+  private activeQualificationFactorConfigs(): QualificationFactorConfig[] {
+    return this.activeQualificationFactors().map((factor) => ({
+      key: factor.key,
+      displayLabel: factor.displayLabel,
+      isActive: factor.isActive,
+      isRequired: factor.isRequired,
+      order: factor.order,
+      factorType: factor.factorType,
+      valueType: factor.valueType,
+      includeInScore: factor.includeInScore,
+      options: factor.options
+    }));
+  }
+
+  private activeQualificationFactors(): QualificationFactorDefinition[] {
+    return this.allQualificationFactors().filter((factor) => factor.isActive);
+  }
+
+  private allQualificationFactors(): QualificationFactorDefinition[] {
+    const configured = this.qualificationPolicyConfig()?.factors ?? [];
+    const defaults: QualificationFactorDefinition[] = [
+      { key: 'budget', displayLabel: 'Budget availability', isActive: true, isRequired: true, order: 10, factorType: 'system', valueType: 'singleSelect', includeInScore: true, options: [] },
+      { key: 'readiness', displayLabel: 'Readiness to spend', isActive: true, isRequired: false, order: 20, factorType: 'system', valueType: 'singleSelect', includeInScore: true, options: [] },
+      { key: 'timeline', displayLabel: 'Buying timeline', isActive: true, isRequired: true, order: 30, factorType: 'system', valueType: 'singleSelect', includeInScore: true, options: [] },
+      { key: 'problem', displayLabel: 'Problem severity', isActive: true, isRequired: true, order: 40, factorType: 'system', valueType: 'singleSelect', includeInScore: true, options: [] },
+      { key: 'economicBuyer', displayLabel: 'Economic buyer', isActive: true, isRequired: true, order: 50, factorType: 'system', valueType: 'singleSelect', includeInScore: true, options: [] },
+      { key: 'icpFit', displayLabel: 'ICP fit', isActive: true, isRequired: false, order: 60, factorType: 'system', valueType: 'singleSelect', includeInScore: true, options: [] }
+    ];
+
+    if (!configured.length) {
+      return defaults;
+    }
+
+    const byKey = new Map(configured.map((factor) => [factor.key, factor] as const));
+    const mergedDefaults = defaults.map((factor) => {
+      const override = byKey.get(factor.key);
+      return override
+        ? {
+            ...factor,
+            ...override,
+            displayLabel: (override.displayLabel ?? '').trim() || factor.displayLabel,
+            options: override.options ?? factor.options
+          }
+        : factor;
+    });
+
+    const custom = configured
+      .filter((factor) => factor.factorType === 'custom')
+      .map((factor) => ({
+        ...factor,
+        displayLabel: factor.displayLabel.trim() || factor.key,
+        options: factor.options ?? []
+      }));
+
+    return [...mergedDefaults, ...custom]
+      .sort((a, b) => a.order - b.order || a.displayLabel.localeCompare(b.displayLabel));
+  }
+
+  private formValueForFactor(key: string): string | null {
+    switch (key) {
+      case 'budget':
+        return this.form.budgetAvailability ?? null;
+      case 'readiness':
+        return this.form.readinessToSpend ?? null;
+      case 'timeline':
+        return this.form.buyingTimeline ?? null;
+      case 'problem':
+        return this.form.problemSeverity ?? null;
+      case 'economicBuyer':
+        return this.form.economicBuyer ?? null;
+      case 'icpFit':
+        return this.form.icpFit ?? null;
+      default:
+        return this.customFactorValue(key);
+    }
+  }
+
+  private setEvidenceValueForFactor(key: string, value: string): void {
+    switch (key) {
+      case 'budget':
+        this.form.budgetEvidence = value;
+        return;
+      case 'readiness':
+        this.form.readinessEvidence = value;
+        return;
+      case 'timeline':
+        this.form.timelineEvidence = value;
+        return;
+      case 'problem':
+        this.form.problemEvidence = value;
+        return;
+      case 'economicBuyer':
+        this.form.economicBuyerEvidence = value;
+        return;
+      case 'icpFit':
+        this.form.icpFitEvidence = value;
+        return;
+      default:
+        this.setCustomFactorEvidence(key, value);
+        return;
+    }
+  }
+
+  private optionsForFactor(key: string): OptionItem[] {
+    switch (key) {
+      case 'budget':
+        return this.budgetOptions;
+      case 'readiness':
+        return this.readinessOptions;
+      case 'timeline':
+        return this.timelineOptions;
+      case 'problem':
+        return this.problemOptions;
+      case 'economicBuyer':
+        return this.economicBuyerOptions;
+      case 'icpFit':
+        return this.icpFitOptions;
+      default:
+        return this.customFactorOptions(key);
+    }
+  }
+
+  private scoreForFactor(key: string): number {
+    const factor = this.allQualificationFactors().find((item) => item.key === key);
+    if (!factor?.includeInScore) {
+      return 0;
+    }
+
+    switch (key) {
+      case 'budget':
+        return this.getBudgetScore(this.form.budgetAvailability);
+      case 'readiness':
+        return this.getReadinessScore(this.form.readinessToSpend);
+      case 'timeline':
+        return this.getTimelineScore(this.form.buyingTimeline);
+      case 'problem':
+        return this.getProblemScore(this.form.problemSeverity);
+      case 'economicBuyer':
+        return this.getEconomicBuyerScore(this.form.economicBuyer);
+      case 'icpFit':
+        return this.getIcpFitScore(this.form.icpFit);
+      default:
+        return 0;
+    }
+  }
+
+  private maxScoreForFactor(key: string): number {
+    const factor = this.allQualificationFactors().find((item) => item.key === key);
+    if (!factor?.includeInScore) {
+      return 0;
+    }
+
+    switch (key) {
+      case 'budget':
+        return 25;
+      case 'readiness':
+        return 20;
+      case 'timeline':
+        return 15;
+      case 'problem':
+        return 20;
+      case 'economicBuyer':
+        return 10;
+      case 'icpFit':
+        return 10;
+      default:
+        return 0;
+    }
   }
 
   private hasQualificationFactors(): boolean {
@@ -3765,7 +3972,7 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     return this.isUnknownValue(value);
   }
 
-  protected evidenceOptionsForFactor(factorKey: 'budget' | 'readiness' | 'timeline' | 'problem' | 'economicBuyer' | 'icpFit'): OptionItem[] {
+  protected evidenceOptionsForFactor(factorKey: string): OptionItem[] {
     const rules = this.qualificationPolicyConfig()?.factorEvidenceRules ?? [];
     const rule = rules.find((candidate) => (candidate.factorKey ?? '').toLowerCase() === factorKey.toLowerCase());
     const allowed = (rule?.allowedEvidenceSources ?? [])
@@ -3780,29 +3987,64 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     return filtered.length ? filtered : this.evidenceOptions;
   }
 
+  protected customFactorValue(key: string): string | null {
+    return this.form.customQualificationFactors?.find((factor) => factor.key === key)?.value ?? null;
+  }
+
+  protected customFactorEvidence(key: string): string | null {
+    return this.form.customQualificationFactors?.find((factor) => factor.key === key)?.evidence ?? null;
+  }
+
+  protected setCustomFactorValue(key: string, value: string | null): void {
+    const factors = [...(this.form.customQualificationFactors ?? [])];
+    const current = factors.find((factor) => factor.key === key);
+    if (current) {
+      current.value = value;
+    } else {
+      factors.push({ key, value, evidence: 'No evidence yet' });
+    }
+    this.form.customQualificationFactors = factors;
+  }
+
+  protected setCustomFactorEvidence(key: string, evidence: string | null): void {
+    const factors = [...(this.form.customQualificationFactors ?? [])];
+    const current = factors.find((factor) => factor.key === key);
+    if (current) {
+      current.evidence = evidence;
+    } else {
+      factors.push({ key, value: null, evidence });
+    }
+    this.form.customQualificationFactors = factors;
+  }
+
+  protected trackCustomQualificationFactor(_index: number, factor: QualificationFactorDefinition): string {
+    return factor.key;
+  }
+
+  protected isCustomTextFactor(factor: QualificationFactorDefinition): boolean {
+    return factor.valueType === 'text';
+  }
+
+  protected customFactorOptions(key: string): OptionItem[] {
+    const factor = this.allQualificationFactors().find((item) => item.key === key);
+    return (factor?.options ?? []).map((option) => ({
+      label: option,
+      value: option,
+      icon: this.resolveCustomFactorOptionIcon(option),
+      tone: this.resolveCustomFactorOptionTone(option)
+    }));
+  }
+
   private isUnknownValue(value?: string | null): boolean {
     if (!value) return true;
     return value.trim().toLowerCase().includes('unknown');
   }
 
   private normalizeEvidence(): void {
-    if (this.isEvidenceDisabled(this.form.budgetAvailability)) {
-      this.form.budgetEvidence = 'No evidence yet';
-    }
-    if (this.isEvidenceDisabled(this.form.readinessToSpend)) {
-      this.form.readinessEvidence = 'No evidence yet';
-    }
-    if (this.isEvidenceDisabled(this.form.buyingTimeline)) {
-      this.form.timelineEvidence = 'No evidence yet';
-    }
-    if (this.isEvidenceDisabled(this.form.problemSeverity)) {
-      this.form.problemEvidence = 'No evidence yet';
-    }
-    if (this.isEvidenceDisabled(this.form.economicBuyer)) {
-      this.form.economicBuyerEvidence = 'No evidence yet';
-    }
-    if (this.isEvidenceDisabled(this.form.icpFit)) {
-      this.form.icpFitEvidence = 'No evidence yet';
+    for (const factor of this.allQualificationFactors()) {
+      if (this.isEvidenceDisabled(this.formValueForFactor(factor.key))) {
+        this.setEvidenceValueForFactor(factor.key, 'No evidence yet');
+      }
     }
   }
 
@@ -3813,7 +4055,8 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
       this.form.timelineEvidence,
       this.form.problemEvidence,
       this.form.economicBuyerEvidence,
-      this.form.icpFitEvidence
+      this.form.icpFitEvidence,
+      ...(this.form.customQualificationFactors ?? []).map((factor) => factor.evidence)
     ]
       .map((value) => (value ?? '').trim())
       .filter((value) => value.length > 0);
@@ -3939,14 +4182,13 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   }
 
   private buildScoreBreakdown(): LeadScoreBreakdownItem[] {
-    return [
-      { factor: 'Budget', score: this.getBudgetScore(this.form.budgetAvailability), maxScore: 25 },
-      { factor: 'Readiness', score: this.getReadinessScore(this.form.readinessToSpend), maxScore: 20 },
-      { factor: 'Timeline', score: this.getTimelineScore(this.form.buyingTimeline), maxScore: 15 },
-      { factor: 'Problem', score: this.getProblemScore(this.form.problemSeverity), maxScore: 20 },
-      { factor: 'Economic Buyer', score: this.getEconomicBuyerScore(this.form.economicBuyer), maxScore: 10 },
-      { factor: 'ICP Fit', score: this.getIcpFitScore(this.form.icpFit), maxScore: 10 }
-    ];
+    return this.activeQualificationFactors()
+      .filter((factor) => factor.includeInScore)
+      .map((factor) => ({
+      factor: factor.displayLabel,
+      score: this.scoreForFactor(factor.key),
+      maxScore: this.maxScoreForFactor(factor.key)
+      }));
   }
 
   private updateEpistemicSummary(preferServer = false): void {
@@ -4017,6 +4259,42 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     return `Updated ${parsed.toLocaleString()}`;
   }
 
+  protected conversationSignalStateLabel(): 'No signal' | 'Weak signal' | 'Healthy signal' | 'Risk signal' {
+    if (!this.conversationSignalAvailable()) {
+      return 'No signal';
+    }
+
+    if (this.isConversationRiskState()) {
+      return 'Risk signal';
+    }
+
+    if ((this.conversationScore() ?? 0) >= 70 || this.isHighBuyingIntentState()) {
+      return 'Healthy signal';
+    }
+
+    return 'Weak signal';
+  }
+
+  protected conversationSignalStateTone(): 'neutral' | 'weak' | 'healthy' | 'risk' {
+    const state = this.conversationSignalStateLabel();
+    switch (state) {
+      case 'Healthy signal':
+        return 'healthy';
+      case 'Risk signal':
+        return 'risk';
+      case 'Weak signal':
+        return 'weak';
+      default:
+        return 'neutral';
+    }
+  }
+
+  protected conversationSentimentDisplay(): string {
+    return this.conversationAiSummary()?.sentiment?.trim()
+      || this.conversationAiSentiment()?.trim()
+      || 'Not detected';
+  }
+
   protected conversationSummaryDisplay(): string {
     const aiSummary = this.conversationAiSummary()?.summary?.trim();
     if (aiSummary) {
@@ -4025,11 +4303,11 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
 
     const stats = this.emailEngagementStats();
     if (!stats?.total) {
-      return 'No linked email thread yet. Log outreach, replies, or meetings so the CRM can score engagement and suggest the next evidence to collect.';
+      return 'No conversation signal exists yet because this lead does not have a linked email thread or recorded outreach. Log a real touchpoint so the CRM can assess tone, intent, and readiness.';
     }
 
     if (!this.conversationSignalAvailable()) {
-      return 'Email activity is recorded, but the conversation signal is still too thin to score confidently. More two-way engagement will improve readiness guidance.';
+      return 'Email activity is recorded, but the signal is still too thin to score confidently. Two-way replies, objections, or buying signals will make the guidance more reliable.';
     }
 
     return `This lead has ${stats.total} recorded email touchpoint${stats.total === 1 ? '' : 's'} and a ${this.conversationScoreDisplayLabel().toLowerCase()} conversation signal. Review the detected signals below before advancing the lead.`;
@@ -4064,6 +4342,18 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
 
   protected conversationNeutralSignals(): string[] {
     return this.conversationClassifiedSignals().neutral;
+  }
+
+  private isConversationRiskState(): boolean {
+    return ['negative', 'cautious'].includes((this.conversationSentimentDisplay() ?? '').trim().toLowerCase())
+      || ['guarded', 'dismissive'].includes((this.conversationAiToneLabel() ?? '').trim().toLowerCase())
+      || ['stalling', 'objecting', 'disengaged'].includes((this.conversationAiBuyingReadiness() ?? '').trim().toLowerCase())
+      || ['going silent', 'raising objections'].includes((this.conversationAiSemanticIntent() ?? '').trim().toLowerCase());
+  }
+
+  protected isHighBuyingIntentState(): boolean {
+    return ['ready to buy', 'actively evaluating'].includes((this.conversationAiBuyingReadiness() ?? '').trim().toLowerCase())
+      || ['seeking solution', 'negotiating terms', 'comparing options'].includes((this.conversationAiSemanticIntent() ?? '').trim().toLowerCase());
   }
 
   private conversationClassifiedSignals(): { positive: string[]; risk: string[]; neutral: string[] } {
@@ -4117,8 +4407,13 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   }
 
   private computeAssumptionsOutstanding(factors: Array<{ label: string; state: string }>): number {
-    const highImpactLabels = new Set(['Budget availability', 'Buying timeline', 'Economic buyer']);
-    return factors.filter((factor) => highImpactLabels.has(factor.label) && (factor.state === 'Unknown' || factor.state === 'Assumed')).length;
+    const highImpactKeys = new Set<string>(['budget', 'timeline', 'economicBuyer']);
+    return this.activeQualificationFactors()
+      .filter((factor) => highImpactKeys.has(factor.key))
+      .map((factor) => factors.find((item) => item.label === factor.displayLabel))
+      .filter((factor): factor is { label: string; state: string } => !!factor)
+      .filter((factor) => factor.state === 'Unknown' || factor.state === 'Assumed')
+      .length;
   }
 
   private buildNextEvidenceSuggestions(label: string | null): string[] {
@@ -4162,14 +4457,9 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   }
 
   private getQualificationFactors(): Array<{ label: string; state: string; weight: number }> {
-    return [
-      this.getFactorState('Budget availability', this.form.budgetAvailability, this.budgetOptions),
-      this.getFactorState('Readiness to spend', this.form.readinessToSpend, this.readinessOptions),
-      this.getFactorState('Buying timeline', this.form.buyingTimeline, this.timelineOptions),
-      this.getFactorState('Problem severity', this.form.problemSeverity, this.problemOptions),
-      this.getFactorState('Economic buyer', this.form.economicBuyer, this.economicBuyerOptions),
-      this.getFactorState('ICP fit', this.form.icpFit, this.icpFitOptions)
-    ];
+    return this.activeQualificationFactors().map((factor) =>
+      this.getFactorState(factor.displayLabel, this.formValueForFactor(factor.key), this.optionsForFactor(factor.key))
+    );
   }
 
   private getFactorState(
@@ -4186,6 +4476,27 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     if (!value) return 'unknown';
     const match = options.find((option) => option.value === value);
     return match?.tone ?? (this.isUnknownValue(value) ? 'unknown' : 'assumed');
+  }
+
+  private resolveCustomFactorOptionTone(value: string): OptionItem['tone'] {
+    const normalized = value.trim().toLowerCase();
+    if (normalized.includes('unknown')) return 'unknown';
+    if (normalized.includes('blocked') || normalized.includes('not ') || normalized.includes('no ')) return 'invalid';
+    if (normalized.includes('confirmed') || normalized.includes('validated') || normalized.includes('approved')) return 'verified';
+    return 'assumed';
+  }
+
+  private resolveCustomFactorOptionIcon(value: string): string {
+    switch (this.resolveCustomFactorOptionTone(value)) {
+      case 'verified':
+        return 'pi pi-check-circle';
+      case 'invalid':
+        return 'pi pi-times-circle';
+      case 'unknown':
+        return 'pi pi-question-circle';
+      default:
+        return 'pi pi-info-circle';
+    }
   }
 
   private toneWeight(tone: OptionItem['tone']): number {

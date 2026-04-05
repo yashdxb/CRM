@@ -277,7 +277,8 @@
           </label>
           <input pInputText 
                  name="name" 
-                 [(ngModel)]="form().name" 
+                 [ngModel]="form().name"
+                 (ngModelChange)="updateForm('name', $event)"
                  placeholder="e.g., West Coast Territory" 
                  class="premium-input" />
           <span class="field-hint">Give this rule a descriptive name</span>
@@ -294,7 +295,8 @@
             optionLabel="label"
             optionValue="value"
             name="type"
-            [(ngModel)]="form().type"
+            [ngModel]="form().type"
+            (ngModelChange)="onTypeChange($event)"
             styleClass="premium-select"
           >
             <ng-template pTemplate="selectedItem" let-option>
@@ -328,7 +330,8 @@
             </label>
             <input pInputText 
                    name="territory" 
-                   [(ngModel)]="form().territory" 
+                   [ngModel]="form().territory"
+                   (ngModelChange)="updateForm('territory', $event)"
                    placeholder="e.g., West Coast, EMEA, APAC" 
                    class="premium-input" />
             <span class="field-hint">Geographic region or market segment</span>
@@ -345,7 +348,8 @@
               optionLabel="label"
               optionValue="value"
               name="assignedUserId"
-              [(ngModel)]="form().assignedUserId"
+              [ngModel]="form().assignedUserId"
+              (ngModelChange)="updateForm('assignedUserId', $event)"
               placeholder="Select team member"
               styleClass="premium-select"
             >
@@ -363,7 +367,11 @@
         <!-- Active Toggle -->
         <div class="form-field toggle-field">
           <label class="toggle-wrapper">
-            <p-checkbox [binary]="true" [(ngModel)]="form().isActive" name="isActive"></p-checkbox>
+            <p-checkbox
+              [binary]="true"
+              [ngModel]="form().isActive"
+              (ngModelChange)="updateForm('isActive', !!$event)"
+              name="isActive"></p-checkbox>
             <div class="toggle-content">
               <span class="toggle-label">Active</span>
               <span class="toggle-hint">Enable this rule for automatic lead assignment</span>

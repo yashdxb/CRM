@@ -7,6 +7,7 @@ import { QualificationPolicy } from '../../settings/models/workspace-settings.mo
 import {
   Lead,
   LeadAssignmentStrategy,
+  LeadCustomQualificationFactorValue,
   LeadConversionRequest,
   LeadConversionResponse,
   LeadDispositionReport,
@@ -61,6 +62,7 @@ export interface SaveLeadRequest {
   economicBuyerEvidence?: string;
   icpFit?: string;
   icpFitEvidence?: string;
+  customQualificationFactors?: LeadCustomQualificationFactorValue[];
 }
 
 export interface LeadAiScoreResponse {

@@ -119,55 +119,23 @@ export const NAV_LINKS: NavLink[] = [
     ]
   },
   {
-    label: 'Reference Data',
-    icon: 'pi-list',
-    path: '/app/settings/lookups/lead-statuses',
-    permission: PERMISSION_KEYS.administrationManage,
-    children: [
-      { label: 'Lead Statuses', icon: 'pi-tag', path: '/app/settings/lookups/lead-statuses', permission: PERMISSION_KEYS.administrationManage },
-      { label: 'Deal Stages', icon: 'pi-chart-bar', path: '/app/settings/lookups/opportunity-stages', permission: PERMISSION_KEYS.administrationManage },
-      { label: 'Activity Priorities', icon: 'pi-flag', path: '/app/settings/lookups/activity-priorities', permission: PERMISSION_KEYS.administrationManage },
-      { label: 'Activity Types', icon: 'pi-list', path: '/app/settings/lookups/activity-types', permission: PERMISSION_KEYS.administrationManage },
-      { label: 'Case Statuses', icon: 'pi-ticket', path: '/app/settings/lookups/helpdesk-case-statuses', permission: PERMISSION_KEYS.administrationManage },
-      { label: 'Helpdesk Priorities', icon: 'pi-exclamation-triangle', path: '/app/settings/lookups/helpdesk-priorities', permission: PERMISSION_KEYS.administrationManage },
-      { label: 'Helpdesk Severities', icon: 'pi-shield', path: '/app/settings/lookups/helpdesk-severities', permission: PERMISSION_KEYS.administrationManage },
-      { label: 'Disqualification Reasons', icon: 'pi-ban', path: '/app/settings/lookups/lead-disqualification-reasons', permission: PERMISSION_KEYS.administrationManage },
-      { label: 'Lead Loss Reasons', icon: 'pi-times-circle', path: '/app/settings/lookups/lead-loss-reasons', permission: PERMISSION_KEYS.administrationManage }
-    ]
-  },
-  {
-    label: 'Automation',
-    icon: 'pi-sitemap',
-    path: '/app/settings/approvals',
-    permission: PERMISSION_KEYS.administrationManage,
-    children: [
-      { label: 'Approvals', icon: 'pi-check-square', path: '/app/settings/approvals', permission: PERMISSION_KEYS.administrationManage },
-      { label: 'Workflow Builder', icon: 'pi-share-alt', path: '/app/workflows/designer', permission: PERMISSION_KEYS.administrationManage },
-      { label: 'Workflow Executions', icon: 'pi-history', path: '/app/workflows/executions', permission: PERMISSION_KEYS.administrationView },
-      { label: 'Notifications', icon: 'pi-bell', path: '/app/settings/notifications', permission: PERMISSION_KEYS.administrationView },
-      { label: 'Marketing', icon: 'pi-megaphone', path: '/app/settings/marketing', permission: PERMISSION_KEYS.administrationView, featureFlag: 'marketing.campaigns' },
-      { label: 'Lead Assignment', icon: 'pi-sitemap', path: '/app/settings/lead-assignment', permission: PERMISSION_KEYS.leadsManage },
-      { label: 'Qualification Policy', icon: 'pi-shield', path: '/app/settings/qualification-policy', permission: PERMISSION_KEYS.administrationManage },
-      { label: 'Qualification Thresholds', icon: 'pi-filter', path: '/app/settings/qualification-thresholds', permission: PERMISSION_KEYS.administrationManage }
-    ]
-  },
-  {
-    label: 'Audit',
-    icon: 'pi-clipboard',
-    path: '/app/settings/audit-log',
-    permission: PERMISSION_KEYS.auditView,
-    children: [
-      { label: 'Audit Log', icon: 'pi-clipboard', path: '/app/settings/audit-log', permission: PERMISSION_KEYS.auditView }
-    ]
-  },
-  {
     label: 'Settings',
     icon: 'pi-cog',
     path: '/app/settings',
     permission: PERMISSION_KEYS.administrationView,
     children: [
       {
-        label: 'People & Access',
+        label: 'Workspace',
+        icon: 'pi-building',
+        path: '/app/settings/workspace',
+        permission: PERMISSION_KEYS.administrationManage,
+        children: [
+          { label: 'Workspace', icon: 'pi-sliders-h', path: '/app/settings/workspace', permission: PERMISSION_KEYS.administrationManage },
+          { label: 'Tenant Configuration', icon: 'pi-building', path: '/app/settings/tenants', permission: PERMISSION_KEYS.tenantsView }
+        ]
+      },
+      {
+        label: 'Users & Access',
         icon: 'pi-users',
         path: '/app/settings/users',
         permission: PERMISSION_KEYS.administrationView,
@@ -185,13 +153,13 @@ export const NAV_LINKS: NavLink[] = [
             permission: PERMISSION_KEYS.administrationView
           },
           {
-            label: 'Permision',
+            label: 'Permissions',
             icon: 'pi-lock',
             path: '/app/settings/permissions',
             permission: PERMISSION_KEYS.administrationView
           },
           {
-            label: 'Security Level',
+            label: 'Security Levels',
             icon: 'pi-shield',
             path: '/app/settings/security-levels',
             permission: PERMISSION_KEYS.administrationManage
@@ -205,24 +173,58 @@ export const NAV_LINKS: NavLink[] = [
         ]
       },
       {
-        label: 'Workspace & Org',
-        icon: 'pi-building',
-        path: '/app/settings/workspace',
+        label: 'Reference Data',
+        icon: 'pi-list',
+        path: '/app/settings/lookups/lead-statuses',
         permission: PERMISSION_KEYS.administrationManage,
         children: [
-          { label: 'Workspace', icon: 'pi-sliders-h', path: '/app/settings/workspace', permission: PERMISSION_KEYS.administrationManage },
-          { label: 'Tenant Configuration', icon: 'pi-building', path: '/app/settings/tenants', permission: PERMISSION_KEYS.tenantsView }
+          { label: 'Lead Statuses', icon: 'pi-tag', path: '/app/settings/lookups/lead-statuses', permission: PERMISSION_KEYS.administrationManage },
+          { label: 'Deal Stages', icon: 'pi-chart-bar', path: '/app/settings/lookups/opportunity-stages', permission: PERMISSION_KEYS.administrationManage },
+          { label: 'Activity Priorities', icon: 'pi-flag', path: '/app/settings/lookups/activity-priorities', permission: PERMISSION_KEYS.administrationManage },
+          { label: 'Activity Types', icon: 'pi-list', path: '/app/settings/lookups/activity-types', permission: PERMISSION_KEYS.administrationManage },
+          { label: 'Case Statuses', icon: 'pi-ticket', path: '/app/settings/lookups/helpdesk-case-statuses', permission: PERMISSION_KEYS.administrationManage },
+          { label: 'Helpdesk Priorities', icon: 'pi-exclamation-triangle', path: '/app/settings/lookups/helpdesk-priorities', permission: PERMISSION_KEYS.administrationManage },
+          { label: 'Helpdesk Severities', icon: 'pi-shield', path: '/app/settings/lookups/helpdesk-severities', permission: PERMISSION_KEYS.administrationManage },
+          { label: 'Disqualification Reasons', icon: 'pi-ban', path: '/app/settings/lookups/lead-disqualification-reasons', permission: PERMISSION_KEYS.administrationManage },
+          { label: 'Lead Loss Reasons', icon: 'pi-times-circle', path: '/app/settings/lookups/lead-loss-reasons', permission: PERMISSION_KEYS.administrationManage }
         ]
       },
       {
-        label: 'Integrations',
-        icon: 'pi-link',
+        label: 'Communications',
+        icon: 'pi-envelope',
         path: '/app/settings/email-accounts',
-        permission: PERMISSION_KEYS.emailsManage,
+        permission: PERMISSION_KEYS.administrationView,
         children: [
-          { label: 'Email Accounts', icon: 'pi-envelope', path: '/app/settings/email-accounts', permission: PERMISSION_KEYS.emailsManage }
+          { label: 'Email Accounts', icon: 'pi-envelope', path: '/app/settings/email-accounts', permission: PERMISSION_KEYS.emailsManage },
+          { label: 'Notifications', icon: 'pi-bell', path: '/app/settings/notifications', permission: PERMISSION_KEYS.administrationView }
         ]
       },
+      {
+        label: 'Intelligence & Automation',
+        icon: 'pi-sitemap',
+        path: '/app/settings/approvals',
+        permission: PERMISSION_KEYS.administrationView,
+        children: [
+          { label: 'Approvals', icon: 'pi-check-square', path: '/app/settings/approvals', permission: PERMISSION_KEYS.administrationManage },
+          { label: 'Workflow Builder', icon: 'pi-share-alt', path: '/app/workflows/designer', permission: PERMISSION_KEYS.administrationManage },
+          { label: 'Workflow Executions', icon: 'pi-history', path: '/app/workflows/executions', permission: PERMISSION_KEYS.administrationView },
+          { label: 'Marketing Settings', icon: 'pi-megaphone', path: '/app/settings/marketing', permission: PERMISSION_KEYS.administrationView, featureFlag: 'marketing.campaigns' },
+          { label: 'Lead Assignment', icon: 'pi-sitemap', path: '/app/settings/lead-assignment', permission: PERMISSION_KEYS.leadsManage },
+          { label: 'Qualification Policy', icon: 'pi-shield', path: '/app/settings/qualification-policy', permission: PERMISSION_KEYS.administrationManage },
+          { label: 'Qualification Thresholds', icon: 'pi-filter', path: '/app/settings/qualification-thresholds', permission: PERMISSION_KEYS.administrationManage },
+          { label: 'Deal Health', icon: 'pi-heart', path: '/app/settings/deal-health', permission: PERMISSION_KEYS.administrationView },
+          { label: 'Opportunity Automation', icon: 'pi-cog', path: '/app/settings/opportunity-automation', permission: PERMISSION_KEYS.opportunitiesManage }
+        ]
+      },
+      {
+        label: 'Audit',
+        icon: 'pi-clipboard',
+        path: '/app/settings/audit-log',
+        permission: PERMISSION_KEYS.auditView,
+        children: [
+          { label: 'Audit Log', icon: 'pi-clipboard', path: '/app/settings/audit-log', permission: PERMISSION_KEYS.auditView }
+        ]
+      }
     ]
   },
   {

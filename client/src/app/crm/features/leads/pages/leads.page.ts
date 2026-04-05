@@ -13,6 +13,7 @@ import { Router, RouterLink } from '@angular/router';
 import { DialogModule } from 'primeng/dialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { DrawerModule } from 'primeng/drawer';
+import { KnobModule } from 'primeng/knob';
 import { forkJoin, of, Subscription, timer } from 'rxjs';
 import { catchError, map, switchMap, takeWhile, tap } from 'rxjs/operators';
 
@@ -27,7 +28,7 @@ import { readTokenContext, readUserId, tokenHasPermission } from '../../../../co
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { AppToastService } from '../../../../core/app-toast.service';
 import { CrmEventsService } from '../../../../core/realtime/crm-events.service';
-import { computeLeadScore, LeadDataWeight, LeadScoreInputs, LeadScoreResult } from './lead-scoring.util';
+import { computeLeadScore, LeadDataWeight, LeadScoreInputs, LeadScoreResult, QualificationFactorConfig } from './lead-scoring.util';
 import { MailComposeService } from '../../../../core/email/mail-compose.service';
 
 interface StatusOption {
@@ -36,7 +37,18 @@ interface StatusOption {
   icon: string;
 }
 
-type ConversationView = 'all' | 'weak_signal' | 'no_signal' | 'coaching_queue' | 'engaged_but_unqualified' | 'manager_review' | 'at_risk' | 'ready_to_convert';
+type ConversationView =
+  | 'all'
+  | 'weak_signal'
+  | 'low_conversation_score'
+  | 'no_signal'
+  | 'negative_or_cautious_tone'
+  | 'high_buying_intent'
+  | 'coaching_queue'
+  | 'engaged_but_unqualified'
+  | 'manager_review'
+  | 'at_risk'
+  | 'ready_to_convert';
 type LeadSortBy = 'newest' | 'lead_score_desc' | 'conversation_desc' | 'conversation_asc' | 'qualification_desc' | 'readiness_desc';
 
 interface ConversationViewOption {
@@ -84,6 +96,7 @@ const CQVS_FACTOR_GROUPS: Array<{ code: CqvsCode; title: string; factorMatchers:
     DialogModule,
     TooltipModule,
     DrawerModule,
+    KnobModule,
     BreadcrumbsComponent,
     BulkActionsBarComponent,
     RouterLink
@@ -118,8 +131,10 @@ export class LeadsPage {
     { label: 'At risk', value: 'at_risk' },
     { label: 'Ready to convert', value: 'ready_to_convert' },
     { label: 'Coaching queue', value: 'coaching_queue' },
-    { label: 'Weak conversation', value: 'weak_signal' },
+    { label: 'Low conversation score', value: 'low_conversation_score' },
     { label: 'No signal', value: 'no_signal' },
+    { label: 'Negative or cautious tone', value: 'negative_or_cautious_tone' },
+    { label: 'High buying intent', value: 'high_buying_intent' },
     { label: 'Engaged but incomplete', value: 'engaged_but_unqualified' }
   ];
   protected readonly sortOptions: SortOption[] = [
@@ -135,6 +150,7 @@ export class LeadsPage {
   protected readonly total = signal(0);
   protected readonly loading = signal(true);
   private readonly leadDataWeights = signal<LeadDataWeight[]>([]);
+  private readonly qualificationFactors = signal<QualificationFactorConfig[]>([]);
   protected readonly showCqvsInLeadList = signal(false);
   protected readonly coachVisible = signal(false);
   protected readonly coachLead = signal<Lead | null>(null);
@@ -170,8 +186,10 @@ export class LeadsPage {
       atRisk: rows.filter((lead) => this.matchesConversationView(lead, 'at_risk')).length,
       readyToConvert: rows.filter((lead) => this.matchesConversationView(lead, 'ready_to_convert')).length,
       coachingQueue: rows.filter((lead) => this.matchesConversationView(lead, 'coaching_queue')).length,
-      weakSignal: rows.filter((lead) => this.matchesConversationView(lead, 'weak_signal')).length,
+      lowConversationScore: rows.filter((lead) => this.matchesConversationView(lead, 'low_conversation_score')).length,
       noSignal: rows.filter((lead) => this.matchesConversationView(lead, 'no_signal')).length,
+      negativeOrCautiousTone: rows.filter((lead) => this.matchesConversationView(lead, 'negative_or_cautious_tone')).length,
+      highBuyingIntent: rows.filter((lead) => this.matchesConversationView(lead, 'high_buying_intent')).length,
       engagedButIncomplete: rows.filter((lead) => this.matchesConversationView(lead, 'engaged_but_unqualified')).length
     };
   });
@@ -1087,6 +1105,19 @@ export class LeadsPage {
     return this.computeOverallScore(lead).qualificationScore100;
   }
 
+  protected leadScoreColor(lead: Lead): string {
+    const score = this.displayScore(lead);
+    if (score >= 70) {
+      return '#10b981';
+    }
+
+    if (score >= 40) {
+      return '#f59e0b';
+    }
+
+    return '#ef4444';
+  }
+
   protected conversationScoreLabel(lead: Lead): string {
     if (!lead.conversationSignalAvailable) {
       return 'No conversation signal';
@@ -1111,6 +1142,74 @@ export class LeadsPage {
     return pieces.join(' • ');
   }
 
+  protected conversationStatusPill(lead: Lead): string {
+    if (!lead.conversationSignalAvailable) {
+      return 'No signal';
+    }
+
+    if (this.matchesConversationView(lead, 'negative_or_cautious_tone')) {
+      return 'Risk signal';
+    }
+
+    if ((lead.conversationScore ?? 0) >= 70 || this.matchesConversationView(lead, 'high_buying_intent')) {
+      return 'Healthy signal';
+    }
+
+    return 'Weak signal';
+  }
+
+  protected conversationStatusTone(lead: Lead): 'neutral' | 'risk' | 'healthy' | 'weak' {
+    if (!lead.conversationSignalAvailable) {
+      return 'neutral';
+    }
+
+    if (this.matchesConversationView(lead, 'negative_or_cautious_tone')) {
+      return 'risk';
+    }
+
+    if ((lead.conversationScore ?? 0) >= 70 || this.matchesConversationView(lead, 'high_buying_intent')) {
+      return 'healthy';
+    }
+
+    return 'weak';
+  }
+
+  protected coachToneLabel(lead: Lead): string {
+    return lead.conversationAiToneLabel || lead.conversationAiSentiment || 'Not detected';
+  }
+
+  protected coachBuyingReadinessLabel(lead: Lead): string {
+    return lead.conversationAiBuyingReadiness || 'No readiness signal';
+  }
+
+  protected coachSemanticIntentLabel(lead: Lead): string {
+    return lead.conversationAiSemanticIntent || 'No clear intent';
+  }
+
+  protected conversationRecommendedAction(lead: Lead): string {
+    if (lead.conversionReadiness?.primaryGap) {
+      return `Resolve the primary gap: ${lead.conversionReadiness.primaryGap}.`;
+    }
+
+    if (lead.riskFlags?.length) {
+      return `Address the top risk first: ${lead.riskFlags[0]}.`;
+    }
+
+    if (lead.conversationScoreReasons?.length) {
+      return `Use the next outreach to validate: ${lead.conversationScoreReasons[0]}.`;
+    }
+
+    if (!lead.conversationSignalAvailable) {
+      return 'Create a real two-way touchpoint so the CRM can score engagement and recommend next steps.';
+    }
+
+    return 'Log the next meaningful response or meeting outcome before pushing the lead forward.';
+  }
+
+  protected canShowCoachConvert(lead: Lead): boolean {
+    return this.canManage() && (lead.status === 'Qualified' || this.matchesConversationView(lead, 'ready_to_convert'));
+  }
+
   protected readinessScoreLabel(lead: Lead): string {
     return lead.conversionReadiness ? `${lead.conversionReadiness.score} / 100` : 'Not assessed';
   }
@@ -1133,6 +1232,14 @@ export class LeadsPage {
 
   protected conversationViewHint(): string {
     return this.conversationViewOptions.find((option) => option.value === this.conversationView)?.label ?? 'All signals';
+  }
+
+  protected conversationFilterCount(view: ConversationView): number | null {
+    if (view === 'all') {
+      return this.leads().length;
+    }
+
+    return this.leads().filter((lead) => this.matchesConversationView(lead, view)).length;
   }
 
   protected evidenceCoveragePercent(lead: Lead): number | null {
@@ -1249,12 +1356,19 @@ export class LeadsPage {
     });
   }
 
-  private matchesConversationView(lead: Lead, view: Exclude<ConversationView, 'all'>): boolean {
+  protected matchesConversationView(lead: Lead, view: Exclude<ConversationView, 'all'>): boolean {
     switch (view) {
       case 'weak_signal':
+      case 'low_conversation_score':
         return lead.conversationSignalAvailable === true && (lead.conversationScore ?? 0) < 50;
       case 'no_signal':
         return lead.conversationSignalAvailable !== true;
+      case 'negative_or_cautious_tone':
+        return ['negative', 'cautious'].includes((lead.conversationAiSentiment ?? '').trim().toLowerCase())
+          || ['guarded', 'dismissive'].includes((lead.conversationAiToneLabel ?? '').trim().toLowerCase());
+      case 'high_buying_intent':
+        return ['ready to buy', 'actively evaluating'].includes((lead.conversationAiBuyingReadiness ?? '').trim().toLowerCase())
+          || ['seeking solution', 'negotiating terms', 'comparing options'].includes((lead.conversationAiSemanticIntent ?? '').trim().toLowerCase());
       case 'manager_review':
         return lead.conversionReadiness?.managerReviewRecommended === true;
       case 'at_risk':
@@ -1275,36 +1389,51 @@ export class LeadsPage {
     this.leadData.getQualificationPolicy().subscribe({
       next: (policy) => {
         this.leadDataWeights.set(policy?.leadDataWeights ?? []);
+        this.qualificationFactors.set(policy?.factors ?? []);
         this.showCqvsInLeadList.set(!!policy?.showCqvsInLeadList);
       },
       error: () => {
         // Default weights live in `computeLeadScore` fallback; this endpoint is for configurability.
         this.leadDataWeights.set([]);
+        this.qualificationFactors.set([]);
         this.showCqvsInLeadList.set(false);
       }
     });
   }
 
   private countQualificationFactors(lead: Lead): number {
+    const activeFactors = (this.qualificationFactors().length ? this.qualificationFactors() : [
+        { key: 'budget', isActive: true, factorType: 'system' as const },
+        { key: 'readiness', isActive: true, factorType: 'system' as const },
+        { key: 'timeline', isActive: true, factorType: 'system' as const },
+        { key: 'problem', isActive: true, factorType: 'system' as const },
+        { key: 'economicBuyer', isActive: true, factorType: 'system' as const },
+        { key: 'icpFit', isActive: true, factorType: 'system' as const }
+      ])
+        .filter((factor) => factor.isActive)
+    const activeKeys = new Set(activeFactors.map((factor) => factor.key));
     const factors = [
-      lead.budgetAvailability,
-      lead.readinessToSpend,
-      lead.buyingTimeline,
-      lead.problemSeverity,
-      lead.economicBuyer,
-      lead.icpFit
+      activeKeys.has('budget') ? lead.budgetAvailability : null,
+      activeKeys.has('readiness') ? lead.readinessToSpend : null,
+      activeKeys.has('timeline') ? lead.buyingTimeline : null,
+      activeKeys.has('problem') ? lead.problemSeverity : null,
+      activeKeys.has('economicBuyer') ? lead.economicBuyer : null,
+      activeKeys.has('icpFit') ? lead.icpFit : null,
+      ...(lead.customQualificationFactors ?? [])
+        .filter((factor) => activeKeys.has(factor.key))
+        .map((factor) => factor.value)
     ];
     return factors.filter((value) => this.isMeaningfulFactor(value)).length;
   }
 
-  private isMeaningfulFactor(value?: string): boolean {
+  private isMeaningfulFactor(value?: string | null): boolean {
     if (!value) return false;
     const normalized = value.trim().toLowerCase();
     return normalized.length > 0 && !normalized.includes('unknown');
   }
 
   private computeOverallScore(lead: Lead): LeadScoreResult {
-    return computeLeadScore(this.toScoreInputs(lead), this.leadDataWeights());
+    return computeLeadScore(this.toScoreInputs(lead), this.leadDataWeights(), this.qualificationFactors());
   }
 
   private toScoreInputs(lead: Lead): LeadScoreInputs {

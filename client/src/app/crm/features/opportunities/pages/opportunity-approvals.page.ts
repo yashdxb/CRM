@@ -9,6 +9,7 @@ import { ButtonModule } from 'primeng/button';
 import { ChipModule } from 'primeng/chip';
 import { TextareaModule } from 'primeng/textarea';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { TableModule } from 'primeng/table';
 import { ConfirmationService } from 'primeng/api';
 import { ActivatedRoute, Router } from '@angular/router';
 
@@ -56,6 +57,7 @@ interface ApprovalLane {
     ChipModule,
     TextareaModule,
     ConfirmDialogModule,
+    TableModule,
     BreadcrumbsComponent
   ],
   providers: [ConfirmationService],
@@ -162,6 +164,15 @@ export class OpportunityApprovalsPage {
     const totalAmount = pending.reduce((acc, item) => acc + (item.amount ?? 0), 0);
 
     return { pending: pending.length, urgent, dueToday, dueSoon, totalAmount };
+  });
+  protected readonly commandMetrics = computed(() => {
+    const metrics = this.kpis();
+    return [
+      { label: 'Pending approvals', value: metrics.pending, tone: 'neutral' },
+      { label: 'Urgent', value: metrics.urgent, tone: 'danger' },
+      { label: 'Due soon', value: metrics.dueSoon, tone: 'warn' },
+      { label: 'Due today', value: metrics.dueToday, tone: 'warn' }
+    ];
   });
 
   protected readonly laneGroups = computed<ApprovalLane[]>(() => {

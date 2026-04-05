@@ -54,13 +54,7 @@ export function getTenantKeyForAuthBootstrap(): string | null {
   }
 
   const stored = localStorage.getItem(STORAGE_KEY);
-  if (!stored || stored === DEFAULT_TENANT) {
-    return DEFAULT_TENANT;
-  }
-
-  // On root domains, ignore stale tenant selections during login/config bootstrap
-  // so the API can fall back to the configured default tenant.
-  return null;
+  return stored || DEFAULT_TENANT;
 }
 
 export function initTenantFromHost() {
@@ -69,13 +63,15 @@ export function initTenantFromHost() {
   }
 
   const hostname = window.location.hostname.toLowerCase();
+  const stored = localStorage.getItem(STORAGE_KEY);
+
   if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') {
-    setTenantKey(DEFAULT_TENANT);
+    if (!stored) {
+      setTenantKey(DEFAULT_TENANT);
+    }
     return;
   }
 
-  const stored = localStorage.getItem(STORAGE_KEY);
-  const current = getTenantKey();
   const hostKey = resolveTenantKeyFromHost(window.location.hostname);
   if (hostKey && (!stored || stored === DEFAULT_TENANT)) {
     setTenantKey(hostKey);

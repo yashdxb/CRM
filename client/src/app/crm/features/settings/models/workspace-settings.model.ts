@@ -139,12 +139,31 @@ export interface QualificationPolicy {
   showCqvsInLeadList: boolean;
   requireEvidenceBeforeQualified: boolean;
   minimumEvidenceCoveragePercent: number;
+  factors: QualificationFactorDefinition[];
   factorEvidenceRules: QualificationFactorEvidenceRule[];
   thresholdRules: QualificationThresholdRule[];
   modifiers: QualificationModifierRule[];
   exposureWeights: QualificationExposureWeight[];
   leadDataWeights: QualificationLeadDataWeight[];
   evidenceSources: string[];
+}
+
+export interface QualificationFactorDefinition {
+  key: string;
+  displayLabel: string;
+  isActive: boolean;
+  isRequired: boolean;
+  order: number;
+  factorType: 'system' | 'custom';
+  valueType: 'singleSelect' | 'text';
+  includeInScore: boolean;
+  options: string[];
+}
+
+export interface LeadCustomQualificationFactorValue {
+  key: string;
+  value?: string | null;
+  evidence?: string | null;
 }
 
 export interface QualificationFactorEvidenceRule {

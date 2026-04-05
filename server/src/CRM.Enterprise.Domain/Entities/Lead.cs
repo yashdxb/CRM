@@ -56,6 +56,7 @@ public class Lead : AuditableEntity
     public string? EconomicBuyerEvidence { get; set; }
     public string? IcpFit { get; set; }
     public string? IcpFitEvidence { get; set; }
+    public string? CustomQualificationFactorsJson { get; set; }
     public DateTime? BudgetValidatedAtUtc { get; set; }
     public DateTime? ReadinessValidatedAtUtc { get; set; }
     public DateTime? BuyingTimelineValidatedAtUtc { get; set; }

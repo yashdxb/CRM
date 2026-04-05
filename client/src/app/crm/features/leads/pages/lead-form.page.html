@@ -1176,10 +1176,10 @@
                   <span class="ai-summary-meta-label">Band</span>
                   <strong>{{ conversationScoreDisplayLabel() }}</strong>
                 </div>
-                <div class="ai-summary-meta-item" [ngClass]="sentimentClass(conversationAiSummary()?.sentiment || 'neutral')" *ngIf="conversationAiSummary() as summary">
-                  <i class="pi" [ngClass]="sentimentIcon(summary.sentiment)" aria-hidden="true"></i>
+                <div class="ai-summary-meta-item" [ngClass]="sentimentClass(conversationSentimentDisplay())">
+                  <i class="pi" [ngClass]="sentimentIcon(conversationSentimentDisplay())" aria-hidden="true"></i>
                   <span class="ai-summary-meta-label">Sentiment</span>
-                  <strong>{{ summary.sentiment }}</strong>
+                  <strong>{{ conversationSentimentDisplay() }}</strong>
                 </div>
                 <div class="ai-summary-meta-item ai-summary-meta-item--time" *ngIf="conversationScoreUpdatedLabel() as updatedLabel">
                   <i class="pi pi-clock" aria-hidden="true"></i>
@@ -1188,8 +1188,20 @@
               </div>
             </div>
 
+            <div class="conversation-state-strip">
+              <span class="conversation-state-pill" [attr.data-tone]="conversationSignalStateTone()">{{ conversationSignalStateLabel() }}</span>
+              <span class="conversation-state-pill conversation-state-pill--detail" [attr.data-tone]="conversationSignalStateTone()">Tone: {{ conversationAiToneLabel() || 'Not detected' }}</span>
+              <span class="conversation-state-pill conversation-state-pill--detail" [attr.data-tone]="isHighBuyingIntentState() ? 'healthy' : conversationSignalStateTone()">Buying readiness: {{ conversationAiBuyingReadiness() || 'No readiness signal' }}</span>
+              <span class="conversation-state-pill conversation-state-pill--detail" [attr.data-tone]="isHighBuyingIntentState() ? 'healthy' : 'neutral'">Intent: {{ conversationAiSemanticIntent() || 'No clear intent' }}</span>
+            </div>
+
+            <div class="conversation-next-action-card conversation-next-action-card--pinned">
+              <div class="conversation-next-action-card__label">Recommended next action</div>
+              <p>{{ conversationNextActionDisplay() }}</p>
+            </div>
+
             <!-- AI Tone & Intent Analysis -->
-            <div class="ai-tone-panel" *ngIf="conversationAiToneLabel()">
+            <div class="ai-tone-panel" *ngIf="conversationAiToneLabel() || conversationAiBuyingReadiness() || conversationAiSemanticIntent()">
               <div class="ai-tone-panel__header">
                 <i class="pi pi-sparkles" aria-hidden="true"></i>
                 <span>AI Tone &amp; Intent Analysis</span>
@@ -1236,11 +1248,6 @@
                   <span class="conversation-signal-chip conversation-signal-chip--neutral" *ngFor="let signal of conversationNeutralSignals()">{{ signal }}</span>
                 </div>
               </div>
-
-              <div class="conversation-next-action-card">
-                <div class="conversation-next-action-card__label">Recommended next action</div>
-                <p>{{ conversationNextActionDisplay() }}</p>
-              </div>
             </div>
 
             <div class="email-thread-list" *ngIf="leadEmails().length">
@@ -1268,7 +1275,7 @@
 
             <div class="email-engagement-panel__empty" *ngIf="!leadEmailsLoading() && !leadEmails().length && !conversationAiSummary()">
               <i class="pi pi-inbox" aria-hidden="true"></i>
-              <span>No email communication recorded for this lead yet.</span>
+              <span>No conversation signal exists yet. Log outreach, replies, or meetings for this lead so the CRM can score engagement and recommend the next action.</span>
             </div>
 
             <div class="email-engagement-panel__loading" *ngIf="leadEmailsLoading() && !leadEmails().length">
@@ -1327,8 +1334,8 @@
                   </div>
                 </div>
               </div>
-              <div class="form-field">
-                <label for="lead-budgetAvailability">Budget availability <i class="pi pi-info-circle qual-info-icon" pTooltip="Confirmed = budget stated in writing&#10;Likely = verbal indication&#10;Unknown = not yet discussed" tooltipPosition="top" [escape]="false"></i></label>
+              <div class="form-field" *ngIf="isQualificationFactorActive('budget')">
+                <label for="lead-budgetAvailability">{{ qualificationFactorLabel('budget', 'Budget availability') }} <i class="pi pi-info-circle qual-info-icon" pTooltip="Confirmed = budget stated in writing&#10;Likely = verbal indication&#10;Unknown = not yet discussed" tooltipPosition="top" [escape]="false"></i></label>
                 <p-select
                   id="lead-budgetAvailability"
                   name="budgetAvailability"
@@ -1355,7 +1362,7 @@
                   </ng-template>
                 </p-select>
               </div>
-              <div class="form-field">
+              <div class="form-field" *ngIf="isQualificationFactorActive('budget')">
                 <label for="lead-budgetEvidence">Evidence source</label>
                 <p-select
                   id="lead-budgetEvidence"
@@ -1397,8 +1404,8 @@
                   [(ngModel)]="form.motivationUrgency"
                 ></p-select>
               </div>
-              <div class="form-field">
-                <label for="lead-readinessToSpend">Readiness to spend <i class="pi pi-info-circle qual-info-icon" pTooltip="Confirmed = ready to purchase this quarter&#10;Likely = evaluating options&#10;Unknown = timeline unclear" tooltipPosition="top" [escape]="false"></i></label>
+              <div class="form-field" *ngIf="isQualificationFactorActive('readiness')">
+                <label for="lead-readinessToSpend">{{ qualificationFactorLabel('readiness', 'Readiness to spend') }} <i class="pi pi-info-circle qual-info-icon" pTooltip="Confirmed = ready to purchase this quarter&#10;Likely = evaluating options&#10;Unknown = timeline unclear" tooltipPosition="top" [escape]="false"></i></label>
                 <p-select
                   id="lead-readinessToSpend"
                   name="readinessToSpend"
@@ -1439,7 +1446,7 @@
                   [(ngModel)]="form.financingReadiness"
                 ></p-select>
               </div>
-              <div class="form-field">
+              <div class="form-field" *ngIf="isQualificationFactorActive('readiness')">
                 <label for="lead-readinessEvidence">Evidence source</label>
                 <p-select
                   id="lead-readinessEvidence"
@@ -1481,8 +1488,8 @@
                   [(ngModel)]="form.preApprovalStatus"
                 ></p-select>
               </div>
-              <div class="form-field">
-                <label for="lead-buyingTimeline">Buying timeline <i class="pi pi-info-circle qual-info-icon" pTooltip="Confirmed = decision date set&#10;Likely = within 6 months&#10;Unknown = no timeline shared" tooltipPosition="top" [escape]="false"></i></label>
+              <div class="form-field" *ngIf="isQualificationFactorActive('timeline')">
+                <label for="lead-buyingTimeline">{{ qualificationFactorLabel('timeline', 'Buying timeline') }} <i class="pi pi-info-circle qual-info-icon" pTooltip="Confirmed = decision date set&#10;Likely = within 6 months&#10;Unknown = no timeline shared" tooltipPosition="top" [escape]="false"></i></label>
                 <p-select
                   id="lead-buyingTimeline"
                   name="buyingTimeline"
@@ -1509,7 +1516,7 @@
                   </ng-template>
                 </p-select>
               </div>
-              <div class="form-field">
+              <div class="form-field" *ngIf="isQualificationFactorActive('timeline')">
                 <label for="lead-timelineEvidence">Evidence source</label>
                 <p-select
                   id="lead-timelineEvidence"
@@ -1537,8 +1544,8 @@
                   </ng-template>
                 </p-select>
               </div>
-              <div class="form-field">
-                <label for="lead-problemSeverity">Problem severity <i class="pi pi-info-circle qual-info-icon" pTooltip="Confirmed = urgent pain documented&#10;Likely = acknowledged need&#10;Unknown = no pain articulated" tooltipPosition="top" [escape]="false"></i></label>
+              <div class="form-field" *ngIf="isQualificationFactorActive('problem')">
+                <label for="lead-problemSeverity">{{ qualificationFactorLabel('problem', 'Problem severity') }} <i class="pi pi-info-circle qual-info-icon" pTooltip="Confirmed = urgent pain documented&#10;Likely = acknowledged need&#10;Unknown = no pain articulated" tooltipPosition="top" [escape]="false"></i></label>
                 <p-select
                   id="lead-problemSeverity"
                   name="problemSeverity"
@@ -1565,7 +1572,7 @@
                   </ng-template>
                 </p-select>
               </div>
-              <div class="form-field">
+              <div class="form-field" *ngIf="isQualificationFactorActive('problem')">
                 <label for="lead-problemEvidence">Evidence source</label>
                 <p-select
                   id="lead-problemEvidence"
@@ -1593,8 +1600,8 @@
                   </ng-template>
                 </p-select>
               </div>
-              <div class="form-field">
-                <label for="lead-economicBuyer">Economic buyer <i class="pi pi-info-circle qual-info-icon" pTooltip="Confirmed = economic buyer identified and engaged&#10;Likely = contact known but not confirmed&#10;Unknown = buyer unknown" tooltipPosition="top" [escape]="false"></i></label>
+              <div class="form-field" *ngIf="isQualificationFactorActive('economicBuyer')">
+                <label for="lead-economicBuyer">{{ qualificationFactorLabel('economicBuyer', 'Economic buyer') }} <i class="pi pi-info-circle qual-info-icon" pTooltip="Confirmed = economic buyer identified and engaged&#10;Likely = contact known but not confirmed&#10;Unknown = buyer unknown" tooltipPosition="top" [escape]="false"></i></label>
                 <p-select
                   id="lead-economicBuyer"
                   name="economicBuyer"
@@ -1621,7 +1628,7 @@
                   </ng-template>
                 </p-select>
               </div>
-              <div class="form-field">
+              <div class="form-field" *ngIf="isQualificationFactorActive('economicBuyer')">
                 <label for="lead-economicBuyerEvidence">Evidence source</label>
                 <p-select
                   id="lead-economicBuyerEvidence"
@@ -1649,9 +1656,9 @@
                   </ng-template>
                 </p-select>
               </div>
-              <div class="form-field">
+              <div class="form-field" *ngIf="isQualificationFactorActive('icpFit')">
                 <label for="lead-icpFit">
-                  ICP fit
+                  {{ qualificationFactorLabel('icpFit', 'ICP fit') }}
                   <i
                     class="pi pi-info-circle info-icon"
                     pTooltip="How closely this lead matches our ideal customer profile (industry, size, use case, delivery fit)."
@@ -1684,7 +1691,7 @@
                   </ng-template>
                 </p-select>
               </div>
-              <div class="form-field">
+              <div class="form-field" *ngIf="isQualificationFactorActive('icpFit')">
                 <label for="lead-icpFitEvidence">Evidence source</label>
                 <p-select
                   id="lead-icpFitEvidence"
@@ -1712,6 +1719,78 @@
                   </ng-template>
                 </p-select>
               </div>
+              <ng-container *ngFor="let factor of customQualificationFactors(); trackBy: trackCustomQualificationFactor">
+                <div class="form-field">
+                  <label [attr.for]="'lead-custom-' + factor.key">{{ factor.displayLabel }}</label>
+                  <ng-container *ngIf="!isCustomTextFactor(factor); else customTextFactorField">
+                    <p-select
+                      [inputId]="'lead-custom-' + factor.key"
+                      [name]="'custom-' + factor.key"
+                      [options]="customFactorOptions(factor.key)"
+                      optionLabel="label"
+                      optionValue="value"
+                      [ngModel]="customFactorValue(factor.key)"
+                      (ngModelChange)="setCustomFactorValue(factor.key, $event); onQualificationFactorChange()"
+                      placeholder="Unknown / not assessed"
+                      appendTo="body"
+                      class="w-full"
+                    >
+                      <ng-template pTemplate="selectedItem" let-option>
+                        <div class="select-option" *ngIf="option">
+                          <i [ngClass]="['option-icon', 'tone-' + option.tone, option.icon]"></i>
+                          <span>{{ option.label }}</span>
+                        </div>
+                      </ng-template>
+                      <ng-template pTemplate="item" let-option>
+                        <div class="select-option">
+                          <i [ngClass]="['option-icon', 'tone-' + option.tone, option.icon]"></i>
+                          <span>{{ option.label }}</span>
+                        </div>
+                      </ng-template>
+                    </p-select>
+                  </ng-container>
+                  <ng-template #customTextFactorField>
+                    <input
+                      pInputText
+                      [id]="'lead-custom-' + factor.key"
+                      [name]="'custom-' + factor.key"
+                      [ngModel]="customFactorValue(factor.key)"
+                      (ngModelChange)="setCustomFactorValue(factor.key, $event); onQualificationFactorChange()"
+                      placeholder="Enter qualification detail"
+                      class="w-full"
+                    />
+                  </ng-template>
+                </div>
+                <div class="form-field">
+                  <label [attr.for]="'lead-custom-evidence-' + factor.key">Evidence source</label>
+                  <p-select
+                    [inputId]="'lead-custom-evidence-' + factor.key"
+                    [name]="'custom-evidence-' + factor.key"
+                    [options]="evidenceOptionsForFactor(factor.key)"
+                    optionLabel="label"
+                    optionValue="value"
+                    [ngModel]="customFactorEvidence(factor.key)"
+                    (ngModelChange)="setCustomFactorEvidence(factor.key, $event); onQualificationFactorChange()"
+                    [disabled]="isEvidenceDisabled(customFactorValue(factor.key))"
+                    placeholder="Select evidence"
+                    appendTo="body"
+                    class="w-full"
+                  >
+                    <ng-template pTemplate="selectedItem" let-option>
+                      <div class="select-option" *ngIf="option">
+                        <i [ngClass]="['option-icon', 'tone-' + option.tone, option.icon]"></i>
+                        <span>{{ option.label }}</span>
+                      </div>
+                    </ng-template>
+                    <ng-template pTemplate="item" let-option>
+                      <div class="select-option">
+                        <i [ngClass]="['option-icon', 'tone-' + option.tone, option.icon]"></i>
+                        <span>{{ option.label }}</span>
+                      </div>
+                    </ng-template>
+                  </p-select>
+                </div>
+              </ng-container>
                   </div>
                 </section>
               </p-accordion-content>

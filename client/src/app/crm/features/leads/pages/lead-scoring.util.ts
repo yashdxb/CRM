@@ -20,6 +20,18 @@ export interface LeadDataWeight {
   weight: number;
 }
 
+export interface QualificationFactorConfig {
+  key: string;
+  displayLabel?: string | null;
+  isActive: boolean;
+  isRequired?: boolean;
+  order?: number;
+  factorType?: 'system' | 'custom';
+  valueType?: 'singleSelect' | 'text';
+  includeInScore?: boolean;
+  options?: string[];
+}
+
 export interface LeadScoreResult {
   buyerDataQualityScore100: number;
   qualificationRawScore100: number | null;
@@ -42,6 +54,15 @@ const DEFAULT_LEAD_DATA_WEIGHTS: LeadDataWeight[] = [
   { key: 'companyName', weight: 16 },
   { key: 'jobTitle', weight: 12 },
   { key: 'source', weight: 8 }
+];
+
+const DEFAULT_QUALIFICATION_FACTORS: QualificationFactorConfig[] = [
+  { key: 'budget', displayLabel: 'Budget availability', isActive: true, isRequired: true, order: 10, factorType: 'system', valueType: 'singleSelect', includeInScore: true, options: [] },
+  { key: 'readiness', displayLabel: 'Readiness to spend', isActive: true, isRequired: false, order: 20, factorType: 'system', valueType: 'singleSelect', includeInScore: true, options: [] },
+  { key: 'timeline', displayLabel: 'Buying timeline', isActive: true, isRequired: true, order: 30, factorType: 'system', valueType: 'singleSelect', includeInScore: true, options: [] },
+  { key: 'problem', displayLabel: 'Problem severity', isActive: true, isRequired: true, order: 40, factorType: 'system', valueType: 'singleSelect', includeInScore: true, options: [] },
+  { key: 'economicBuyer', displayLabel: 'Economic buyer', isActive: true, isRequired: true, order: 50, factorType: 'system', valueType: 'singleSelect', includeInScore: true, options: [] },
+  { key: 'icpFit', displayLabel: 'ICP fit', isActive: true, isRequired: false, order: 60, factorType: 'system', valueType: 'singleSelect', includeInScore: true, options: [] }
 ];
 
 const budgetScores: Record<string, number> = {
@@ -97,6 +118,22 @@ const icpScores: Record<string, number> = {
   'clearly out of icp': 0,
   'unknown / not assessed': 0
 };
+
+type QualificationFactorScoreConfig = {
+  key: string;
+  inputKey: keyof Pick<LeadScoreInputs, 'budgetAvailability' | 'readinessToSpend' | 'buyingTimeline' | 'problemSeverity' | 'economicBuyer' | 'icpFit'>;
+  maxScore: number;
+  scores: Record<string, number>;
+};
+
+const QUALIFICATION_FACTOR_SCORE_CONFIG: QualificationFactorScoreConfig[] = [
+  { key: 'budget', inputKey: 'budgetAvailability', maxScore: 25, scores: budgetScores },
+  { key: 'readiness', inputKey: 'readinessToSpend', maxScore: 20, scores: readinessScores },
+  { key: 'timeline', inputKey: 'buyingTimeline', maxScore: 15, scores: timelineScores },
+  { key: 'problem', inputKey: 'problemSeverity', maxScore: 20, scores: problemScores },
+  { key: 'economicBuyer', inputKey: 'economicBuyer', maxScore: 10, scores: economicBuyerScores },
+  { key: 'icpFit', inputKey: 'icpFit', maxScore: 10, scores: icpScores }
+];
 
 export const qualificationFactorOptions = {
   budgetAvailability: [
@@ -198,35 +235,36 @@ export function computeLeadDataQualityScore(
   return clampScore(Math.round((earnedWeight / totalWeight) * 100));
 }
 
-export function computeQualificationRawScore(input: LeadScoreInputs): number | null {
-  const factors = [
-    input.budgetAvailability,
-    input.readinessToSpend,
-    input.buyingTimeline,
-    input.problemSeverity,
-    input.economicBuyer,
-    input.icpFit
-  ];
+export function computeQualificationRawScore(
+  input: LeadScoreInputs,
+  configuredFactors?: ReadonlyArray<QualificationFactorConfig> | null
+): number | null {
+  const activeConfigs = normalizeQualificationFactors(configuredFactors);
+  const activeFactorKeys = new Set(activeConfigs.filter((factor) => factor.isActive && factor.includeInScore !== false).map((factor) => factor.key));
+  const activeFactors = QUALIFICATION_FACTOR_SCORE_CONFIG.filter((factor) => activeFactorKeys.has(factor.key));
+  const factors = activeFactors.map((factor) => input[factor.inputKey]);
   const hasAnyMeaningfulFactor = factors.some((value) => isMeaningfulQualificationValue(value));
   if (!hasAnyMeaningfulFactor) return null;
 
-  const total =
-    (budgetScores[toKey(input.budgetAvailability)] ?? 0) +
-    (readinessScores[toKey(input.readinessToSpend)] ?? 0) +
-    (timelineScores[toKey(input.buyingTimeline)] ?? 0) +
-    (problemScores[toKey(input.problemSeverity)] ?? 0) +
-    (economicBuyerScores[toKey(input.economicBuyer)] ?? 0) +
-    (icpScores[toKey(input.icpFit)] ?? 0);
+  const totalPossible = activeFactors.reduce((sum, factor) => sum + factor.maxScore, 0);
+  if (totalPossible <= 0) {
+    return null;
+  }
 
-  return clampScore(total);
+  const earned = activeFactors.reduce((sum, factor) => {
+    return sum + (factor.scores[toKey(input[factor.inputKey])] ?? 0);
+  }, 0);
+
+  return clampScore(Math.round((earned / totalPossible) * 100));
 }
 
 export function computeLeadScore(
   input: LeadScoreInputs,
-  configuredLeadDataWeights?: ReadonlyArray<LeadDataWeight> | null
+  configuredLeadDataWeights?: ReadonlyArray<LeadDataWeight> | null,
+  configuredQualificationFactors?: ReadonlyArray<QualificationFactorConfig> | null
 ): LeadScoreResult {
   const buyerDataQualityScore100 = computeLeadDataQualityScore(input, configuredLeadDataWeights);
-  const qualificationRawScore100 = computeQualificationRawScore(input);
+  const qualificationRawScore100 = computeQualificationRawScore(input, configuredQualificationFactors);
   const qualificationScore100 = qualificationRawScore100 === null ? 0 : qualificationRawScore100;
   const leadContributionScore100 = Math.round(buyerDataQualityScore100 * LEAD_DATA_QUALITY_WEIGHT);
   const qualificationContributionScore100 = Math.round(qualificationScore100 * QUALIFICATION_WEIGHT);
@@ -240,6 +278,35 @@ export function computeLeadScore(
     qualificationContributionScore100,
     finalLeadScore
   };
+}
+
+function normalizeQualificationFactors(
+  configuredFactors?: ReadonlyArray<QualificationFactorConfig> | null
+): QualificationFactorConfig[] {
+  const source = configuredFactors && configuredFactors.length > 0 ? configuredFactors : DEFAULT_QUALIFICATION_FACTORS;
+  const byKey = new Map<string, QualificationFactorConfig>();
+  for (const factor of source) {
+    const key = (factor.key ?? '').trim();
+    if (!key) continue;
+    byKey.set(key, factor);
+  }
+
+  return DEFAULT_QUALIFICATION_FACTORS.map((factor) => {
+    const configured = byKey.get(factor.key);
+    if (!configured) {
+      return factor;
+    }
+
+    return {
+      ...factor,
+      ...configured,
+      displayLabel: (configured.displayLabel ?? '').trim() || factor.displayLabel,
+      factorType: factor.factorType,
+      valueType: configured.valueType ?? factor.valueType,
+      includeInScore: configured.includeInScore ?? factor.includeInScore,
+      options: configured.options ?? factor.options
+    };
+  });
 }
 
 function normalizeLeadDataWeights(configuredWeights?: ReadonlyArray<LeadDataWeight> | null): LeadDataWeight[] {

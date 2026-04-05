@@ -5,6 +5,7 @@ using CRM.Enterprise.Application.Opportunities;
 using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Domain.Enums;
+using CRM.Enterprise.Security;
 using CRM.Enterprise.Infrastructure.Caching;
 using CRM.Enterprise.Infrastructure.Persistence;
 using Microsoft.Extensions.Hosting;
@@ -556,9 +557,13 @@ public sealed class AssistantChatService : IAssistantChatService
             leadsQuery = leadsQuery.Where(lead => scopedUserIds.Contains(lead.OwnerId));
         }
         var leadSlaBreaches = await leadsQuery.CountAsync(cancellationToken);
-        var leadForFollowUpId = await leadsQuery
+        var leadForFollowUp = await leadsQuery
             .OrderBy(lead => lead.FirstTouchDueAtUtc)
-            .Select(lead => (Guid?)lead.Id)
+            .Select(lead => new
+            {
+                Id = (Guid?)lead.Id,
+                Name = (lead.FirstName + " " + lead.LastName).Trim()
+            })
             .FirstOrDefaultAsync(cancellationToken);
 
         var lowConfidenceLeadsQuery = _dbContext.Leads
@@ -640,7 +645,8 @@ public sealed class AssistantChatService : IAssistantChatService
             LowConfidenceLeads: lowConfidenceLeads,
             PendingApprovals: pendingApprovals,
             TopAtRiskOpportunityNames: topAtRiskOpportunityNames,
-            LeadForFollowUpId: leadForFollowUpId,
+            LeadForFollowUpId: leadForFollowUp?.Id,
+            LeadForFollowUpName: string.IsNullOrWhiteSpace(leadForFollowUp?.Name) ? null : leadForFollowUp.Name,
             TopAtRiskOpportunityId: topAtRiskOpportunityId);
     }
 
@@ -685,7 +691,7 @@ public sealed class AssistantChatService : IAssistantChatService
                 score,
                 ResolveRiskTier(score, policy),
                 ResolveUrgency(score, policy),
-                "Rep/Owner",
+                "Lead owner",
                 "Today",
                 "lead_follow_up",
                 "lead",
@@ -697,7 +703,7 @@ public sealed class AssistantChatService : IAssistantChatService
                     "Customer response probability drops when first touch is delayed.",
                     "Immediate outreach is required to recover conversion momentum."
                 },
-                BuildEntities("Lead", snapshot.LeadForFollowUpId),
+                BuildEntities("Lead", snapshot.LeadForFollowUpId, snapshot.LeadForFollowUpName),
                 $"Potentially recover up to {snapshot.LeadSlaBreaches} delayed lead(s) in today's outreach window.",
                 "Verify lead ownership and contact validity before triggering follow-up tasks."));
         }
@@ -716,7 +722,7 @@ public sealed class AssistantChatService : IAssistantChatService
                 score,
                 ResolveRiskTier(score, policy),
                 ResolveUrgency(score, policy),
-                "Rep/Manager",
+                "Deal owner",
                 "24 hours",
                 "opportunity_recovery",
                 "opportunity",
@@ -770,7 +776,7 @@ public sealed class AssistantChatService : IAssistantChatService
                 score,
                 ResolveRiskTier(score, policy),
                 ResolveUrgency(score, policy),
-                "Rep",
+                "Lead owner",
                 "This week",
                 "lead_qualification",
                 "lead",
@@ -782,7 +788,7 @@ public sealed class AssistantChatService : IAssistantChatService
                     "Low-confidence records create qualification risk and rework.",
                     "Collecting missing evidence improves conversion quality."
                 },
-                BuildEntities("Lead", snapshot.LeadForFollowUpId),
+                BuildEntities("Lead", snapshot.LeadForFollowUpId, snapshot.LeadForFollowUpName),
                 $"Improving confidence can unlock cleaner progression for {snapshot.LowConfidenceLeads} lead(s) this week.",
                 "Review missing qualification fields and evidence before advancing lead status."));
         }
@@ -797,7 +803,7 @@ public sealed class AssistantChatService : IAssistantChatService
                 score,
                 ResolveRiskTier(score, policy),
                 ResolveUrgency(score, policy),
-                "Rep/Owner",
+                "Activity owner",
                 "Today",
                 "activity_cleanup",
                 "activity",
@@ -962,6 +968,7 @@ public sealed class AssistantChatService : IAssistantChatService
         int PendingApprovals,
         string[] TopAtRiskOpportunityNames,
         Guid? LeadForFollowUpId,
+        string? LeadForFollowUpName,
         Guid? TopAtRiskOpportunityId);
 
     private async Task<AssistantActionExecutionResult> ExecuteApprovedActionAsync(
@@ -1164,18 +1171,39 @@ public sealed class AssistantChatService : IAssistantChatService
     private async Task<VisibilityContext> ResolveVisibilityAsync(Guid userId, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.TenantId;
+        var userInfo = await _dbContext.Users
+            .AsNoTracking()
+            .Where(u => u.Id == userId)
+            .Select(u => new { u.Id, u.TenantId })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (userInfo is null)
+        {
+            return new VisibilityContext(RoleVisibilityScope.Self, new[] { userId });
+        }
+
         var roleRows = await _dbContext.UserRoles
             .AsNoTracking()
             .Where(ur => !ur.IsDeleted && ur.UserId == userId)
-            .Join(_dbContext.Roles.AsNoTracking().Where(r => !r.IsDeleted && r.TenantId == tenantId),
+            .Join(
+                _dbContext.Roles
+                    .AsNoTracking()
+                    .Where(r => !r.IsDeleted && (r.TenantId == userInfo.TenantId || r.TenantId == Guid.Empty)),
                 ur => ur.RoleId,
                 r => r.Id,
-                (ur, r) => new { r.Id, r.HierarchyPath, r.VisibilityScope })
+                (ur, r) => new { r.Id, r.Name, r.HierarchyPath, r.VisibilityScope })
             .ToListAsync(cancellationToken);
 
         if (roleRows.Count == 0)
         {
             return new VisibilityContext(RoleVisibilityScope.Self, new[] { userId });
+        }
+
+        if (roleRows.Any(r => string.Equals(r.Name, Permissions.RoleNames.SuperAdmin, StringComparison.OrdinalIgnoreCase)
+                              || string.Equals(r.Name, Permissions.RoleNames.Admin, StringComparison.OrdinalIgnoreCase)
+                              || string.Equals(r.Name, Permissions.RoleNames.InternalAdmin, StringComparison.OrdinalIgnoreCase)))
+        {
+            return new VisibilityContext(RoleVisibilityScope.All, null);
         }
 
         var effectiveScope = ResolveVisibilityScope(roleRows.Select(r => r.VisibilityScope));
@@ -1237,6 +1265,18 @@ public sealed class AssistantChatService : IAssistantChatService
             .Select(ur => ur.UserId)
             .Distinct()
             .ToListAsync(cancellationToken);
+
+        // Some seeded/demo tenants use flat role paths, which can collapse team visibility
+        // to the current role only. In that case, fall back to active tenant users so
+        // manager and admin operational views still surface data.
+        if (teamUserIds.Count <= 1)
+        {
+            teamUserIds = await _dbContext.Users
+                .AsNoTracking()
+                .Where(u => u.TenantId == userInfo.TenantId && !u.IsDeleted && u.IsActive)
+                .Select(u => u.Id)
+                .ToListAsync(cancellationToken);
+        }
 
         if (!teamUserIds.Contains(userId))
         {
