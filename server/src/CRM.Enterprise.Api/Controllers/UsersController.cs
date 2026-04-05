@@ -1095,72 +1095,90 @@ public class UsersController : ControllerBase
         var encodedInviteUrl = System.Net.WebUtility.HtmlEncode(inviteUrl);
         // Keep the invite template self-contained so it renders consistently across email clients.
         var htmlBody = $@"
-            <div style=""font-family:'Segoe UI',Arial,sans-serif;background:radial-gradient(1200px 680px at 10% -20%, #233d72 0%, #101a39 42%, #0b1229 100%);padding:24px;"">
-              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" width=""100%"" style=""max-width:700px;margin:0 auto;border-radius:18px;border:1px solid rgba(147,197,253,0.26);background:rgba(7,12,28,0.86);overflow:hidden;box-shadow:0 24px 60px rgba(2,6,23,0.6);"">
+            <div style=""margin:0;padding:24px 0;background-color:#f5f7fb;font-family:'Segoe UI',Arial,sans-serif;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" width=""100%"" style=""border-collapse:collapse;background-color:#f5f7fb;"">
                 <tr>
-                  <td style=""padding:16px 22px;background:linear-gradient(90deg,#1d4ed8 0%,#2563eb 48%,#38bdf8 100%);color:#e0f2fe;"">
-                    <div style=""font-size:12px;letter-spacing:0.22em;text-transform:uppercase;font-weight:700;opacity:0.9;"">North Edge CRM</div>
-                    <div style=""margin-top:6px;font-size:21px;line-height:1.25;font-weight:800;color:#ffffff;"">Secure Workspace Invitation</div>
-                  </td>
-                </tr>
-                <tr>
-                  <td style=""padding:20px 22px 10px;color:#dbeafe;"">
-                    <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" width=""100%"">
-                      {logoSection}
-                    </table>
-
-                    <h1 style=""margin:0;font-size:24px;line-height:1.25;color:#eff6ff;"">Join {encodedTenantName} on North Edge CRM</h1>
-                    <p style=""margin:10px 0 0;font-size:14px;line-height:1.6;color:#cbd5e1;"">
-                      Dear {encodedUserName},<br />
-                      You are invited to join the {encodedTenantName} workspace. Activate your access and complete your profile to get started.
-                    </p>
-
-                    <table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""margin-top:14px;border-collapse:separate;border-spacing:0 10px;"">
+                  <td align=""center"" style=""padding:0 16px;"">
+                    <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" width=""100%"" style=""max-width:720px;border-collapse:separate;border-spacing:0;background-color:#2d3142;border:1px solid #394561;border-radius:20px;overflow:hidden;box-shadow:0 24px 60px rgba(15,23,42,0.32);"">
                       <tr>
-                        <td style=""width:50%;padding:10px 12px;background:rgba(59,130,246,0.14);border:1px solid rgba(96,165,250,0.3);border-radius:12px;"">
-                          <div style=""font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#93c5fd;"">Invitee</div>
-                          <div style=""margin-top:4px;font-size:14px;font-weight:700;color:#eff6ff;"">{encodedUserName}</div>
+                        <td bgcolor=""#2563eb"" style=""padding:18px 24px;background-color:#2563eb;background-image:linear-gradient(90deg,#1d4ed8 0%,#2563eb 48%,#38bdf8 100%);border-top-left-radius:20px;border-top-right-radius:20px;color:#e0f2fe;"">
+                          <div style=""font-size:12px;letter-spacing:0.24em;text-transform:uppercase;font-weight:700;color:#dbeafe;"">North Edge CRM</div>
+                          <div style=""margin-top:8px;font-size:21px;line-height:1.25;font-weight:800;color:#ffffff;"">Secure Workspace Invitation</div>
                         </td>
-                        <td style=""width:50%;padding:10px 12px;background:rgba(59,130,246,0.14);border:1px solid rgba(96,165,250,0.3);border-radius:12px;"">
-                          <div style=""font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#93c5fd;"">Email</div>
-                          <div style=""margin-top:4px;font-size:14px;font-weight:700;color:#eff6ff;"">{encodedUserEmail}</div>
+                      </tr>
+                      <tr>
+                        <td bgcolor=""#2d3142"" style=""padding:24px;background-color:#2d3142;color:#dbeafe;"">
+                          <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" width=""100%"" style=""border-collapse:collapse;"">
+                            {logoSection}
+                          </table>
+
+                          <h1 style=""margin:0;font-size:24px;line-height:1.25;font-weight:800;color:#f8fafc;"">Join {encodedTenantName} on North Edge CRM</h1>
+                          <p style=""margin:14px 0 0;font-size:15px;line-height:1.7;color:#d1d5db;"">
+                            Dear {encodedUserName},<br />
+                            You are invited to join the {encodedTenantName} workspace. Activate your access and complete your profile to get started.
+                          </p>
+
+                          <table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""margin-top:18px;border-collapse:separate;border-spacing:0 10px;"">
+                            <tr>
+                              <td width=""50%"" valign=""top"" style=""padding-right:6px;"">
+                                <table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""border-collapse:collapse;background-color:#33415c;border:1px solid #4569b2;border-radius:12px;"">
+                                  <tr>
+                                    <td style=""padding:12px 14px;"">
+                                      <div style=""font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#93c5fd;"">Invitee</div>
+                                      <div style=""margin-top:6px;font-size:14px;font-weight:700;color:#f8fafc;"">{encodedUserName}</div>
+                                    </td>
+                                  </tr>
+                                </table>
+                              </td>
+                              <td width=""50%"" valign=""top"" style=""padding-left:6px;"">
+                                <table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""border-collapse:collapse;background-color:#33415c;border:1px solid #4569b2;border-radius:12px;"">
+                                  <tr>
+                                    <td style=""padding:12px 14px;"">
+                                      <div style=""font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#93c5fd;"">Email</div>
+                                      <div style=""margin-top:6px;font-size:14px;font-weight:700;color:#38bdf8;word-break:break-word;"">{encodedUserEmail}</div>
+                                    </td>
+                                  </tr>
+                                </table>
+                              </td>
+                            </tr>
+                          </table>
+
+                          <table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""margin-top:8px;border-collapse:collapse;background-color:#1d2235;border:1px solid #3b455e;border-radius:14px;"">
+                            <tr>
+                              <td style=""padding:14px 16px;color:#93c5fd;font-size:12px;letter-spacing:0.12em;text-transform:uppercase;font-weight:700;border-bottom:1px solid #3b455e;"">Activation</td>
+                            </tr>
+                            <tr>
+                              <td style=""padding:16px;color:#e5e7eb;font-size:15px;line-height:1.7;"">
+                                This invite link expires in <strong style=""color:#ffffff;"">24 hours</strong>.<br />
+                                Use the button below to activate your account and sign in.
+                              </td>
+                            </tr>
+                          </table>
+
+                          <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" style=""margin-top:22px;border-collapse:separate;"">
+                            <tr>
+                              <td bgcolor=""#2563eb"" style=""border-radius:12px;background-color:#2563eb;background-image:linear-gradient(90deg,#1d4ed8 0%,#2563eb 48%,#38bdf8 100%);"">
+                                <a href=""{encodedInviteUrl}"" style=""display:inline-block;padding:14px 24px;font-size:15px;font-weight:700;line-height:1;color:#ffffff;text-decoration:none;"">Join workspace</a>
+                              </td>
+                            </tr>
+                          </table>
+
+                          <p style=""margin:22px 0 0;font-size:13px;line-height:1.6;color:#aab4c8;"">If you did not expect this invitation, you can ignore this message.</p>
+                          <p style=""margin:16px 0 4px;font-size:13px;line-height:1.6;color:#aab4c8;"">
+                            Need help? Reply to this email or contact
+                            <a href=""mailto:contact@northedgesystem.com"" style=""color:#60a5fa;text-decoration:none;"">contact@northedgesystem.com</a>.
+                          </p>
+                          <p style=""margin:0;font-size:13px;line-height:1.6;color:#aab4c8;"">
+                            <a href=""{encodedWebsiteUrl}"" style=""color:#60a5fa;text-decoration:none;"">North Edge System</a> • Toronto, ON, Canada
+                          </p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td bgcolor=""#2d3142"" style=""padding:14px 18px 18px;background-color:#2d3142;text-align:center;font-size:11px;color:#7c8aa5;"">
+                          North Edge CRM • Secure workspace invite
                         </td>
                       </tr>
                     </table>
-
-                    <table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""margin-top:8px;border-collapse:collapse;background:rgba(15,23,42,0.64);border:1px solid rgba(148,163,184,0.24);border-radius:14px;overflow:hidden;"">
-                      <tr>
-                        <td style=""padding:12px 14px;color:#93c5fd;font-size:12px;letter-spacing:0.1em;text-transform:uppercase;font-weight:700;border-bottom:1px solid rgba(148,163,184,0.2);"">Activation</td>
-                      </tr>
-                      <tr>
-                        <td style=""padding:12px 14px;color:#e2e8f0;font-size:14px;line-height:1.6;"">
-                          This invite link expires in <strong style=""color:#f8fafc;"">24 hours</strong>.<br />
-                          Use the button below to activate your account and sign in.
-                        </td>
-                      </tr>
-                    </table>
-
-                    <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" style=""margin-top:18px;"">
-                      <tr>
-                        <td style=""background:linear-gradient(90deg,#2563eb,#0ea5e9);border-radius:10px;"">
-                          <a href=""{encodedInviteUrl}"" style=""display:inline-block;padding:12px 20px;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;"">Join workspace</a>
-                        </td>
-                      </tr>
-                    </table>
-
-                    <p style=""margin:16px 0 0;color:#94a3b8;font-size:12px;"">If you did not expect this invitation, you can ignore this message.</p>
-                    <p style=""margin:14px 0 4px;color:#94a3b8;font-size:12px;"">
-                      Need help? Reply to this email or contact
-                      <a href=""mailto:contact@northedgesystem.com"" style=""color:#60a5fa;text-decoration:none;"">contact@northedgesystem.com</a>.
-                    </p>
-                    <p style=""margin:0;color:#94a3b8;font-size:12px;"">
-                      <a href=""{encodedWebsiteUrl}"" style=""color:#60a5fa;text-decoration:none;"">North Edge System</a> • Toronto, ON, Canada
-                    </p>
-                  </td>
-                </tr>
-                <tr>
-                  <td style=""padding:12px 16px 16px;text-align:center;color:#64748b;font-size:11px;"">
-                    North Edge CRM • Secure workspace invite
                   </td>
                 </tr>
               </table>
