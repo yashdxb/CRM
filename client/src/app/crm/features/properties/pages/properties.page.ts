@@ -264,6 +264,40 @@ export class PropertiesPage {
     }
   }
 
+  protected getPrimaryPhotoUrl(property: Property): string | null {
+    const raw = property.photoUrls?.trim();
+    if (!raw) {
+      return null;
+    }
+
+    const first = raw
+      .split(/\r?\n|,/)
+      .map((item) => item.trim())
+      .find((item) => item.length > 0);
+
+    return first || null;
+  }
+
+  protected propertyCardBackground(property: Property): string {
+    const status = this.statusColor(property.status);
+    const photo = this.getPrimaryPhotoUrl(property);
+    if (!photo) {
+      return `linear-gradient(135deg, ${status} 0%, ${status}b3 50%, ${status}80 100%)`;
+    }
+
+    return `linear-gradient(180deg, rgba(15, 23, 42, 0.10) 0%, rgba(15, 23, 42, 0.18) 45%, rgba(15, 23, 42, 0.52) 100%), url('${photo}') center/cover no-repeat`;
+  }
+
+  protected propertyAvatarBackground(property: Property): string {
+    const photo = this.getPrimaryPhotoUrl(property);
+    if (!photo) {
+      const status = this.statusColor(property.status);
+      return `linear-gradient(135deg, ${status} 0%, ${status}cc 100%)`;
+    }
+
+    return `linear-gradient(180deg, rgba(15, 23, 42, 0.10) 0%, rgba(15, 23, 42, 0.45) 100%), url('${photo}') center/cover no-repeat`;
+  }
+
   /* ── Bulk selection helpers (X11) ── */
   protected toggleSelect(id: string) {
     const s = new Set(this.selectedIds());

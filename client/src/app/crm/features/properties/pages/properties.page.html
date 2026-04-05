@@ -475,8 +475,8 @@
         </div>
 
         <!-- Photo / gradient header -->
-        <div class="card-photo-area" [style.background]="'linear-gradient(135deg, ' + statusColor(prop.status) + ' 0%, ' + statusColor(prop.status) + 'b3 50%, ' + statusColor(prop.status) + '80 100%)'">
-          <div class="card-photo-icon">
+        <div class="card-photo-area" [style.background]="propertyCardBackground(prop)">
+          <div class="card-photo-icon" [class.card-photo-icon--thumbnail]="getPrimaryPhotoUrl(prop)">
             <i class="pi pi-home"></i>
           </div>
           <div class="card-photo-price" *ngIf="prop.listPrice">
@@ -554,7 +554,7 @@
       <div class="column-body">
         <div class="property-card" *ngFor="let prop of getPropertiesByStatus(status)" (click)="onRowClick(prop, $event)">
           <div class="property-card-header">
-            <div class="prop-avatar" [style.background]="'linear-gradient(135deg, ' + statusColor(prop.status) + ' 0%, ' + statusColor(prop.status) + 'cc 100%)'">
+            <div class="prop-avatar" [style.background]="propertyAvatarBackground(prop)">
               <i class="pi pi-home"></i>
             </div>
             <div class="prop-meta">
@@ -609,7 +609,7 @@
         <div class="neighborhood-cards">
           <div class="map-property-card" *ngFor="let prop of hood.items" (click)="onRowClick(prop, $event)">
             <div class="map-card-top">
-              <div class="map-card-avatar" [style.background]="'linear-gradient(135deg, ' + statusColor(prop.status) + ' 0%, ' + statusColor(prop.status) + 'cc 100%)'">
+              <div class="map-card-avatar" [style.background]="propertyAvatarBackground(prop)">
                 <i class="pi pi-home"></i>
               </div>
               <p-tag [value]="prop.status" [severity]="statusSeverity(prop.status)" [rounded]="true" class="map-card-tag"></p-tag>
