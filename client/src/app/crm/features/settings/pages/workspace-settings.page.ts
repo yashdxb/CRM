@@ -2,6 +2,7 @@ import { NgClass, NgFor, NgIf } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { AccordionModule } from 'primeng/accordion';
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
 import { InputGroupModule } from 'primeng/inputgroup';
@@ -46,6 +47,7 @@ interface RecordNumberingRow {
   selector: 'app-workspace-settings-page',
   standalone: true,
   imports: [
+    AccordionModule,
     ButtonModule,
     CheckboxModule,
     InputGroupModule,
@@ -79,6 +81,11 @@ export class WorkspaceSettingsPage {
   private readonly brandingState = inject(TenantBrandingStateService);
 
   protected readonly activeTab = signal<string>('company');
+
+  // Accordion panel states – all expanded by default
+  protected readonly companyPanels = signal<string[]>(['company-info', 'workspace-branding']);
+  protected readonly operationsPanels = signal<string[]>(['lead-sla', 'record-numbering', 'ai-scoring', 'supporting-docs', 'delivery-renewal']);
+  protected readonly regionalPanels = signal<string[]>(['regional-settings']);
 
   protected readonly brandingLogoUrl = this.brandingState.logoUrl;
   protected readonly brandingUploading = signal(false);
@@ -249,6 +256,10 @@ export class WorkspaceSettingsPage {
       this.activeTab.set(tab);
     }
   }
+
+  protected onCompanyPanelsChange(v: string | number | string[] | number[] | null | undefined) { this.companyPanels.set((v ?? []) as string[]); }
+  protected onOperationsPanelsChange(v: string | number | string[] | number[] | null | undefined) { this.operationsPanels.set((v ?? []) as string[]); }
+  protected onRegionalPanelsChange(v: string | number | string[] | number[] | null | undefined) { this.regionalPanels.set((v ?? []) as string[]); }
 
   protected loadSettings() {
     this.loading.set(true);

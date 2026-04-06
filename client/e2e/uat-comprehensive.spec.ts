@@ -886,7 +886,7 @@ test.describe('Activity Management', () => {
 test.describe('Settings & Administration', () => {
   const settingsPages = [
     { path: '/app/settings/workspace', label: 'Workspace Settings' },
-    { path: '/app/settings/approvals', label: 'Approval Settings' },
+    { path: '/app/workflows', label: 'Workflow Builder' },
     { path: '/app/settings/users', label: 'Users Directory' },
     { path: '/app/settings/roles', label: 'Roles Management' },
     { path: '/app/settings/lead-assignment', label: 'Lead Assignment Rules' },

@@ -1254,7 +1254,7 @@ export class DashboardPage implements OnInit {
       return;
     }
     if (entityType === 'approval') {
-      this.router.navigate(['/app/settings/approvals']);
+      this.router.navigate(['/app/workflows']);
       return;
     }
 

@@ -495,7 +495,7 @@ export class AssistantPanelComponent {
       return;
     }
     if (entityType === 'approval') {
-      this.router.navigate(['/app/settings/approvals']);
+      this.router.navigate(['/app/workflows']);
       return;
     }
 

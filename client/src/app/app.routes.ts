@@ -646,9 +646,8 @@ export const routes: Routes = [
           },
           {
             path: 'approvals',
-            canActivate: [roleGuard],
-            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Approval Settings' },
-            loadComponent: () => import('./crm/features/settings/pages/approval-settings.page').then((m) => m.ApprovalSettingsPage)
+            pathMatch: 'full',
+            redirectTo: '/app/workflows'
           },
           {
             path: 'qualification-policy',
@@ -687,7 +686,7 @@ export const routes: Routes = [
           {
             path: 'workflow-builder',
             pathMatch: 'full',
-            redirectTo: '/app/workflows/designer'
+            redirectTo: '/app/workflows'
           },
           {
             path: 'dashboard-packs',
@@ -896,27 +895,26 @@ export const routes: Routes = [
         canActivate: [roleGuard],
         data: { permission: PERMISSION_KEYS.administrationView, breadcrumb: 'Workflows', icon: 'pi-share-alt' },
         children: [
-          { path: '', pathMatch: 'full', redirectTo: 'designer' },
           {
-            path: 'designer',
+            path: '',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.administrationView, breadcrumb: 'Workflow Workspace' },
+            loadComponent: () =>
+              import('./crm/features/workflows/pages/workflow-workspace.page').then((m) => m.WorkflowWorkspacePage)
+          },
+          {
+            path: 'builder',
             canActivate: [roleGuard],
             data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Workflow Builder' },
             loadComponent: () =>
-              import('./crm/features/workflows/pages/workflow-designer.page').then((m) => m.WorkflowDesignerPage)
+              import('./crm/features/workflows/pages/workflow-builder.page').then((m) => m.WorkflowBuilderPage)
           },
           {
-            path: 'designer/advanced',
+            path: 'builder/:id',
             canActivate: [roleGuard],
-            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Advanced Workflow Builder' },
+            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Edit Workflow' },
             loadComponent: () =>
-              import('./crm/features/workflows/pages/workflow-designer-advanced.page').then((m) => m.WorkflowDesignerAdvancedPage)
-          },
-          {
-            path: 'designer/legacy',
-            canActivate: [roleGuard],
-            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Legacy Workflow Designer' },
-            loadComponent: () =>
-              import('./crm/features/workflows/pages/workflow-designer-legacy.page').then((m) => m.WorkflowDesignerLegacyPage)
+              import('./crm/features/workflows/pages/workflow-builder.page').then((m) => m.WorkflowBuilderPage)
           },
           {
             path: 'executions',

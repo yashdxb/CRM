@@ -1,32 +1,38 @@
+/** @deprecated Use ConditionGroup/ConditionRule from approval-workflow-builder.model instead. */
 export interface WorkflowNodeConditionConfig {
   field: string | null;
   operator: string | null;
   value: string | null;
 }
 
+/** @deprecated Legacy delay node config — not used in unified builder. */
 export interface WorkflowNodeDelayConfig {
   duration: number | null;
   unit: 'minutes' | 'hours' | 'days';
   businessHoursOnly: boolean;
 }
 
+/** @deprecated Legacy email node config — not used in unified builder. */
 export interface WorkflowNodeEmailConfig {
   template: string | null;
   recipientType: string | null;
   subject: string | null;
 }
 
+/** @deprecated Legacy notification node config — not used in unified builder. */
 export interface WorkflowNodeNotificationConfig {
   channel: string | null;
   audience: string | null;
   message: string | null;
 }
 
+/** @deprecated Legacy CRM update node config — not used in unified builder. */
 export interface WorkflowNodeCrmUpdateConfig {
   field: string | null;
   value: string | null;
 }
 
+/** @deprecated Legacy activity node config — not used in unified builder. */
 export interface WorkflowNodeActivityConfig {
   activityType: string | null;
   subject: string | null;
@@ -34,6 +40,7 @@ export interface WorkflowNodeActivityConfig {
   dueInHours: number | null;
 }
 
+/** @deprecated Use WorkflowStep from approval-workflow-builder.model instead. */
 export interface WorkflowNodeConfig {
   condition?: WorkflowNodeConditionConfig | null;
   delay?: WorkflowNodeDelayConfig | null;
@@ -43,6 +50,7 @@ export interface WorkflowNodeConfig {
   activity?: WorkflowNodeActivityConfig | null;
 }
 
+/** @deprecated Legacy canvas node — not used in unified builder. */
 export interface WorkflowNode {
   id: string;
   type: 'start' | 'approval' | 'condition' | 'email' | 'notification' | 'delay' | 'crm-update' | 'activity' | 'end';
@@ -52,6 +60,7 @@ export interface WorkflowNode {
   config?: WorkflowNodeConfig | null;
 }
 
+/** @deprecated Legacy canvas connection — not used in unified builder. */
 export interface WorkflowConnection {
   source: string;
   target: string;
@@ -59,6 +68,7 @@ export interface WorkflowConnection {
   branchKey?: string | null;
 }
 
+/** @deprecated Use WorkflowStep from approval-workflow-builder.model instead. */
 export interface WorkflowStep {
   order: number;
   approverRoleId?: string | null;
@@ -69,6 +79,7 @@ export interface WorkflowStep {
   nodeId?: string | null;
 }
 
+/** @deprecated Use ApprovalWorkflowDefinition from approval-workflow-builder.model instead. */
 export interface WorkflowScope {
   name: string;
   purpose: string;
@@ -80,6 +91,7 @@ export interface WorkflowScope {
   version: number;
 }
 
+/** @deprecated Use ApprovalWorkflowDefinition from approval-workflow-builder.model instead. */
 export interface DealApprovalWorkflowDefinition {
   enabled: boolean;
   scope: WorkflowScope;

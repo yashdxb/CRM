@@ -9,7 +9,7 @@ import {
   ReactiveFormsModule,
   Validators
 } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MenuItem } from 'primeng/api';
 import { AccordionModule } from 'primeng/accordion';
 import { ButtonModule } from 'primeng/button';
@@ -37,6 +37,7 @@ import {
   ConditionRule,
   ParallelApprovalGroup,
   ParallelCompletionMode,
+  SimulationResult,
   ValidationItem,
   WorkflowFlowItem,
   WorkflowOutcome,
@@ -48,7 +49,7 @@ import {
 import { ApprovalWorkflowBuilderFacade } from '../services/approval-workflow-builder.facade';
 
 @Component({
-  selector: 'app-workflow-designer-advanced-page',
+  selector: 'app-workflow-builder-page',
   standalone: true,
   imports: [
     CommonModule,
@@ -72,20 +73,22 @@ import { ApprovalWorkflowBuilderFacade } from '../services/approval-workflow-bui
     TooltipModule
   ],
   providers: [ApprovalWorkflowBuilderFacade],
-  templateUrl: './workflow-designer-advanced.page.html',
-  styleUrl: './workflow-designer-advanced.page.scss'
+  templateUrl: './workflow-builder.page.html',
+  styleUrl: './workflow-builder.page.scss'
 })
-export class WorkflowDesignerAdvancedPage {
+export class WorkflowBuilderPage {
   private readonly fb = inject(FormBuilder);
   protected readonly facade = inject(ApprovalWorkflowBuilderFacade);
   private readonly toast = inject(AppToastService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly route = inject(ActivatedRoute);
 
-  private readonly currentDefinition = signal<ApprovalWorkflowDefinition>(this.facade.loadDraft());
-  private readonly savedSnapshot = signal<ApprovalWorkflowDefinition>(this.facade.loadDraft());
+  private readonly currentDefinition = signal<ApprovalWorkflowDefinition>(this.loadInitialDefinition());
+  private readonly savedSnapshot = signal<ApprovalWorkflowDefinition>(this.loadInitialDefinition());
   protected readonly workflowStatus = signal<WorkflowStatus>(this.savedSnapshot().status);
   protected readonly selectedFlowItemId = signal<string | null>(this.savedSnapshot().steps[0]?.id ?? null);
   protected readonly metadataLoading = this.facade.metadataLoading;
+  protected readonly expandedSections = signal<string[]>(['details']);
 
   protected readonly moduleOptions = this.facade.moduleOptions;
   protected readonly triggerOptions = this.facade.triggerOptions;
@@ -104,6 +107,9 @@ export class WorkflowDesignerAdvancedPage {
   protected readonly validationItems = computed<ValidationItem[]>(() => this.facade.buildValidation(this.currentDefinition()));
   protected readonly scenarioResult = computed(() =>
     this.facade.evaluateScenario(this.currentDefinition(), this.currentDefinition().testScenario)
+  );
+  protected readonly simulationResult = computed<SimulationResult>(() =>
+    this.facade.runSimulation(this.currentDefinition(), this.currentDefinition().testScenario)
   );
   protected readonly statusSeverity = computed<'info' | 'success'>(() =>
     this.workflowStatus() === 'Active' ? 'success' : 'info'
@@ -135,6 +141,15 @@ export class WorkflowDesignerAdvancedPage {
       .loadMetadata(this.savedSnapshot())
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe();
+  }
+
+  private loadInitialDefinition(): ApprovalWorkflowDefinition {
+    const templateId = this.route.snapshot.queryParamMap.get('template');
+    if (templateId) {
+      const fromTemplate = this.facade.createFromTemplate(templateId);
+      if (fromTemplate) return fromTemplate;
+    }
+    return this.facade.loadDraft();
   }
 
   protected get conditionGroups(): FormArray {

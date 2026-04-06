@@ -25,17 +25,17 @@ test('settings: workspace settings page loads', async ({ page, request }) => {
   await expect(page.locator('body')).toContainText(/workspace|settings|configuration/i);
 });
 
-/* ── Approval settings loads ── */
-test('settings: approval settings page loads', async ({ page, request }) => {
+/* ── Workflow workspace loads (replaced approval settings) ── */
+test('settings: workflow workspace page loads', async ({ page, request }) => {
   test.setTimeout(60_000);
   attachDiagnostics(page);
   await login(page, request);
 
-  await page.goto('/app/settings/approvals');
-  await page.waitForURL('**/app/settings/approvals');
+  await page.goto('/app/workflows');
+  await page.waitForURL('**/app/workflows');
   await page.waitForTimeout(1500);
 
-  await expect(page.locator('body')).toContainText(/approval|threshold|settings/i);
+  await expect(page.locator('body')).toContainText(/workflow|builder|registry/i);
 });
 
 /* ── Users page loads ── */

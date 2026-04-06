@@ -18,10 +18,9 @@
       </div>
 
       <div class="page-header__actions">
-        <button pButton type="button" styleClass="wf-btn wf-btn--nav" severity="secondary" [outlined]="true" label="Simple Builder" icon="pi pi-table" routerLink="/app/workflows/designer"></button>
-        <button pButton type="button" styleClass="wf-btn wf-btn--nav" severity="secondary" [outlined]="true" label="Legacy Builder" icon="pi pi-history" routerLink="/app/workflows/designer/legacy"></button>
-        <button pButton type="button" styleClass="wf-btn wf-btn--neutral" severity="secondary" [outlined]="true" label="Cancel" icon="pi pi-times" (click)="cancelChanges()"></button>
-        <button pButton type="button" styleClass="wf-btn wf-btn--draft" severity="secondary" label="Save Draft" icon="pi pi-save" (click)="saveDraft()"></button>
+        <button pButton type="button" styleClass="wf-btn wf-btn--nav" label="Back to Workflows" icon="pi pi-arrow-left" routerLink="/app/workflows"></button>
+        <button pButton type="button" styleClass="wf-btn wf-btn--neutral" label="Cancel" icon="pi pi-times" (click)="cancelChanges()"></button>
+        <button pButton type="button" styleClass="wf-btn wf-btn--draft" label="Save Draft" icon="pi pi-save" (click)="saveDraft()"></button>
         <button pButton type="button" styleClass="wf-btn wf-btn--publish" label="Publish" icon="pi pi-send" [disabled]="!canPublish()" (click)="publish()"></button>
       </div>
     </div>
@@ -29,19 +28,27 @@
 
   <div class="builder-layout">
     <section class="builder-canvas">
-      <p-card styleClass="builder-card builder-card--details">
-        <ng-template pTemplate="header">
-          <div class="card-header">
-            <div>
-              <span class="card-kicker">Workflow Details</span>
-              <h2>Control the identity, trigger, and activation state.</h2>
+      <p-accordion [value]="expandedSections()" [multiple]="true" styleClass="builder-accordion">
+
+      <!-- ── 1. Workflow Details ── -->
+      <p-accordion-panel value="details">
+        <p-accordion-header>
+          <div class="accordion-header-content">
+            <div class="accordion-header-icon accordion-header-icon--details">
+              <i class="pi pi-id-card"></i>
             </div>
-            <div class="card-header__meta">
+            <div class="accordion-header-text">
+              <span class="accordion-kicker">Step 1</span>
+              <h2>Workflow Details</h2>
+              <p>Control the identity, trigger, and activation state.</p>
+            </div>
+            <div class="accordion-header-meta">
               <p-chip label="Versioned"></p-chip>
               <span class="save-note">Last saved {{ lastSavedLabel() }}</span>
             </div>
           </div>
-        </ng-template>
+        </p-accordion-header>
+        <p-accordion-content>
 
         <div class="metadata-banner" *ngIf="metadataLoading()">
           <i class="pi pi-spin pi-spinner"></i>
@@ -104,20 +111,27 @@
             ></textarea>
           </div>
         </div>
-      </p-card>
+      </p-accordion-content>
+      </p-accordion-panel>
 
-      <p-card styleClass="builder-card">
-        <ng-template pTemplate="header">
-          <div class="card-header">
-            <div>
-              <span class="card-kicker">Conditions Builder</span>
-              <h2>Model entry conditions with readable rule groups.</h2>
+      <!-- ── 2. Entry Conditions ── -->
+      <p-accordion-panel value="conditions">
+        <p-accordion-header>
+          <div class="accordion-header-content">
+            <div class="accordion-header-icon accordion-header-icon--conditions">
+              <i class="pi pi-filter"></i>
             </div>
-            <div class="card-header__actions">
-              <button pButton type="button" styleClass="wf-btn wf-btn--add" severity="secondary" icon="pi pi-plus" label="Add Group" (click)="addConditionGroup()"></button>
+            <div class="accordion-header-text">
+              <span class="accordion-kicker">Step 2</span>
+              <h2>Entry Conditions</h2>
+              <p>Model entry conditions with readable rule groups.</p>
+            </div>
+            <div class="accordion-header-actions">
+              <button pButton type="button" styleClass="wf-btn wf-btn--add" icon="pi pi-plus" label="Add Group" (click)="addConditionGroup(); $event.stopPropagation()"></button>
             </div>
           </div>
-        </ng-template>
+        </p-accordion-header>
+        <p-accordion-content>
 
         <div class="conditions-stack" formArrayName="conditionGroups">
           <div class="empty-state" *ngIf="conditionGroups.length === 0">
@@ -153,8 +167,6 @@
                   pButton
                   type="button"
                   styleClass="wf-btn wf-btn--danger"
-                  severity="secondary"
-                  [outlined]="true"
                   icon="pi pi-trash"
                 label="Remove Group"
                 (click)="removeConditionGroup(groupIndex)"
@@ -227,26 +239,33 @@
             </div>
 
             <div class="panel-actions">
-              <button pButton type="button" styleClass="wf-btn wf-btn--add" severity="secondary" icon="pi pi-plus" label="Add Condition" (click)="addCondition(groupIndex)"></button>
+              <button pButton type="button" styleClass="wf-btn wf-btn--add" icon="pi pi-plus" label="Add Condition" (click)="addCondition(groupIndex)"></button>
             </div>
           </p-panel>
         </div>
-      </p-card>
 
-      <p-card styleClass="builder-card">
-        <ng-template pTemplate="header">
-          <div class="card-header">
-            <div>
-              <span class="card-kicker">Approval Steps</span>
-              <h2>Combine sequential routing with clear parallel review groups.</h2>
-              <p class="section-helper">Each step shows who approves, how long they have, and what happens if they miss the SLA.</p>
+      </p-accordion-content>
+      </p-accordion-panel>
+
+      <!-- ── 3. Approval Steps ── -->
+      <p-accordion-panel value="steps">
+        <p-accordion-header>
+          <div class="accordion-header-content">
+            <div class="accordion-header-icon accordion-header-icon--steps">
+              <i class="pi pi-share-alt"></i>
             </div>
-            <div class="card-header__actions">
-              <button pButton type="button" styleClass="wf-btn wf-btn--add" severity="secondary" icon="pi pi-plus" label="Add Step" (click)="addSequentialStep()"></button>
-              <button pButton type="button" styleClass="wf-btn wf-btn--group" severity="secondary" [outlined]="true" icon="pi pi-sitemap" label="Add Parallel Group" (click)="addParallelGroup()"></button>
+            <div class="accordion-header-text">
+              <span class="accordion-kicker">Step 3</span>
+              <h2>Approval Steps</h2>
+              <p>Combine sequential routing with parallel review groups.</p>
+            </div>
+            <div class="accordion-header-actions">
+              <button pButton type="button" styleClass="wf-btn wf-btn--add" icon="pi pi-plus" label="Add Step" (click)="addSequentialStep(); $event.stopPropagation()"></button>
+              <button pButton type="button" styleClass="wf-btn wf-btn--group" icon="pi pi-sitemap" label="Add Parallel Group" (click)="addParallelGroup(); $event.stopPropagation()"></button>
             </div>
           </div>
-        </ng-template>
+        </p-accordion-header>
+        <p-accordion-content>
 
         <div class="flow-stack" formArrayName="steps">
           <div class="empty-state" *ngIf="flowSteps.length === 0">
@@ -389,7 +408,7 @@
                         <span class="chip chip--warning">{{ approverControl.get('escalationRule')?.value }}</span>
                       </div>
                     </div>
-                    <button pButton type="button" styleClass="wf-btn-icon wf-btn-icon--danger" severity="secondary" [text]="true" icon="pi pi-trash" (click)="removeParallelApprover(stepIndex, approverIndex)"></button>
+                    <button pButton type="button" styleClass="wf-btn-icon wf-btn-icon--danger" [text]="true" icon="pi pi-trash" (click)="removeParallelApprover(stepIndex, approverIndex)"></button>
                   </div>
 
                   <div class="step-grid step-grid--compact">
@@ -422,7 +441,7 @@
               </div>
 
               <div class="panel-actions">
-                <button pButton type="button" styleClass="wf-btn wf-btn--add" severity="secondary" icon="pi pi-plus" label="Add Parallel Approver" (click)="addParallelApprover(stepIndex)"></button>
+                <button pButton type="button" styleClass="wf-btn wf-btn--add" icon="pi pi-plus" label="Add Parallel Approver" (click)="addParallelApprover(stepIndex)"></button>
               </div>
             </div>
 
@@ -469,17 +488,25 @@
             </p-accordion>
           </div>
         </div>
-      </p-card>
 
-      <p-card styleClass="builder-card">
-        <ng-template pTemplate="header">
-          <div class="card-header">
-            <div>
-              <span class="card-kicker">Actions / Outcomes</span>
-              <h2>Define what happens when the workflow approves, rejects, or times out.</h2>
+      </p-accordion-content>
+      </p-accordion-panel>
+
+      <!-- ── 4. Actions & Outcomes ── -->
+      <p-accordion-panel value="outcomes">
+        <p-accordion-header>
+          <div class="accordion-header-content">
+            <div class="accordion-header-icon accordion-header-icon--outcomes">
+              <i class="pi pi-check-circle"></i>
+            </div>
+            <div class="accordion-header-text">
+              <span class="accordion-kicker">Step 4</span>
+              <h2>Actions &amp; Outcomes</h2>
+              <p>Define what happens when the workflow approves, rejects, or times out.</p>
             </div>
           </div>
-        </ng-template>
+        </p-accordion-header>
+        <p-accordion-content>
 
         <div class="outcomes-grid" formGroupName="outcomes">
           <div class="outcome-card" formGroupName="approve">
@@ -527,7 +554,10 @@
             </div>
           </div>
         </div>
-      </p-card>
+      </p-accordion-content>
+      </p-accordion-panel>
+
+      </p-accordion>
     </section>
 
     <aside class="builder-sidebar">
@@ -651,6 +681,48 @@
 
         <div class="test-result">
           <p>{{ scenarioResult().detail }}</p>
+        </div>
+      </p-card>
+
+      <!-- ── Simulation ── -->
+      <p-card styleClass="sidebar-card sidebar-card--simulation">
+        <ng-template pTemplate="header">
+          <div class="sidebar-card__header">
+            <div>
+              <span class="card-kicker">Simulation</span>
+              <h2>Traversed nodes &amp; outcome</h2>
+            </div>
+            <p-tag [severity]="simulationResult().triggered ? 'success' : 'warn'" [value]="simulationResult().badge"></p-tag>
+          </div>
+        </ng-template>
+
+        <div class="simulation-stack">
+          @for (node of simulationResult().traversedNodes; track node.id) {
+            <div class="simulation-node" [class]="'simulation-node--' + node.status">
+              <span class="simulation-node__icon">
+                @switch (node.status) {
+                  @case ('passed') { <i class="pi pi-check-circle"></i> }
+                  @case ('skipped') { <i class="pi pi-minus-circle"></i> }
+                  @case ('pending') { <i class="pi pi-clock"></i> }
+                }
+              </span>
+              <div class="simulation-node__body">
+                <strong>{{ node.title }}</strong>
+                <span class="simulation-node__detail">{{ node.detail }}</span>
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="simulation-footer">
+          <div class="simulation-footer__meta">
+            <span class="simulation-footer__label">Est. Duration</span>
+            <strong>{{ simulationResult().estimatedDuration }}</strong>
+          </div>
+          <div class="simulation-footer__meta">
+            <span class="simulation-footer__label">Outcome</span>
+            <strong>{{ simulationResult().finalOutcome }}</strong>
+          </div>
         </div>
       </p-card>
     </aside>

@@ -202,11 +202,10 @@ export const NAV_LINKS: NavLink[] = [
       {
         label: 'Intelligence & Automation',
         icon: 'pi-sitemap',
-        path: '/app/settings/approvals',
+        path: '/app/workflows',
         permission: PERMISSION_KEYS.administrationView,
         children: [
-          { label: 'Approvals', icon: 'pi-check-square', path: '/app/settings/approvals', permission: PERMISSION_KEYS.administrationManage },
-          { label: 'Workflow Builder', icon: 'pi-share-alt', path: '/app/workflows/designer', permission: PERMISSION_KEYS.administrationManage },
+          { label: 'Workflow Builder', icon: 'pi-share-alt', path: '/app/workflows', permission: PERMISSION_KEYS.administrationManage },
           { label: 'Workflow Executions', icon: 'pi-history', path: '/app/workflows/executions', permission: PERMISSION_KEYS.administrationView },
           { label: 'Marketing Settings', icon: 'pi-megaphone', path: '/app/settings/marketing', permission: PERMISSION_KEYS.administrationView, featureFlag: 'marketing.campaigns' },
           { label: 'Lead Assignment', icon: 'pi-sitemap', path: '/app/settings/lead-assignment', permission: PERMISSION_KEYS.leadsManage },

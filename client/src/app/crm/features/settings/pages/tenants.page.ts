@@ -16,7 +16,7 @@ import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { TenantSummary } from '../models/tenant-admin.model';
 import { TenantAdminDataService } from '../services/tenant-admin-data.service';
 import { WorkspaceSettingsService } from '../services/workspace-settings.service';
-import { VerticalPresetConfiguration, WorkspaceSettings } from '../models/workspace-settings.model';
+import { VerticalPresetConfiguration, UpdateWorkspaceSettingsRequest, WorkspaceSettings } from '../models/workspace-settings.model';
 import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { AppToastService } from '../../../../core/app-toast.service';
@@ -72,6 +72,9 @@ export class TenantsPage {
   );
 
   protected readonly totalTenants = computed(() => this.tenants().length);
+
+  /** Cached current workspace settings so feature-flag saves include required fields. */
+  private currentSettings = signal<WorkspaceSettings | null>(null);
 
   /* ── Feature-flag config tab ── */
   protected readonly activeConfigTab = signal<string>('modules');
@@ -193,7 +196,10 @@ export class TenantsPage {
   /* ── Feature flags ── */
   private loadFeatureFlags() {
     this.settingsService.getSettings().subscribe({
-      next: (settings) => this.applyFeatureSettings(settings),
+      next: (settings) => {
+        this.currentSettings.set(settings);
+        this.applyFeatureSettings(settings);
+      },
       error: () => { /* keep defaults */ }
     });
   }
@@ -256,12 +262,17 @@ export class TenantsPage {
       'auth.entra': !!p.featureAuthEntra
     };
     this.savingFlags.set(true);
+    const current = this.currentSettings();
     this.settingsService.updateSettings({
+      name: current?.name ?? '',
+      timeZone: current?.timeZone ?? '',
+      currency: current?.currency ?? '',
       featureFlags,
       reportDesignerRequiredPermission: p.reportDesignerRequiredPermission || null
-    } as Partial<WorkspaceSettings> as WorkspaceSettings).subscribe({
+    } as UpdateWorkspaceSettingsRequest).subscribe({
       next: (settings) => {
         this.savingFlags.set(false);
+        this.currentSettings.set(settings);
         this.applyFeatureSettings(settings);
         this.raiseToast('success', 'Feature flags saved');
       },

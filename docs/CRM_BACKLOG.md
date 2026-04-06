@@ -489,10 +489,12 @@ MoSCoW: Must
   - Builder supports typed node config, branch metadata, direct canvas selection, and visible branch labels.
   - Published deal workflows execute `crm-update`, `activity`, and `notification` nodes before and between approval checkpoints.
 - Remaining improvement focus:
-  - Execute `delay` and `email` nodes.
-  - Add simulation mode before publish.
+  - Execute `delay` and `email` nodes at runtime.
   - Replace overlay branch labels with routed-edge label placement.
-  - Add a more guided “starter template” experience so the builder feels less open-ended for first-time admins.
+- Delivered in Phase 3:
+  - Workflow template catalog (5 executable templates) with template picker dialog.
+  - Simulation mode: traversed nodes, estimated duration, final outcome.
+  - Approval settings route consolidated to /app/workflows (old route redirects).
 
 10) Epistemic dashboard widgets (Truth Metrics, Risk Register, Confidence Forecast)
 MoSCoW: Must

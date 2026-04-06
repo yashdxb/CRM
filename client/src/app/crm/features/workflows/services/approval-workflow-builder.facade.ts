@@ -9,10 +9,13 @@ import {
   ConditionRule,
   ParallelApprovalGroup,
   ParallelCompletionMode,
+  SimulationNode,
+  SimulationResult,
   ValidationItem,
   WorkflowStatus,
   WorkflowStep,
   WorkflowSummary,
+  WorkflowTemplate,
   WorkflowTestScenario
 } from '../models/approval-workflow-builder.model';
 import { WorkflowDefinitionService } from './workflow-definition.service';
@@ -409,6 +412,377 @@ export class ApprovalWorkflowBuilderFacade {
       default:
         return false;
     }
+  }
+
+  getTemplateCatalog(): WorkflowTemplate[] {
+    return [
+      {
+        id: 'high-discount-approval',
+        name: 'High Discount Approval',
+        description: 'Route strategic discount exceptions through sales leadership, finance, legal, and executive approval.',
+        icon: 'pi-percentage',
+        category: 'approval',
+        module: 'Opportunity',
+        previewSteps: ['Sales Manager', 'Finance & Legal (parallel)', 'Director final']
+      },
+      {
+        id: 'new-inquiry-followup-sla',
+        name: 'New Inquiry Follow-Up SLA',
+        description: 'Ensure every new lead inquiry receives a response within the configured SLA window.',
+        icon: 'pi-clock',
+        category: 'follow-up',
+        module: 'Lead',
+        previewSteps: ['Auto-assign agent', 'SLA check (8h)', 'Manager escalation']
+      },
+      {
+        id: 'showing-followup',
+        name: 'Showing Follow-Up',
+        description: 'Trigger a follow-up task after a property showing to capture buyer feedback and next steps.',
+        icon: 'pi-home',
+        category: 'follow-up',
+        module: 'Activity',
+        previewSteps: ['Post-showing task', 'Feedback capture (24h)', 'Agent review']
+      },
+      {
+        id: 'low-readiness-review',
+        name: 'Low Readiness Review',
+        description: 'Flag deals with low readiness scores for manager review before they advance to negotiation.',
+        icon: 'pi-exclamation-triangle',
+        category: 'review',
+        module: 'Opportunity',
+        previewSteps: ['Readiness check', 'Manager review', 'Go/No-go decision']
+      },
+      {
+        id: 'price-drop-escalation',
+        name: 'Price Drop Escalation',
+        description: 'Escalate pricing changes beyond a threshold to leadership for approval before the listing is updated.',
+        icon: 'pi-arrow-down',
+        category: 'escalation',
+        module: 'Opportunity',
+        previewSteps: ['Price delta check', 'Manager approval', 'Director override']
+      }
+    ];
+  }
+
+  createFromTemplate(templateId: string): ApprovalWorkflowDefinition {
+    switch (templateId) {
+      case 'new-inquiry-followup-sla':
+        return this.createInquiryFollowUpTemplate();
+      case 'showing-followup':
+        return this.createShowingFollowUpTemplate();
+      case 'low-readiness-review':
+        return this.createLowReadinessReviewTemplate();
+      case 'price-drop-escalation':
+        return this.createPriceDropEscalationTemplate();
+      case 'high-discount-approval':
+      default:
+        return this.createDemoWorkflow();
+    }
+  }
+
+  runSimulation(definition: ApprovalWorkflowDefinition, scenario: WorkflowTestScenario): SimulationResult {
+    const conditionMatch = definition.conditionGroups.every((group) => this.evaluateGroup(group, scenario));
+    const traversedNodes: SimulationNode[] = [];
+
+    // Evaluate conditions
+    definition.conditionGroups.forEach((group, index) => {
+      const groupMatch = this.evaluateGroup(group, scenario);
+      traversedNodes.push({
+        id: group.id,
+        title: group.label || `Condition Group ${index + 1}`,
+        kind: 'condition',
+        status: groupMatch ? 'passed' : 'skipped',
+        detail: groupMatch
+          ? `All rules in "${group.label || 'Group ' + (index + 1)}" satisfied`
+          : `Rules not met — workflow would not trigger`
+      });
+    });
+
+    if (!conditionMatch) {
+      return {
+        triggered: false,
+        badge: 'Would not trigger',
+        detail: 'The sample values do not satisfy the workflow entry criteria.',
+        traversedNodes,
+        estimatedDuration: '—',
+        finalOutcome: 'No action'
+      };
+    }
+
+    // Simulate step traversal
+    let totalHours = 0;
+    for (const step of definition.steps) {
+      if (step.kind === 'parallel-group') {
+        const longestSla = step.approvers.reduce((max, approver) => Math.max(max, approver.slaHours), 0);
+        totalHours += longestSla;
+        traversedNodes.push({
+          id: step.id,
+          title: step.title,
+          kind: 'parallel-group',
+          status: 'passed',
+          detail: `${step.approvers.length} parallel approvers (${step.completionMode}), longest SLA: ${longestSla}h`
+        });
+        for (const approver of step.approvers) {
+          traversedNodes.push({
+            id: approver.id,
+            title: approver.title,
+            kind: 'step',
+            status: 'passed',
+            detail: `${approver.approverType}: ${approver.approverSelector} — SLA: ${approver.slaHours}h`
+          });
+        }
+      } else {
+        totalHours += step.slaHours;
+        traversedNodes.push({
+          id: step.id,
+          title: step.title,
+          kind: 'step',
+          status: 'passed',
+          detail: `${step.approverType}: ${step.approverSelector} — SLA: ${step.slaHours}h`
+        });
+      }
+    }
+
+    // Add outcome node
+    const approveOutcome = definition.outcomes.find((o) => o.event === 'approve');
+    traversedNodes.push({
+      id: 'outcome-approve',
+      title: approveOutcome?.action ?? 'Approve',
+      kind: 'outcome',
+      status: 'pending',
+      detail: approveOutcome?.config ?? 'Workflow completes with approval.'
+    });
+
+    return {
+      triggered: true,
+      badge: 'Would trigger',
+      detail: 'This sample record satisfies all workflow conditions and would traverse the full approval path.',
+      traversedNodes,
+      estimatedDuration: `${totalHours}h`,
+      finalOutcome: approveOutcome?.action ?? 'Approve'
+    };
+  }
+
+  private createInquiryFollowUpTemplate(): ApprovalWorkflowDefinition {
+    return {
+      id: `inquiry-followup-${Date.now()}`,
+      name: 'New Inquiry Follow-Up SLA',
+      processName: 'Lead Response SLA Enforcement',
+      requesterLabel: 'System',
+      module: 'Lead',
+      triggerType: 'On Create',
+      version: 'v1.0',
+      isActive: false,
+      status: 'Draft',
+      description: 'Ensure every new lead inquiry receives agent contact within an 8-hour SLA window, with automatic manager escalation on breach.',
+      conditionGroups: [
+        {
+          id: 'inquiry-source',
+          label: 'Lead Source Check',
+          combinator: 'AND',
+          rules: [
+            { id: 'source-rule', field: 'dealType', operator: '!=', value: 'Referral', combinator: 'AND' }
+          ]
+        }
+      ],
+      steps: [
+        this.createStep({
+          id: 'agent-response',
+          title: 'Agent first response',
+          stepType: 'Sequential',
+          approverType: 'Role',
+          approverSelector: 'Sales Agent',
+          slaHours: 8,
+          escalationRule: 'Escalates in 8h',
+          completionRule: 'Required',
+          notes: 'Agent must make first contact with the inquiry within the SLA window.'
+        }),
+        this.createStep({
+          id: 'manager-escalation',
+          title: 'Manager escalation review',
+          stepType: 'Final',
+          approverType: 'Role',
+          approverSelector: 'Sales Manager',
+          slaHours: 4,
+          escalationRule: 'Escalates in 12h',
+          completionRule: 'Required',
+          notes: 'If SLA breached, manager reviews and reassigns or follows up directly.'
+        })
+      ],
+      outcomes: [
+        { event: 'approve', action: 'Mark Contacted', config: 'Set lead status to Contacted and log first-touch activity.' },
+        { event: 'reject', action: 'Reassign Lead', config: 'Reassign to another agent and reset SLA timer.' },
+        { event: 'timeout', action: 'Escalate to Director', config: 'Create escalation task for director attention.' }
+      ],
+      testScenario: { discountPercent: 0, dealValue: 25000, region: 'Dubai', dealType: 'Inbound' }
+    };
+  }
+
+  private createShowingFollowUpTemplate(): ApprovalWorkflowDefinition {
+    return {
+      id: `showing-followup-${Date.now()}`,
+      name: 'Showing Follow-Up',
+      processName: 'Post-Showing Feedback Capture',
+      requesterLabel: 'System',
+      module: 'Activity',
+      triggerType: 'On Complete',
+      version: 'v1.0',
+      isActive: false,
+      status: 'Draft',
+      description: 'After each property showing, create a follow-up task to collect buyer feedback and determine next steps within 24 hours.',
+      conditionGroups: [
+        {
+          id: 'showing-type',
+          label: 'Showing Completed',
+          combinator: 'AND',
+          rules: [
+            { id: 'type-rule', field: 'dealType', operator: '=', value: 'Showing', combinator: 'AND' }
+          ]
+        }
+      ],
+      steps: [
+        this.createStep({
+          id: 'feedback-capture',
+          title: 'Capture buyer feedback',
+          stepType: 'Sequential',
+          approverType: 'Role',
+          approverSelector: 'Sales Agent',
+          slaHours: 24,
+          escalationRule: 'Escalates in 24h',
+          completionRule: 'Required',
+          notes: 'Agent records buyer interest level, objections, and next-step preference.'
+        }),
+        this.createStep({
+          id: 'agent-review',
+          title: 'Agent review and next steps',
+          stepType: 'Final',
+          approverType: 'Role',
+          approverSelector: 'Sales Manager',
+          slaHours: 12,
+          escalationRule: 'No escalation',
+          completionRule: 'Required',
+          notes: 'Manager reviews feedback and approves the proposed next action (second showing, offer, or close).'
+        })
+      ],
+      outcomes: [
+        { event: 'approve', action: 'Schedule Next Step', config: 'Create follow-up activity based on agent recommendation.' },
+        { event: 'reject', action: 'Archive Showing', config: 'Mark showing as no further action and archive feedback.' },
+        { event: 'timeout', action: 'Escalate to Manager', config: 'Create escalation task for overdue follow-up.' }
+      ],
+      testScenario: { discountPercent: 0, dealValue: 500000, region: 'Dubai', dealType: 'Showing' }
+    };
+  }
+
+  private createLowReadinessReviewTemplate(): ApprovalWorkflowDefinition {
+    return {
+      id: `low-readiness-${Date.now()}`,
+      name: 'Low Readiness Review',
+      processName: 'Deal Readiness Gate',
+      requesterLabel: 'Opportunity Owner',
+      module: 'Opportunity',
+      triggerType: 'On Stage Change',
+      version: 'v1.0',
+      isActive: false,
+      status: 'Draft',
+      description: 'Flag deals with low readiness scores for mandatory manager review before they can advance to the negotiation stage.',
+      conditionGroups: [
+        {
+          id: 'readiness-check',
+          label: 'Low Readiness Score',
+          combinator: 'AND',
+          rules: [
+            { id: 'score-rule', field: 'discountPercent', operator: '>', value: 0, combinator: 'AND' },
+            { id: 'value-rule', field: 'dealValue', operator: '>=', value: 100000, combinator: 'AND' }
+          ]
+        }
+      ],
+      steps: [
+        this.createStep({
+          id: 'manager-review',
+          title: 'Manager readiness review',
+          stepType: 'Sequential',
+          approverType: 'Role',
+          approverSelector: 'Sales Manager',
+          slaHours: 12,
+          escalationRule: 'Escalates in 24h',
+          completionRule: 'Required',
+          notes: 'Manager reviews deal readiness checklist and confirms the deal is prepared for negotiation.'
+        }),
+        this.createStep({
+          id: 'go-no-go',
+          title: 'Go/No-go decision',
+          stepType: 'Final',
+          approverType: 'Role',
+          approverSelector: 'Director',
+          slaHours: 8,
+          escalationRule: 'Escalates in 24h',
+          completionRule: 'Required',
+          notes: 'Director confirms final go/no-go for stage advancement.'
+        })
+      ],
+      outcomes: [
+        { event: 'approve', action: 'Advance Stage', config: 'Allow stage advancement to Negotiation.' },
+        { event: 'reject', action: 'Hold Stage', config: 'Block stage change and notify opportunity owner with improvement checklist.' },
+        { event: 'timeout', action: 'Escalate to VP', config: 'Create escalation task for VP review.' }
+      ],
+      testScenario: { discountPercent: 5, dealValue: 150000, region: 'Abu Dhabi', dealType: 'New Business' }
+    };
+  }
+
+  private createPriceDropEscalationTemplate(): ApprovalWorkflowDefinition {
+    return {
+      id: `price-drop-${Date.now()}`,
+      name: 'Price Drop Escalation',
+      processName: 'Pricing Change Governance',
+      requesterLabel: 'Listing Agent',
+      module: 'Opportunity',
+      triggerType: 'On Submit',
+      version: 'v1.0',
+      isActive: false,
+      status: 'Draft',
+      description: 'Escalate pricing reductions beyond a configured threshold to management for approval before the change takes effect.',
+      conditionGroups: [
+        {
+          id: 'price-delta',
+          label: 'Price Reduction Check',
+          combinator: 'AND',
+          rules: [
+            { id: 'delta-rule', field: 'discountPercent', operator: '>', value: 5, combinator: 'AND' },
+            { id: 'value-rule', field: 'dealValue', operator: '>=', value: 200000, combinator: 'AND' }
+          ]
+        }
+      ],
+      steps: [
+        this.createStep({
+          id: 'manager-approval',
+          title: 'Manager price approval',
+          stepType: 'Sequential',
+          approverType: 'Role',
+          approverSelector: 'Sales Manager',
+          slaHours: 12,
+          escalationRule: 'Escalates in 24h',
+          completionRule: 'Required',
+          notes: 'Manager validates the business justification for the price reduction.'
+        }),
+        this.createStep({
+          id: 'director-override',
+          title: 'Director override approval',
+          stepType: 'Final',
+          approverType: 'Role',
+          approverSelector: 'Director',
+          slaHours: 24,
+          escalationRule: 'Escalates in 48h',
+          completionRule: 'Required',
+          notes: 'Director final sign-off for significant pricing changes.'
+        })
+      ],
+      outcomes: [
+        { event: 'approve', action: 'Apply Price Change', config: 'Update listing price and notify stakeholders.' },
+        { event: 'reject', action: 'Revert Price', config: 'Block price change and notify listing agent with explanation.' },
+        { event: 'timeout', action: 'Escalate to VP Sales', config: 'Create escalation task for VP review of stalled pricing decision.' }
+      ],
+      testScenario: { discountPercent: 8, dealValue: 350000, region: 'Sharjah', dealType: 'Resale' }
+    };
   }
 
   private createDemoWorkflow(): ApprovalWorkflowDefinition {

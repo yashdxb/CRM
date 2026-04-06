@@ -97,3 +97,30 @@ export interface WorkflowTestScenario {
   region: string;
   dealType: string;
 }
+
+export interface WorkflowTemplate {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  category: 'approval' | 'follow-up' | 'review' | 'escalation';
+  module: string;
+  previewSteps: string[];
+}
+
+export interface SimulationResult {
+  triggered: boolean;
+  badge: string;
+  detail: string;
+  traversedNodes: SimulationNode[];
+  estimatedDuration: string;
+  finalOutcome: string;
+}
+
+export interface SimulationNode {
+  id: string;
+  title: string;
+  kind: StepKind | 'condition' | 'outcome';
+  status: 'passed' | 'skipped' | 'pending';
+  detail: string;
+}

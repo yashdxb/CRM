@@ -49,6 +49,7 @@ import {
   templateUrl: './approval-settings.page.html',
   styleUrl: './approval-settings.page.scss'
 })
+/** @deprecated Replaced by WorkflowBuilderPage — use /app/workflows instead */
 export class ApprovalSettingsPage {
   private readonly settingsService = inject(WorkspaceSettingsService);
   private readonly userAdminData = inject(UserAdminDataService);

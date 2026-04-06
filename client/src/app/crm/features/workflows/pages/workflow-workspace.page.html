@@ -1,0 +1,270 @@
+<div class="page-container">
+  <div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <div class="page-content">
+    <app-breadcrumbs></app-breadcrumbs>
+
+    <section class="hero-section">
+      <div class="hero-info">
+        <div class="hero-badge">
+          <span class="badge-dot"></span>
+          <span>Automation Admin</span>
+        </div>
+        <h1 class="hero-title">
+          <span class="title-gradient">Workflow</span>
+          <span class="title-light">Workspace</span>
+        </h1>
+        <p class="hero-description">
+          Manage approval workflows, track execution status, and configure automation rules for your CRM processes.
+        </p>
+        <div class="hero-stats">
+          <div class="hero-stat">
+            <span class="stat-value">{{ totalCount() }}</span>
+            <span class="stat-label">Workflows</span>
+            <div class="stat-bar"><div class="stat-bar-fill" [style.width.%]="100"></div></div>
+          </div>
+          <div class="hero-stat">
+            <span class="stat-value">{{ activeCount() }}</span>
+            <span class="stat-label">Active</span>
+            <div class="stat-bar"><div class="stat-bar-fill stat-bar-fill--success" [style.width.%]="totalCount() ? (activeCount() / totalCount()) * 100 : 0"></div></div>
+          </div>
+          <div class="hero-stat">
+            <span class="stat-value">{{ draftCount() }}</span>
+            <span class="stat-label">Drafts</span>
+            <div class="stat-bar"><div class="stat-bar-fill stat-bar-fill--prospects" [style.width.%]="totalCount() ? (draftCount() / totalCount()) * 100 : 0"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-visual">
+        <div class="visual-card visual-card--primary">
+          <div class="card-icon"><i class="pi pi-share-alt"></i></div>
+          <div class="card-content">
+            <span class="card-label">Total Steps</span>
+            <strong class="card-value">{{ totalSteps() }}</strong>
+            <span class="card-trend card-trend--up"><i class="pi pi-arrow-up"></i> Across all workflows</span>
+          </div>
+          <div class="card-glow"></div>
+        </div>
+        <div class="visual-card visual-card--success">
+          <div class="card-icon"><i class="pi pi-check-circle"></i></div>
+          <div class="card-content">
+            <span class="card-label">Active</span>
+            <strong class="card-value">{{ activeCount() }}</strong>
+            <span class="card-trend card-trend--up"><i class="pi pi-arrow-up"></i> Running workflows</span>
+          </div>
+          <div class="card-glow"></div>
+        </div>
+        <div class="visual-card visual-card--secondary">
+          <div class="card-icon"><i class="pi pi-clock"></i></div>
+          <div class="card-content">
+            <span class="card-label">Drafts</span>
+            <strong class="card-value">{{ draftCount() }}</strong>
+            <span class="card-trend"><i class="pi pi-pencil"></i> Pending publish</span>
+          </div>
+          <div class="card-glow"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="metrics-section">
+      <div class="metric-card metric-card--total">
+        <div class="metric-icon"><i class="pi pi-database"></i></div>
+        <div class="metric-content">
+          <span class="metric-label">Total Workflows</span>
+          <strong class="metric-value">{{ totalCount() }}</strong>
+        </div>
+      </div>
+      <div class="metric-card metric-card--customers">
+        <div class="metric-icon"><i class="pi pi-check-circle"></i></div>
+        <div class="metric-content">
+          <span class="metric-label">Active</span>
+          <strong class="metric-value">{{ activeCount() }}</strong>
+        </div>
+      </div>
+      <div class="metric-card metric-card--leads">
+        <div class="metric-icon"><i class="pi pi-pencil"></i></div>
+        <div class="metric-content">
+          <span class="metric-label">Draft</span>
+          <strong class="metric-value">{{ draftCount() }}</strong>
+        </div>
+      </div>
+      <div class="metric-card metric-card--prospects">
+        <div class="metric-icon"><i class="pi pi-sitemap"></i></div>
+        <div class="metric-content">
+          <span class="metric-label">Total Steps</span>
+          <strong class="metric-value">{{ totalSteps() }}</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="data-section">
+      <div class="data-card">
+        <div class="data-header">
+          <h2><i class="pi pi-list"></i> Workflow Registry</h2>
+          <div class="data-header__actions">
+            <div class="search-box">
+              <i class="pi pi-search"></i>
+              <input type="text" pInputText placeholder="Search workflows..." (input)="onSearch($event)" />
+            </div>
+            <button type="button" class="action-btn action-btn--settings" (click)="viewExecutions()">
+              <span class="action-btn__icon"><i class="pi pi-history"></i></span>
+              <span>Executions</span>
+            </button>
+            <button type="button" class="action-btn action-btn--add" (click)="createWorkflow()">
+              <span class="action-btn__icon"><i class="pi pi-plus"></i></span>
+              <span>New Workflow</span>
+            </button>
+          </div>
+        </div>
+
+        <p-table
+          [value]="filteredWorkflows()"
+          [loading]="loading()"
+          [rowHover]="true"
+          styleClass="p-datatable-sm"
+          [tableStyle]="{ 'min-width': '100%' }"
+        >
+          <ng-template pTemplate="header">
+            <tr>
+              <th>Workflow</th>
+              <th>Module</th>
+              <th>Trigger</th>
+              <th>Status</th>
+              <th>Version</th>
+              <th>Steps</th>
+              <th>SLA</th>
+              <th>Last Modified</th>
+              <th>Actions</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-row>
+            <tr class="table-row">
+              <td>
+                <div class="workflow-cell">
+                  <div class="workflow-avatar">
+                    <i class="pi pi-share-alt"></i>
+                  </div>
+                  <div class="workflow-info">
+                    <span class="workflow-name">{{ row.name }}</span>
+                    <span class="workflow-process">{{ row.processName }}</span>
+                  </div>
+                </div>
+              </td>
+              <td><p-tag [value]="row.module" severity="info"></p-tag></td>
+              <td>{{ row.triggerType }}</td>
+              <td><p-tag [value]="row.status" [severity]="statusSeverity(row.status)"></p-tag></td>
+              <td>{{ row.version }}</td>
+              <td>
+                <span class="step-count">{{ row.totalSteps }}</span>
+                <span class="parallel-badge" *ngIf="row.parallelGroups > 0">+{{ row.parallelGroups }} parallel</span>
+              </td>
+              <td>{{ row.slaSummary }}</td>
+              <td>{{ formatDate(row.lastModified) }}</td>
+              <td>
+                <div class="row-actions">
+                  <button type="button" class="row-action-btn row-action-btn--edit" title="Edit" (click)="editWorkflow(row.id)">
+                    <i class="pi pi-pencil"></i>
+                  </button>
+                  <button type="button" class="row-action-btn row-action-btn--view" title="Clone">
+                    <i class="pi pi-copy"></i>
+                  </button>
+                  <button type="button" class="row-action-btn row-action-btn--archive" title="Archive">
+                    <i class="pi pi-inbox"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="emptymessage">
+            <tr>
+              <td colspan="9" class="empty-message">
+                <div class="empty-state">
+                  <i class="pi pi-share-alt"></i>
+                  <strong>No workflows found</strong>
+                  <span>Create your first workflow to automate approval processes.</span>
+                  <button type="button" class="action-btn action-btn--add" (click)="createWorkflow()">
+                    <span class="action-btn__icon"><i class="pi pi-plus"></i></span>
+                    <span>New Workflow</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- Template Picker Dialog -->
+<p-dialog
+  header="Choose a Workflow Template"
+  [(visible)]="showTemplatePicker"
+  [modal]="true"
+  [closable]="true"
+  [style]="{ width: '720px', maxWidth: '95vw' }"
+  [contentStyle]="{ padding: '0' }"
+  styleClass="template-picker-dialog"
+>
+  <div class="template-picker">
+    <p class="template-picker__intro">
+      Start with a pre-configured template or build from scratch. Templates include conditions, approval steps, and outcomes tailored to common CRM scenarios.
+    </p>
+
+    <div class="template-grid">
+      @for (template of templates(); track template.id) {
+        <div
+          class="template-card"
+          [class.template-card--selected]="isTemplateSelected(template.id)"
+          (click)="selectTemplate(template.id)"
+        >
+          <div class="template-card__header">
+            <div class="template-card__icon">
+              <i class="pi {{ template.icon }}"></i>
+            </div>
+            <div class="template-card__category">
+              <i class="{{ categoryIcon(template.category) }}"></i>
+              {{ template.category }}
+            </div>
+          </div>
+          <h4 class="template-card__name">{{ template.name }}</h4>
+          <p class="template-card__description">{{ template.description }}</p>
+          <div class="template-card__steps">
+            @for (step of template.previewSteps; track step; let i = $index) {
+              <span class="template-step">
+                <span class="template-step__number">{{ i + 1 }}</span>
+                {{ step }}
+              </span>
+            }
+          </div>
+          <div class="template-card__module">
+            <i class="pi pi-box"></i> {{ template.module }}
+          </div>
+          @if (isTemplateSelected(template.id)) {
+            <div class="template-card__check">
+              <i class="pi pi-check-circle"></i>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <div class="template-picker__actions">
+      <button type="button" class="action-btn action-btn--settings" (click)="startBlank()">
+        <span class="action-btn__icon"><i class="pi pi-file"></i></span>
+        <span>Start Blank</span>
+      </button>
+      <button type="button" class="action-btn action-btn--add" [disabled]="!selectedTemplateId()" (click)="confirmTemplate()">
+        <span class="action-btn__icon"><i class="pi pi-check"></i></span>
+        <span>Use Template</span>
+      </button>
+    </div>
+  </ng-template>
+</p-dialog>

@@ -191,11 +191,22 @@
               <p-tabpanels class="ws-sidebar-content">
               <!-- ═══════════════ TAB 1 — Company & Branding ═══════════════ -->
               <p-tabpanel value="company">
+                <p-accordion class="ws-section-accordion" [multiple]="true" [value]="companyPanels()" (valueChange)="onCompanyPanelsChange($any($event))">
+                  <!-- Company Information -->
+                  <p-accordion-panel value="company-info">
+                    <p-accordion-header>
+                      <div class="ws-accordion-header">
+                        <div class="ws-accordion-header__title">
+                          <i class="pi pi-building"></i>
+                          <span>Company Information</span>
+                        </div>
+                        <div class="ws-accordion-header__badges">
+                          <span class="status-badge status-badge--success">Required</span>
+                        </div>
+                      </div>
+                    </p-accordion-header>
+                    <p-accordion-content>
           <section class="form-card">
-            <h3 class="section-title">
-              <i class="pi pi-building"></i>
-              Company Information
-            </h3>
             <p class="section-description">Basic workspace identity settings</p>
             
             <div class="form-grid">
@@ -211,13 +222,24 @@
               </div>
             </div>
           </section>
+                    </p-accordion-content>
+                  </p-accordion-panel>
 
-          <!-- Workspace Branding -->
+                  <!-- Workspace Branding -->
+                  <p-accordion-panel value="workspace-branding">
+                    <p-accordion-header>
+                      <div class="ws-accordion-header">
+                        <div class="ws-accordion-header__title">
+                          <i class="pi pi-palette"></i>
+                          <span>Workspace Branding</span>
+                        </div>
+                        <div class="ws-accordion-header__badges">
+                          <span class="status-badge status-badge--info">Optional</span>
+                        </div>
+                      </div>
+                    </p-accordion-header>
+                    <p-accordion-content>
           <section class="form-card">
-            <h3 class="section-title">
-              <i class="pi pi-palette"></i>
-              Workspace Branding
-            </h3>
             <p class="section-description">Customise logo displayed across the application</p>
 
             <div class="branding-upload">
@@ -263,15 +285,29 @@
               </div>
             </div>
           </section>
+                    </p-accordion-content>
+                  </p-accordion-panel>
+                </p-accordion>
               </p-tabpanel>
 
               <!-- ═══════════════ TAB 2 — Operations ═══════════════ -->
               <p-tabpanel value="operations">
+                <p-accordion class="ws-section-accordion" [multiple]="true" [value]="operationsPanels()" (valueChange)="onOperationsPanelsChange($any($event))">
+                  <!-- Lead SLA -->
+                  <p-accordion-panel value="lead-sla">
+                    <p-accordion-header>
+                      <div class="ws-accordion-header">
+                        <div class="ws-accordion-header__title">
+                          <i class="pi pi-stopwatch"></i>
+                          <span>Lead SLA</span>
+                        </div>
+                        <div class="ws-accordion-header__badges">
+                          <span class="status-badge status-badge--warning">SLA</span>
+                        </div>
+                      </div>
+                    </p-accordion-header>
+                    <p-accordion-content>
           <section class="form-card">
-            <h3 class="section-title section-title--warning">
-              <i class="pi pi-stopwatch"></i>
-              Lead SLA
-            </h3>
             <p class="section-description">Define how quickly new leads must be contacted</p>
 
             <div class="form-grid form-grid--2col">
@@ -287,12 +323,24 @@
               </div>
             </div>
           </section>
+                    </p-accordion-content>
+                  </p-accordion-panel>
 
+                  <!-- Record Numbering -->
+                  <p-accordion-panel value="record-numbering">
+                    <p-accordion-header>
+                      <div class="ws-accordion-header">
+                        <div class="ws-accordion-header__title">
+                          <i class="pi pi-hashtag"></i>
+                          <span>Record Numbering</span>
+                        </div>
+                        <div class="ws-accordion-header__badges">
+                          <span class="status-badge status-badge--info">Prefixes</span>
+                        </div>
+                      </div>
+                    </p-accordion-header>
+                    <p-accordion-content>
           <section class="form-card">
-            <h3 class="section-title section-title--info">
-              <i class="pi pi-hashtag"></i>
-              Record Numbering
-            </h3>
             <p class="section-description">Define tenant-level prefixes for business-facing CRM record numbers. Leads are active now; other modules can be prepared in advance.</p>
 
             <div class="form-grid">
@@ -320,63 +368,211 @@
               </div>
             </div>
           </section>
+                    </p-accordion-content>
+                  </p-accordion-panel>
 
-          <section class="form-card">
-            <h3 class="section-title section-title--info">
-              <i class="pi pi-sliders-h"></i>
-              AI Action Scoring
-            </h3>
-            <p class="section-description">Configure orchestration score weights and risk/urgency thresholds</p>
+                  <!-- AI Action Scoring -->
+                  <p-accordion-panel value="ai-scoring">
+                    <p-accordion-header>
+                      <div class="ws-accordion-header">
+                        <div class="ws-accordion-header__title">
+                          <i class="pi pi-sliders-h"></i>
+                          <span>AI Action Scoring</span>
+                        </div>
+                        <div class="ws-accordion-header__badges">
+                          <span class="status-badge status-badge--info">Weights &amp; Thresholds</span>
+                        </div>
+                      </div>
+                    </p-accordion-header>
+                    <p-accordion-content>
+          <section class="form-card scoring-section">
+            <p class="section-description">
+              The AI scores each category as <strong>weight × count</strong> (0–100).
+              The resulting score determines Risk and Urgency tiers below.
+            </p>
 
-            <div class="form-grid form-grid--2col">
-              <div class="form-field">
-                <label for="ws-scoreWeightSlaBreaches">SLA breaches weight</label>
-                <p-inputNumber inputId="ws-scoreWeightSlaBreaches" formControlName="scoreWeightSlaBreaches" [min]="0" [max]="100" styleClass="w-full"></p-inputNumber>
+            <!-- ── Live Preview ── -->
+            <div class="scoring-preview">
+              <div class="scoring-preview__icon"><i class="pi pi-calculator"></i></div>
+              <div class="scoring-preview__body">
+                <span class="scoring-preview__title">How scoring works</span>
+                <span class="scoring-preview__formula">
+                  Score = Weight × Item Count&nbsp;&nbsp;→&nbsp;&nbsp;e.g. <strong>3</strong> SLA breaches × <strong>{{ settingsForm.get('scoreWeightSlaBreaches')?.value }}</strong> weight = <strong>{{ 3 * (settingsForm.get('scoreWeightSlaBreaches')?.value || 0) }}</strong> → 
+                  <span class="scoring-tag" [class.scoring-tag--low]="3 * (settingsForm.get('scoreWeightSlaBreaches')?.value || 0) < (settingsForm.get('scoreMediumRiskFrom')?.value || 45)"
+                        [class.scoring-tag--medium]="3 * (settingsForm.get('scoreWeightSlaBreaches')?.value || 0) >= (settingsForm.get('scoreMediumRiskFrom')?.value || 45) && 3 * (settingsForm.get('scoreWeightSlaBreaches')?.value || 0) < (settingsForm.get('scoreHighRiskFrom')?.value || 75)"
+                        [class.scoring-tag--high]="3 * (settingsForm.get('scoreWeightSlaBreaches')?.value || 0) >= (settingsForm.get('scoreHighRiskFrom')?.value || 75)">
+                    {{ 3 * (settingsForm.get('scoreWeightSlaBreaches')?.value || 0) < (settingsForm.get('scoreMediumRiskFrom')?.value || 45) ? 'Low' : (3 * (settingsForm.get('scoreWeightSlaBreaches')?.value || 0) < (settingsForm.get('scoreHighRiskFrom')?.value || 75) ? 'Medium' : 'High') }} Risk
+                  </span>
+                </span>
               </div>
-              <div class="form-field">
-                <label for="ws-scoreWeightStaleOpportunities">Stale opportunities weight</label>
-                <p-inputNumber inputId="ws-scoreWeightStaleOpportunities" formControlName="scoreWeightStaleOpportunities" [min]="0" [max]="100" styleClass="w-full"></p-inputNumber>
+            </div>
+
+            <!-- ── 1. Category Weights ── -->
+            <h4 class="scoring-subsection-title">
+              <i class="pi pi-chart-bar"></i> Category Weights
+              <span class="scoring-subsection-hint">Multiplier applied to each item count</span>
+            </h4>
+
+            <div class="scoring-weights-grid">
+              <div class="scoring-weight-card">
+                <div class="scoring-weight-card__header">
+                  <i class="pi pi-exclamation-triangle scoring-weight-card__icon scoring-weight-card__icon--danger"></i>
+                  <div>
+                    <span class="scoring-weight-card__label">SLA Breaches</span>
+                    <span class="scoring-weight-card__hint">Overdue response time violations</span>
+                  </div>
+                </div>
+                <div class="form-field">
+                  <label for="ws-scoreWeightSlaBreaches">Weight</label>
+                  <p-inputNumber inputId="ws-scoreWeightSlaBreaches" formControlName="scoreWeightSlaBreaches" [min]="0" [max]="100" styleClass="w-full"></p-inputNumber>
+                </div>
               </div>
-              <div class="form-field">
-                <label for="ws-scoreWeightPendingApprovals">Pending approvals weight</label>
-                <p-inputNumber inputId="ws-scoreWeightPendingApprovals" formControlName="scoreWeightPendingApprovals" [min]="0" [max]="100" styleClass="w-full"></p-inputNumber>
+              <div class="scoring-weight-card">
+                <div class="scoring-weight-card__header">
+                  <i class="pi pi-clock scoring-weight-card__icon scoring-weight-card__icon--warning"></i>
+                  <div>
+                    <span class="scoring-weight-card__label">Stale Opportunities</span>
+                    <span class="scoring-weight-card__hint">Open deals with no recent activity</span>
+                  </div>
+                </div>
+                <div class="form-field">
+                  <label for="ws-scoreWeightStaleOpportunities">Weight</label>
+                  <p-inputNumber inputId="ws-scoreWeightStaleOpportunities" formControlName="scoreWeightStaleOpportunities" [min]="0" [max]="100" styleClass="w-full"></p-inputNumber>
+                </div>
               </div>
-              <div class="form-field">
-                <label for="ws-scoreWeightLowConfidenceLeads">Low-confidence leads weight</label>
-                <p-inputNumber inputId="ws-scoreWeightLowConfidenceLeads" formControlName="scoreWeightLowConfidenceLeads" [min]="0" [max]="100" styleClass="w-full"></p-inputNumber>
+              <div class="scoring-weight-card">
+                <div class="scoring-weight-card__header">
+                  <i class="pi pi-check-circle scoring-weight-card__icon scoring-weight-card__icon--purple"></i>
+                  <div>
+                    <span class="scoring-weight-card__label">Pending Approvals</span>
+                    <span class="scoring-weight-card__hint">Awaiting manager sign-off</span>
+                  </div>
+                </div>
+                <div class="form-field">
+                  <label for="ws-scoreWeightPendingApprovals">Weight</label>
+                  <p-inputNumber inputId="ws-scoreWeightPendingApprovals" formControlName="scoreWeightPendingApprovals" [min]="0" [max]="100" styleClass="w-full"></p-inputNumber>
+                </div>
               </div>
-              <div class="form-field">
-                <label for="ws-scoreWeightOverdueActivities">Overdue activities weight</label>
-                <p-inputNumber inputId="ws-scoreWeightOverdueActivities" formControlName="scoreWeightOverdueActivities" [min]="0" [max]="100" styleClass="w-full"></p-inputNumber>
+              <div class="scoring-weight-card">
+                <div class="scoring-weight-card__header">
+                  <i class="pi pi-percentage scoring-weight-card__icon scoring-weight-card__icon--cyan"></i>
+                  <div>
+                    <span class="scoring-weight-card__label">Low-Confidence Leads</span>
+                    <span class="scoring-weight-card__hint">AI-scored leads below confidence threshold</span>
+                  </div>
+                </div>
+                <div class="form-field">
+                  <label for="ws-scoreWeightLowConfidenceLeads">Weight</label>
+                  <p-inputNumber inputId="ws-scoreWeightLowConfidenceLeads" formControlName="scoreWeightLowConfidenceLeads" [min]="0" [max]="100" styleClass="w-full"></p-inputNumber>
+                </div>
+              </div>
+              <div class="scoring-weight-card">
+                <div class="scoring-weight-card__header">
+                  <i class="pi pi-calendar-times scoring-weight-card__icon scoring-weight-card__icon--orange"></i>
+                  <div>
+                    <span class="scoring-weight-card__label">Overdue Activities</span>
+                    <span class="scoring-weight-card__hint">Tasks and follow-ups past due date</span>
+                  </div>
+                </div>
+                <div class="form-field">
+                  <label for="ws-scoreWeightOverdueActivities">Weight</label>
+                  <p-inputNumber inputId="ws-scoreWeightOverdueActivities" formControlName="scoreWeightOverdueActivities" [min]="0" [max]="100" styleClass="w-full"></p-inputNumber>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── 2. Risk Thresholds ── -->
+            <h4 class="scoring-subsection-title">
+              <i class="pi pi-shield"></i> Risk Thresholds
+              <span class="scoring-subsection-hint">Score ranges that determine risk tier</span>
+            </h4>
+
+            <div class="scoring-scale">
+              <div class="scoring-scale__bar">
+                <div class="scoring-scale__segment scoring-scale__segment--low"
+                     [style.width.%]="settingsForm.get('scoreMediumRiskFrom')?.value || 45">
+                  <span class="scoring-scale__label">Low</span>
+                  <span class="scoring-scale__range">0 – {{ (settingsForm.get('scoreMediumRiskFrom')?.value || 45) - 1 }}</span>
+                </div>
+                <div class="scoring-scale__segment scoring-scale__segment--medium"
+                     [style.width.%]="(settingsForm.get('scoreHighRiskFrom')?.value || 75) - (settingsForm.get('scoreMediumRiskFrom')?.value || 45)">
+                  <span class="scoring-scale__label">Medium</span>
+                  <span class="scoring-scale__range">{{ settingsForm.get('scoreMediumRiskFrom')?.value || 45 }} – {{ (settingsForm.get('scoreHighRiskFrom')?.value || 75) - 1 }}</span>
+                </div>
+                <div class="scoring-scale__segment scoring-scale__segment--high"
+                     [style.width.%]="100 - (settingsForm.get('scoreHighRiskFrom')?.value || 75)">
+                  <span class="scoring-scale__label">High</span>
+                  <span class="scoring-scale__range">{{ settingsForm.get('scoreHighRiskFrom')?.value || 75 }} – 100</span>
+                </div>
               </div>
             </div>
 
             <div class="form-grid form-grid--2col">
               <div class="form-field">
-                <label for="ws-scoreMediumRiskFrom">Medium risk from (score)</label>
+                <label for="ws-scoreMediumRiskFrom">Medium risk starts at</label>
                 <p-inputNumber inputId="ws-scoreMediumRiskFrom" formControlName="scoreMediumRiskFrom" [min]="1" [max]="95" styleClass="w-full"></p-inputNumber>
               </div>
               <div class="form-field">
-                <label for="ws-scoreHighRiskFrom">High risk from (score)</label>
+                <label for="ws-scoreHighRiskFrom">High risk starts at</label>
                 <p-inputNumber inputId="ws-scoreHighRiskFrom" formControlName="scoreHighRiskFrom" [min]="5" [max]="99" styleClass="w-full"></p-inputNumber>
               </div>
+            </div>
+
+            <!-- ── 3. Urgency Thresholds ── -->
+            <h4 class="scoring-subsection-title">
+              <i class="pi pi-bolt"></i> Urgency Thresholds
+              <span class="scoring-subsection-hint">Score ranges that determine urgency level</span>
+            </h4>
+
+            <div class="scoring-scale">
+              <div class="scoring-scale__bar">
+                <div class="scoring-scale__segment scoring-scale__segment--normal"
+                     [style.width.%]="settingsForm.get('scoreSoonUrgencyFrom')?.value || 50">
+                  <span class="scoring-scale__label">Normal</span>
+                  <span class="scoring-scale__range">0 – {{ (settingsForm.get('scoreSoonUrgencyFrom')?.value || 50) - 1 }}</span>
+                </div>
+                <div class="scoring-scale__segment scoring-scale__segment--soon"
+                     [style.width.%]="(settingsForm.get('scoreImmediateUrgencyFrom')?.value || 80) - (settingsForm.get('scoreSoonUrgencyFrom')?.value || 50)">
+                  <span class="scoring-scale__label">Soon</span>
+                  <span class="scoring-scale__range">{{ settingsForm.get('scoreSoonUrgencyFrom')?.value || 50 }} – {{ (settingsForm.get('scoreImmediateUrgencyFrom')?.value || 80) - 1 }}</span>
+                </div>
+                <div class="scoring-scale__segment scoring-scale__segment--immediate"
+                     [style.width.%]="100 - (settingsForm.get('scoreImmediateUrgencyFrom')?.value || 80)">
+                  <span class="scoring-scale__label">Immediate</span>
+                  <span class="scoring-scale__range">{{ settingsForm.get('scoreImmediateUrgencyFrom')?.value || 80 }} – 100</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-grid form-grid--2col">
               <div class="form-field">
-                <label for="ws-scoreSoonUrgencyFrom">Soon urgency from (score)</label>
+                <label for="ws-scoreSoonUrgencyFrom">Soon urgency starts at</label>
                 <p-inputNumber inputId="ws-scoreSoonUrgencyFrom" formControlName="scoreSoonUrgencyFrom" [min]="1" [max]="95" styleClass="w-full"></p-inputNumber>
               </div>
               <div class="form-field">
-                <label for="ws-scoreImmediateUrgencyFrom">Immediate urgency from (score)</label>
+                <label for="ws-scoreImmediateUrgencyFrom">Immediate urgency starts at</label>
                 <p-inputNumber inputId="ws-scoreImmediateUrgencyFrom" formControlName="scoreImmediateUrgencyFrom" [min]="5" [max]="99" styleClass="w-full"></p-inputNumber>
-                <small class="field-hint">Example: 80 means scores 80+ are marked Immediate.</small>
               </div>
             </div>
           </section>
+                    </p-accordion-content>
+                  </p-accordion-panel>
 
+                  <!-- Supporting Documents -->
+                  <p-accordion-panel value="supporting-docs">
+                    <p-accordion-header>
+                      <div class="ws-accordion-header">
+                        <div class="ws-accordion-header__title">
+                          <i class="pi pi-paperclip"></i>
+                          <span>Supporting Documents</span>
+                        </div>
+                        <div class="ws-accordion-header__badges">
+                          <span class="status-badge status-badge--warning">Limits</span>
+                        </div>
+                      </div>
+                    </p-accordion-header>
+                    <p-accordion-content>
           <section class="form-card">
-            <h3 class="section-title section-title--warning">
-              <i class="pi pi-paperclip"></i>
-              Supporting Documents
-            </h3>
             <p class="section-description">Global document limits for CRM records (lead-first rollout)</p>
 
             <div class="form-grid form-grid--2col">
@@ -405,12 +601,24 @@
               </div>
             </div>
           </section>
+                    </p-accordion-content>
+                  </p-accordion-panel>
 
+                  <!-- Delivery & Renewal Defaults -->
+                  <p-accordion-panel value="delivery-renewal">
+                    <p-accordion-header>
+                      <div class="ws-accordion-header">
+                        <div class="ws-accordion-header__title">
+                          <i class="pi pi-briefcase"></i>
+                          <span>Delivery &amp; Renewal Defaults</span>
+                        </div>
+                        <div class="ws-accordion-header__badges">
+                          <span class="status-badge status-badge--info">Defaults</span>
+                        </div>
+                      </div>
+                    </p-accordion-header>
+                    <p-accordion-content>
           <section class="form-card">
-            <h3 class="section-title section-title--info">
-              <i class="pi pi-briefcase"></i>
-              Delivery & Renewal Defaults
-            </h3>
             <p class="section-description">Defaults applied when a deal is closed won</p>
 
             <div class="form-grid form-grid--2col">
@@ -444,15 +652,29 @@
               </div>
             </div>
           </section>
+                    </p-accordion-content>
+                  </p-accordion-panel>
+                </p-accordion>
               </p-tabpanel>
 
               <!-- ═══════════════ TAB 3 — Regional ═══════════════ -->
               <p-tabpanel value="regional">
+                <p-accordion class="ws-section-accordion" [multiple]="true" [value]="regionalPanels()" (valueChange)="onRegionalPanelsChange($any($event))">
+                  <!-- Regional Settings -->
+                  <p-accordion-panel value="regional-settings">
+                    <p-accordion-header>
+                      <div class="ws-accordion-header">
+                        <div class="ws-accordion-header__title">
+                          <i class="pi pi-globe"></i>
+                          <span>Regional Settings</span>
+                        </div>
+                        <div class="ws-accordion-header__badges">
+                          <span class="status-badge status-badge--info">Locale</span>
+                        </div>
+                      </div>
+                    </p-accordion-header>
+                    <p-accordion-content>
           <section class="form-card">
-            <h3 class="section-title section-title--info">
-              <i class="pi pi-globe"></i>
-              Regional Settings
-            </h3>
             <p class="section-description">Time zone and currency preferences</p>
             
             <div class="form-grid form-grid--2col">
@@ -513,6 +735,9 @@
               </div>
             </div>
           </section>
+                    </p-accordion-content>
+                  </p-accordion-panel>
+                </p-accordion>
               </p-tabpanel>
             </p-tabpanels>
             </div>

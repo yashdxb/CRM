@@ -182,20 +182,59 @@ Recommended confidence-first improvements:
 
 ## Next
 
-1. Add workflow simulation:
-   - sample record
-   - chosen trigger
-   - traversed nodes
-   - resulting actions
-2. Add runtime support for:
+1. Add runtime support for:
    - `email`
    - `delay`
-3. Add executable real-estate templates:
-   - new inquiry follow-up SLA
-   - showing follow-up
-   - low-readiness review
-   - price-drop escalation
-4. Replace overlay branch labels with routed-edge label placement tied to the actual rendered connection path.
+2. Replace overlay branch labels with routed-edge label placement tied to the actual rendered connection path.
+
+## Implemented — Phase 3 (Templates, Simulation, Route Consolidation)
+
+### 1. Workflow template catalog
+
+A `WorkflowTemplate` model and template catalog system was added in the facade:
+- [approval-workflow-builder.model.ts](../client/src/app/crm/features/workflows/models/approval-workflow-builder.model.ts) — `WorkflowTemplate`, `SimulationResult`, `SimulationNode` interfaces
+- [approval-workflow-builder.facade.ts](../client/src/app/crm/features/workflows/services/approval-workflow-builder.facade.ts) — `getTemplateCatalog()`, `createFromTemplate()`
+
+Five executable templates:
+| Template | Module | Trigger | Steps |
+|----------|--------|---------|-------|
+| High Discount Approval | Opportunity | On Submit | 3 (Manager → Finance → VP) |
+| New Inquiry Follow-Up SLA | Lead | On Create | 2 (Agent Response 8h → Manager Escalation 4h) |
+| Showing Follow-Up | Activity | On Complete | 2 (Feedback Capture 24h → Agent Review 12h) |
+| Low Readiness Review | Opportunity | On Stage Change | 2 (Manager Review 12h → Go/No-Go Decision 8h) |
+| Price Drop Escalation | Opportunity | On Submit | 2 (Manager Price Approval 12h → Director Override 24h) |
+
+### 2. Template picker dialog
+
+The Workflow Workspace page now opens a template picker dialog when creating a new workflow:
+- [workflow-workspace.page.ts](../client/src/app/crm/features/workflows/pages/workflow-workspace.page.ts) — `showTemplatePicker`, `templates`, `confirmTemplate()`, `startBlank()`
+- [workflow-workspace.page.html](../client/src/app/crm/features/workflows/pages/workflow-workspace.page.html) — `p-dialog` with template grid
+- [workflow-workspace.page.scss](../client/src/app/crm/features/workflows/pages/workflow-workspace.page.scss) — template card styles
+
+The builder page reads `?template=` query param and initializes from the selected template:
+- [workflow-builder.page.ts](../client/src/app/crm/features/workflows/pages/workflow-builder.page.ts) — `loadInitialDefinition()` via `ActivatedRoute`
+
+### 3. Workflow simulation
+
+The facade exposes `runSimulation()` which evaluates conditions, traverses steps, and returns:
+- `triggered` boolean
+- `traversedNodes[]` with status (passed/skipped/pending)
+- `estimatedDuration`
+- `finalOutcome`
+
+The builder sidebar now has a Simulation card showing traversed nodes and outcome:
+- [workflow-builder.page.html](../client/src/app/crm/features/workflows/pages/workflow-builder.page.html) — simulation panel
+- [workflow-builder.page.scss](../client/src/app/crm/features/workflows/pages/workflow-builder.page.scss) — simulation styles
+
+### 4. Approval settings route consolidation
+
+The old `settings/approvals` route now redirects to `/app/workflows`:
+- `app.routes.ts` — `settings/approvals` redirects to `/app/workflows`
+- `navigation.config.ts` — sidebar "Intelligence & Automation" section now points to `/app/workflows`, removed standalone "Approvals" child entry
+- `assistant-panel.component.ts` and `dashboard.page.ts` — approval entity navigation updated
+- `decision-policies-sla.page.html` — "Open Approval Settings" → "Open Workflow Builder"
+- `approval-settings.page.ts` — marked `@deprecated`
+- E2E tests updated
 
 ## Later
 

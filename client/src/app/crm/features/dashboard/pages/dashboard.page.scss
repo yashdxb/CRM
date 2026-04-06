@@ -540,10 +540,20 @@
 
 .ai-kpi-card {
   padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(184, 196, 228, 0.7);
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.83), rgba(246, 248, 255, 0.8));
+  border-radius: 0 12px 12px 0;
+  border: 1px solid rgba(59, 130, 246, 0.18);
+  border-left: 3px solid #3b82f6;
+  background: linear-gradient(180deg, #f0f7ff 0%, #e6f0fa 100%);
   min-height: 72px;
+  transition: all 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+
+  &:hover {
+    border-color: rgba(59, 130, 246, 0.35);
+    border-left-color: #2563eb;
+    background: linear-gradient(180deg, #e8f1ff 0%, #dce8f8 100%);
+    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.1);
+    transform: translateY(-1px);
+  }
 
   @include respond-to('mobile') {
     padding: 8px 10px;
@@ -1370,12 +1380,13 @@
 
 .metric-card {
   position: relative;
-  background: $glass-bg;
+  background: linear-gradient(180deg, #f0f7ff 0%, #e6f0fa 100%);
   backdrop-filter: blur($glass-blur);
-  border-radius: $radius-xl;
+  border-radius: 0 $radius-xl $radius-xl 0;
   padding: $space-4;
-  border: 1px solid $glass-border;
-  transition: all $transition-base;
+  border: 1px solid rgba(59, 130, 246, 0.18);
+  border-left: 3px solid #3b82f6;
+  transition: all 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
   overflow: hidden;
   min-height: 160px;
   min-width: 0;
@@ -1384,7 +1395,10 @@
   
   &:hover {
     transform: translateY(-4px);
-    box-shadow: $glass-shadow-hover;
+    border-color: rgba(59, 130, 246, 0.35);
+    border-left-color: #2563eb;
+    background: linear-gradient(180deg, #e8f1ff 0%, #dce8f8 100%);
+    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.1), 0 0 0 1px rgba(59, 130, 246, 0.08);
   }
   
   &.featured {
