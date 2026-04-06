@@ -249,7 +249,7 @@ public sealed class EmbeddedLibraryTelerikReport : Report
                 CAST(COUNT(*) AS nvarchar(50)) AS Col2,
                 CONCAT('$', FORMAT(SUM(o.Amount), '#,0')) AS Col3,
                 CONCAT('$', FORMAT(AVG(o.Amount), '#,0')) AS Col4,
-                ROW_NUMBER() OVER (ORDER BY CASE WHEN o.IsWon = 1 THEN 0 ELSE 1 END) AS Sort1
+                ROW_NUMBER() OVER (ORDER BY o.IsWon DESC) AS Sort1
             FROM [crm].[Opportunities] o
             WHERE o.TenantId = @TenantId
               AND o.IsDeleted = 0
@@ -263,8 +263,8 @@ public sealed class EmbeddedLibraryTelerikReport : Report
                   )
               AND (@DateFrom = '' OR CAST(o.UpdatedAtUtc AS date) >= CAST(@DateFrom AS date))
               AND (@DateTo = '' OR CAST(o.UpdatedAtUtc AS date) <= CAST(@DateTo AS date))
-            GROUP BY CASE WHEN o.IsWon = 1 THEN 'Won' ELSE 'Lost' END
-            ORDER BY CASE WHEN o.IsWon = 1 THEN 0 ELSE 1 END;
+            GROUP BY o.IsWon
+            ORDER BY o.IsWon DESC;
             RETURN;
         END
 
