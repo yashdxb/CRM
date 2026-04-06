@@ -203,6 +203,351 @@
       </div>
     </ng-container>
 
+    <!-- ── Feature-flag configuration (sidebar tabs) ── -->
+    <section class="config-section" *ngIf="!loading()">
+      <h2 class="config-section-title">
+        <i class="pi pi-sliders-h"></i>
+        Platform Configuration
+      </h2>
+
+      <form [formGroup]="flagsForm" (ngSubmit)="saveFeatureFlags()">
+        <p-tabs class="tc-sidebar-tabs" [value]="activeConfigTab()" (valueChange)="onConfigTabChange($event)">
+          <div class="tc-sidebar-layout">
+            <p-tablist class="tc-sidebar-nav">
+              <p-tab value="modules" [pt]="{ root: { class: 'tc-sidebar-item' } }">
+                <i class="pi pi-th-large"></i>
+                <span class="tc-sidebar-label">Modules</span>
+              </p-tab>
+              <p-tab value="features" [pt]="{ root: { class: 'tc-sidebar-item' } }">
+                <i class="pi pi-bolt"></i>
+                <span class="tc-sidebar-label">Features</span>
+              </p-tab>
+              <p-tab value="security" [pt]="{ root: { class: 'tc-sidebar-item' } }">
+                <i class="pi pi-lock"></i>
+                <span class="tc-sidebar-label">Security</span>
+              </p-tab>
+            </p-tablist>
+
+            <p-tabpanels class="tc-sidebar-content">
+              <!-- ── Tab 1: Modules ── -->
+              <p-tabpanel value="modules">
+                <p-accordion [multiple]="true" [value]="['vertical-preset', 'crm-modules', 'helpdesk']" class="tc-config-accordion">
+
+                  <p-accordion-panel value="vertical-preset">
+                    <p-accordion-header>
+                      <div class="acc-header">
+                        <div class="acc-header__icon acc-header__icon--primary"><i class="pi pi-compass"></i></div>
+                        <div class="acc-header__text">
+                          <span class="acc-header__title">CRM Vertical Preset</span>
+                          <span class="acc-header__subtitle">Language, catalogs, reports & workflow defaults</span>
+                        </div>
+                      </div>
+                    </p-accordion-header>
+                    <p-accordion-content>
+                      <div class="preset-body">
+                        <div class="form-field">
+                          <label for="tc-industryPreset">Preset</label>
+                          <p-select
+                            inputId="tc-industryPreset"
+                            formControlName="industryPreset"
+                            [options]="verticalPresetOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            appendTo="body"
+                            styleClass="w-full"
+                          ></p-select>
+                        </div>
+                        <small class="field-hint">Use Core CRM for standard sales workflows. Use Real Estate Brokerage for realtor and brokerage CRM operations.</small>
+                        <div class="preset-actions">
+                          <button type="button" class="action-btn action-btn--add" [disabled]="presetApplying()" (click)="applyVerticalPreset(false)">
+                            <span class="action-btn__icon"><i class="pi pi-sparkles"></i></span>
+                            <span>Apply Preset</span>
+                          </button>
+                          <button type="button" class="action-btn action-btn--refresh" [disabled]="presetApplying()" (click)="applyVerticalPreset(true)">
+                            <span class="action-btn__icon"><i class="pi pi-refresh"></i></span>
+                            <span>Reset to Preset</span>
+                          </button>
+                          <span class="preset-status" *ngIf="presetApplied() && !presetApplying()">
+                            <i class="pi pi-check-circle"></i> In effect
+                          </span>
+                          <span class="preset-status preset-status--applying" *ngIf="presetApplying()">
+                            <i class="pi pi-spinner pi-spin"></i> Applying…
+                          </span>
+                        </div>
+                      </div>
+                    </p-accordion-content>
+                  </p-accordion-panel>
+
+                  <p-accordion-panel value="crm-modules">
+                    <p-accordion-header>
+                      <div class="acc-header">
+                        <div class="acc-header__icon acc-header__icon--primary"><i class="pi pi-box"></i></div>
+                        <div class="acc-header__text">
+                          <span class="acc-header__title">CRM Modules</span>
+                          <span class="acc-header__subtitle">Enable or disable optional CRM modules</span>
+                        </div>
+                      </div>
+                    </p-accordion-header>
+                    <p-accordion-content>
+                      <div class="flag-grid">
+                        <div class="flag-item">
+                          <p-checkbox inputId="tc-properties" formControlName="featureProperties" [binary]="true"></p-checkbox>
+                          <label for="tc-properties" class="flag-label">
+                            <strong>Properties</strong>
+                            <span>Property management module</span>
+                          </label>
+                        </div>
+                        <div class="flag-item">
+                          <p-checkbox inputId="tc-marketing" formControlName="featureMarketingCampaigns" [binary]="true"></p-checkbox>
+                          <label for="tc-marketing" class="flag-label">
+                            <strong>Marketing Campaigns</strong>
+                            <span>Campaign planning and execution</span>
+                          </label>
+                        </div>
+                      </div>
+                    </p-accordion-content>
+                  </p-accordion-panel>
+
+                  <p-accordion-panel value="helpdesk">
+                    <p-accordion-header>
+                      <div class="acc-header">
+                        <div class="acc-header__icon acc-header__icon--orange"><i class="pi pi-headphones"></i></div>
+                        <div class="acc-header__text">
+                          <span class="acc-header__title">Help Desk</span>
+                          <span class="acc-header__subtitle">Configure help desk and support features</span>
+                        </div>
+                      </div>
+                    </p-accordion-header>
+                    <p-accordion-content>
+                      <div class="flag-grid">
+                        <div class="flag-item">
+                          <p-checkbox inputId="tc-hd-cases" formControlName="featureHelpDeskCases" [binary]="true"></p-checkbox>
+                          <label for="tc-hd-cases" class="flag-label">
+                            <strong>Help Desk Cases</strong>
+                            <span>Enable support case management</span>
+                          </label>
+                        </div>
+                        <div class="flag-item">
+                          <p-checkbox inputId="tc-hd-email" formControlName="featureHelpDeskEmailIntake" [binary]="true"></p-checkbox>
+                          <label for="tc-hd-email" class="flag-label">
+                            <strong>Email Intake</strong>
+                            <span>Auto-create cases from inbound email</span>
+                          </label>
+                        </div>
+                        <div class="flag-item">
+                          <p-checkbox inputId="tc-hd-realtime" formControlName="featureHelpDeskRealtime" [binary]="true"></p-checkbox>
+                          <label for="tc-hd-realtime" class="flag-label">
+                            <strong>Realtime Help Desk</strong>
+                            <span>Live updates for case activity</span>
+                          </label>
+                        </div>
+                      </div>
+                    </p-accordion-content>
+                  </p-accordion-panel>
+
+                </p-accordion>
+              </p-tabpanel>
+
+              <!-- ── Tab 2: Features ── -->
+              <p-tabpanel value="features">
+                <p-accordion [multiple]="true" [value]="['realtime', 'ai', 'communications']" class="tc-config-accordion">
+
+                  <p-accordion-panel value="realtime">
+                    <p-accordion-header>
+                      <div class="acc-header">
+                        <div class="acc-header__icon acc-header__icon--success"><i class="pi pi-wifi"></i></div>
+                        <div class="acc-header__text">
+                          <span class="acc-header__title">Realtime</span>
+                          <span class="acc-header__subtitle">Control SignalR-powered live features</span>
+                        </div>
+                      </div>
+                    </p-accordion-header>
+                    <p-accordion-content>
+                      <div class="flag-grid">
+                        <div class="flag-item">
+                          <p-checkbox inputId="tc-rt-dashboard" formControlName="featureRealtimeDashboard" [binary]="true"></p-checkbox>
+                          <label for="tc-rt-dashboard" class="flag-label">
+                            <strong>Dashboard</strong>
+                            <span>Live dashboard updates</span>
+                          </label>
+                        </div>
+                        <div class="flag-item">
+                          <p-checkbox inputId="tc-rt-pipeline" formControlName="featureRealtimePipeline" [binary]="true"></p-checkbox>
+                          <label for="tc-rt-pipeline" class="flag-label">
+                            <strong>Pipeline</strong>
+                            <span>Live pipeline / kanban refresh</span>
+                          </label>
+                        </div>
+                        <div class="flag-item">
+                          <p-checkbox inputId="tc-rt-crud" formControlName="featureRealtimeEntityCrud" [binary]="true"></p-checkbox>
+                          <label for="tc-rt-crud" class="flag-label">
+                            <strong>Entity CRUD</strong>
+                            <span>Broadcast create/update/delete events</span>
+                          </label>
+                        </div>
+                        <div class="flag-item">
+                          <p-checkbox inputId="tc-rt-import" formControlName="featureRealtimeImportProgress" [binary]="true"></p-checkbox>
+                          <label for="tc-rt-import" class="flag-label">
+                            <strong>Import Progress</strong>
+                            <span>Live import status tracking</span>
+                          </label>
+                        </div>
+                        <div class="flag-item">
+                          <p-checkbox inputId="tc-rt-presence" formControlName="featureRealtimeRecordPresence" [binary]="true"></p-checkbox>
+                          <label for="tc-rt-presence" class="flag-label">
+                            <strong>Record Presence</strong>
+                            <span>See who else is viewing a record</span>
+                          </label>
+                        </div>
+                        <div class="flag-item">
+                          <p-checkbox inputId="tc-rt-assistant" formControlName="featureRealtimeAssistantStreaming" [binary]="true"></p-checkbox>
+                          <label for="tc-rt-assistant" class="flag-label">
+                            <strong>Assistant Streaming</strong>
+                            <span>Live AI assistant response streaming</span>
+                          </label>
+                        </div>
+                      </div>
+                    </p-accordion-content>
+                  </p-accordion-panel>
+
+                  <p-accordion-panel value="ai">
+                    <p-accordion-header>
+                      <div class="acc-header">
+                        <div class="acc-header__icon acc-header__icon--purple"><i class="pi pi-sparkles"></i></div>
+                        <div class="acc-header__text">
+                          <span class="acc-header__title">AI</span>
+                          <span class="acc-header__subtitle">Artificial intelligence features</span>
+                        </div>
+                      </div>
+                    </p-accordion-header>
+                    <p-accordion-content>
+                      <div class="flag-grid">
+                        <div class="flag-item">
+                          <p-checkbox inputId="tc-ai-knowledge" formControlName="featureAiKnowledgeSearch" [binary]="true"></p-checkbox>
+                          <label for="tc-ai-knowledge" class="flag-label">
+                            <strong>Knowledge Search</strong>
+                            <span>AI-powered knowledge base queries</span>
+                          </label>
+                        </div>
+                      </div>
+                    </p-accordion-content>
+                  </p-accordion-panel>
+
+                  <p-accordion-panel value="communications">
+                    <p-accordion-header>
+                      <div class="acc-header">
+                        <div class="acc-header__icon acc-header__icon--primary"><i class="pi pi-envelope"></i></div>
+                        <div class="acc-header__text">
+                          <span class="acc-header__title">Communications</span>
+                          <span class="acc-header__subtitle">Email delivery and notification channels</span>
+                        </div>
+                      </div>
+                    </p-accordion-header>
+                    <p-accordion-content>
+                      <div class="flag-grid">
+                        <div class="flag-item">
+                          <p-checkbox inputId="tc-email-delivery" formControlName="featureEmailDelivery" [binary]="true"></p-checkbox>
+                          <label for="tc-email-delivery" class="flag-label">
+                            <strong>Email Delivery</strong>
+                            <span>Master toggle for outbound email</span>
+                          </label>
+                        </div>
+                        <ng-container *ngIf="emailDeliveryEnabled()">
+                          <div class="flag-item flag-item--child" *ngFor="let opt of emailDeliveryOptions">
+                            <p-checkbox [inputId]="opt.inputId" [formControlName]="opt.controlName" [binary]="true"></p-checkbox>
+                            <label [for]="opt.inputId" class="flag-label">
+                              <strong>{{ opt.label }}</strong>
+                            </label>
+                          </div>
+                          <div class="flag-item flag-item--child">
+                            <p-checkbox inputId="tc-email-status" formControlName="featureEmailDeliveryStatusNotifications" [binary]="true"></p-checkbox>
+                            <label for="tc-email-status" class="flag-label">
+                              <strong>Status notification emails</strong>
+                            </label>
+                          </div>
+                        </ng-container>
+                      </div>
+                    </p-accordion-content>
+                  </p-accordion-panel>
+
+                </p-accordion>
+              </p-tabpanel>
+
+              <!-- ── Tab 3: Security ── -->
+              <p-tabpanel value="security">
+                <p-accordion [multiple]="true" [value]="['auth', 'report-designer']" class="tc-config-accordion">
+
+                  <p-accordion-panel value="auth">
+                    <p-accordion-header>
+                      <div class="acc-header">
+                        <div class="acc-header__icon acc-header__icon--orange"><i class="pi pi-microsoft"></i></div>
+                        <div class="acc-header__text">
+                          <span class="acc-header__title">Enterprise Authentication</span>
+                          <span class="acc-header__subtitle">SSO and identity provider settings</span>
+                        </div>
+                      </div>
+                    </p-accordion-header>
+                    <p-accordion-content>
+                      <div class="flag-grid">
+                        <div class="flag-item">
+                          <p-checkbox inputId="tc-auth-entra" formControlName="featureAuthEntra" [binary]="true"></p-checkbox>
+                          <label for="tc-auth-entra" class="flag-label">
+                            <strong>Microsoft Entra ID</strong>
+                            <span>Enable Azure AD / Entra SSO login</span>
+                          </label>
+                        </div>
+                      </div>
+                    </p-accordion-content>
+                  </p-accordion-panel>
+
+                  <p-accordion-panel value="report-designer">
+                    <p-accordion-header>
+                      <div class="acc-header">
+                        <div class="acc-header__icon acc-header__icon--purple"><i class="pi pi-file-edit"></i></div>
+                        <div class="acc-header__text">
+                          <span class="acc-header__title">Report Designer Access</span>
+                          <span class="acc-header__subtitle">Permission required for report designer</span>
+                        </div>
+                      </div>
+                    </p-accordion-header>
+                    <p-accordion-content>
+                      <div class="flag-grid">
+                        <div class="form-field">
+                          <label for="tc-report-perm">Minimum permission</label>
+                          <p-select
+                            id="tc-report-perm"
+                            [options]="reportDesignerPermissionOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            formControlName="reportDesignerRequiredPermission"
+                            placeholder="Select permission"
+                            class="w-full"
+                            appendTo="body"
+                          ></p-select>
+                        </div>
+                      </div>
+                    </p-accordion-content>
+                  </p-accordion-panel>
+
+                </p-accordion>
+              </p-tabpanel>
+            </p-tabpanels>
+          </div>
+        </p-tabs>
+
+        <div class="config-actions">
+          <button
+            type="submit"
+            class="action-btn action-btn--add"
+            [disabled]="savingFlags()"
+          >
+            <span class="action-btn__icon"><i class="pi pi-save"></i></span>
+            <span>{{ savingFlags() ? 'Saving…' : 'Save Configuration' }}</span>
+          </button>
+        </div>
+      </form>
+    </section>
+
     <ng-template #loadingState>
       <div class="loading-grid">
         <div class="glass-card">

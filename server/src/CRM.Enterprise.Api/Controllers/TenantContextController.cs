@@ -2,6 +2,7 @@ using CRM.Enterprise.Api.Contracts.Tenants;
 using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Application.Notifications;
 using CRM.Enterprise.Domain.Entities;
+using CRM.Enterprise.Security;
 using CRM.Enterprise.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -119,6 +120,18 @@ public class TenantContextController : ControllerBase
         featureFlags["realtime.recordPresence"] = IsRealtimeFlagEnabled("realtime.recordPresence", tenant.Key, realtimeTenantEnabled);
         featureFlags["realtime.assistantStreaming"] = IsRealtimeFlagEnabled("realtime.assistantStreaming", tenant.Key, realtimeTenantEnabled);
         ApplyTenantFeatureOverrides(featureFlags, tenant.FeatureFlagsJson);
+
+        // Super Admins bypass feature flag restrictions — full module access
+        if (User.IsInRole(Permissions.RoleNames.SuperAdmin))
+        {
+            foreach (var key in featureFlags.Keys)
+            {
+                if (!key.StartsWith("communications.", StringComparison.OrdinalIgnoreCase))
+                {
+                    featureFlags[key] = true;
+                }
+            }
+        }
 
         return Ok(new TenantContextResponse(
             tenant.Id,

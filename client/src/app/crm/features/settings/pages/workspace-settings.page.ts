@@ -10,6 +10,7 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { SkeletonModule } from 'primeng/skeleton';
+import { TabsModule } from 'primeng/tabs';
 import { TextareaModule } from 'primeng/textarea';
 
 import { WorkspaceSettingsService } from '../services/workspace-settings.service';
@@ -59,6 +60,7 @@ interface RecordNumberingRow {
     ReactiveFormsModule,
     RouterLink,
     SkeletonModule,
+    TabsModule,
     TextareaModule,
     BreadcrumbsComponent
   ],
@@ -75,6 +77,8 @@ export class WorkspaceSettingsPage {
   private readonly tenantContext = inject(TenantContextService);
   private readonly brandingService = inject(TenantBrandingService);
   private readonly brandingState = inject(TenantBrandingStateService);
+
+  protected readonly activeTab = signal<string>('company');
 
   protected readonly brandingLogoUrl = this.brandingState.logoUrl;
   protected readonly brandingUploading = signal(false);
@@ -131,6 +135,7 @@ export class WorkspaceSettingsPage {
     recordNumberPrefixDeals: ['DEAL-', [Validators.required, Validators.maxLength(12)]],
     recordNumberPrefixCustomers: ['CUS-', [Validators.required, Validators.maxLength(12)]],
     featureProperties: [false],
+    featureMarketingCampaigns: [false],
     featureAuthEntra: [false],
     featureRealtimeDashboard: [false],
     featureRealtimePipeline: [false],
@@ -239,6 +244,12 @@ export class WorkspaceSettingsPage {
     return !!this.settingsForm.get('featureEmailDelivery')?.value;
   }
 
+  protected onActiveTabChange(tab: string | number | null | undefined) {
+    if (typeof tab === 'string') {
+      this.activeTab.set(tab);
+    }
+  }
+
   protected loadSettings() {
     this.loading.set(true);
     this.settingsService.getSettings().subscribe({
@@ -292,6 +303,7 @@ export class WorkspaceSettingsPage {
       recordNumberingPolicies: this.buildRecordNumberingPolicies(payload),
       featureFlags: {
         properties: !!payload.featureProperties,
+        'marketing.campaigns': !!payload.featureMarketingCampaigns,
         'auth.entra': !!payload.featureAuthEntra,
         'realtime.dashboard': !!payload.featureRealtimeDashboard,
         'realtime.pipeline': !!payload.featureRealtimePipeline,
@@ -354,6 +366,7 @@ export class WorkspaceSettingsPage {
       recordNumberPrefixDeals: this.resolveRecordNumberingPolicy(settings.recordNumberingPolicies, 'Deals', 'DEAL-').prefix,
       recordNumberPrefixCustomers: this.resolveRecordNumberingPolicy(settings.recordNumberingPolicies, 'Customers', 'CUS-').prefix,
       featureProperties: this.resolveFeatureFlag(settings.featureFlags, 'properties'),
+      featureMarketingCampaigns: this.resolveFeatureFlag(settings.featureFlags, 'marketing.campaigns'),
       featureAuthEntra: this.resolveFeatureFlag(settings.featureFlags, 'auth.entra'),
       featureRealtimeDashboard: this.resolveFeatureFlag(settings.featureFlags, 'realtime.dashboard'),
       featureRealtimePipeline: this.resolveFeatureFlag(settings.featureFlags, 'realtime.pipeline'),

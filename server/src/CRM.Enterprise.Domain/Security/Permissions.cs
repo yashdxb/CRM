@@ -165,6 +165,7 @@ public static class Permissions
 
     public static IReadOnlyList<RoleIntentDefinition> RoleIntents { get; } = Array.AsReadOnly(new[]
     {
+        new RoleIntentDefinition(RoleNames.SuperAdmin, "Super Admin", "Platform super administrator with full access including tenant management.", AllKeys.ToArray()),
         new RoleIntentDefinition(RoleNames.SalesRep, "Sales Rep", "Owns assigned accounts and opportunities.", SalesRepPermissions),
         new RoleIntentDefinition(RoleNames.SalesManager, "Sales Manager", "Manages team pipeline and forecasts.", SalesManagerPermissions),
         new RoleIntentDefinition(RoleNames.Admin, "Admin", "System administrator with workspace governance.", AdminPermissions),

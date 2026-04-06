@@ -1707,6 +1707,7 @@ public class DatabaseInitializer : IDatabaseInitializer
     {
         await _dbContext.Database.MigrateAsync(cancellationToken);
         await EnsureSchemaCompatibilityAsync(cancellationToken);
+        await EnsureSuperAdminPermissionsAsync(cancellationToken);
     }
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
@@ -2841,6 +2842,45 @@ public class DatabaseInitializer : IDatabaseInitializer
             """;
 
         await _dbContext.Database.ExecuteSqlRawAsync(ensureTenantQualificationPolicyColumnSql, cancellationToken);
+    }
+
+    /// <summary>
+    /// Production-safe: ensures every Super Admin role across all tenants has the full permission set.
+    /// Additive only — adds missing permissions without removing existing ones.
+    /// </summary>
+    private async Task EnsureSuperAdminPermissionsAsync(CancellationToken cancellationToken)
+    {
+        var superAdminRoles = await _dbContext.Roles
+            .IgnoreQueryFilters()
+            .Where(r => r.Name == Permissions.RoleNames.SuperAdmin)
+            .Include(r => r.Permissions)
+            .ToListAsync(cancellationToken);
+
+        if (superAdminRoles.Count == 0)
+            return;
+
+        var allKeys = Permissions.AllKeys;
+
+        foreach (var role in superAdminRoles)
+        {
+            var existing = new HashSet<string>(
+                role.Permissions.Select(rp => rp.Permission),
+                StringComparer.OrdinalIgnoreCase);
+
+            foreach (var key in allKeys)
+            {
+                if (existing.Contains(key))
+                    continue;
+
+                role.Permissions.Add(new RolePermission
+                {
+                    RoleId = role.Id,
+                    Permission = key
+                });
+            }
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private async Task<User> EnsureDemoUserAsync(

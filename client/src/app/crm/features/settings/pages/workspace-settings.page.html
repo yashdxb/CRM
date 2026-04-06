@@ -167,6 +167,30 @@
 
         <!-- Form -->
         <form class="settings-form" *ngIf="!loading()" [formGroup]="settingsForm" (ngSubmit)="saveSettings()">
+
+          <!-- ═══════════════ VERTICAL SIDEBAR TABS ═══════════════ -->
+          <p-tabs class="ws-sidebar-tabs" [value]="activeTab()" (valueChange)="onActiveTabChange($event)">
+            <div class="ws-sidebar-layout">
+              <!-- Sidebar Navigation -->
+              <p-tablist class="ws-sidebar-nav">
+                <p-tab value="company" [pt]="{ root: { class: 'ws-sidebar-item' } }">
+                  <i class="pi pi-building"></i>
+                  <span class="ws-sidebar-label">Company &amp; Branding</span>
+                </p-tab>
+                <p-tab value="operations" [pt]="{ root: { class: 'ws-sidebar-item' } }">
+                  <i class="pi pi-cog"></i>
+                  <span class="ws-sidebar-label">Operations</span>
+                </p-tab>
+                <p-tab value="regional" [pt]="{ root: { class: 'ws-sidebar-item' } }">
+                  <i class="pi pi-globe"></i>
+                  <span class="ws-sidebar-label">Regional</span>
+                </p-tab>
+              </p-tablist>
+
+              <!-- Tab Content Area -->
+              <p-tabpanels class="ws-sidebar-content">
+              <!-- ═══════════════ TAB 1 — Company & Branding ═══════════════ -->
+              <p-tabpanel value="company">
           <section class="form-card">
             <h3 class="section-title">
               <i class="pi pi-building"></i>
@@ -239,70 +263,10 @@
               </div>
             </div>
           </section>
+              </p-tabpanel>
 
-          <section class="form-card">
-            <h3 class="section-title section-title--info">
-              <i class="pi pi-compass"></i>
-              CRM Vertical Preset
-            </h3>
-            <p class="section-description">Apply a tenant preset for CRM-specific language, lead catalogs, reports, and workflow defaults.</p>
-
-            <div class="form-grid form-grid--2col">
-              <div class="form-field">
-                <label for="ws-industryPreset">Preset</label>
-                <p-select
-                  inputId="ws-industryPreset"
-                  formControlName="industryPreset"
-                  [options]="verticalPresetOptions"
-                  optionLabel="label"
-                  optionValue="value"
-                  appendTo="body"
-                  styleClass="w-full"
-                ></p-select>
-                <small class="field-hint">Use Core CRM for standard sales workflows. Use Real Estate Brokerage for realtor and brokerage CRM operations.</small>
-              </div>
-              <div class="form-field form-field--actions">
-                <label>Apply preset</label>
-                <div class="preset-actions">
-                  <button type="button" class="action-btn action-btn--add" [disabled]="presetApplying()" (click)="applyVerticalPreset(false)">
-                    <span class="action-btn__icon"><i class="pi pi-sparkles"></i></span>
-                    <span>Apply Preset</span>
-                  </button>
-                  <button type="button" class="action-btn action-btn--refresh" [disabled]="presetApplying()" (click)="applyVerticalPreset(true)">
-                    <span class="action-btn__icon"><i class="pi pi-refresh"></i></span>
-                    <span>Reset to Preset</span>
-                  </button>
-                  <span class="preset-status" *ngIf="presetApplied() && !presetApplying()">
-                    <i class="pi pi-check-circle"></i> In effect
-                  </span>
-                  <span class="preset-status preset-status--applying" *ngIf="presetApplying()">
-                    <i class="pi pi-spinner pi-spin"></i> Applying…
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div class="form-grid form-grid--3col" *ngIf="activeVerticalPresetConfiguration() as preset">
-              <div class="form-field">
-                <label>Qualification language</label>
-                <div class="field-preview">{{ preset.vocabulary.leadQualificationLabel }}</div>
-              </div>
-              <div class="form-field">
-                <label>Report starter pack</label>
-                <div class="token-list">
-                  <span class="token-pill" *ngFor="let item of preset.reportLibraryHighlights">{{ item }}</span>
-                </div>
-              </div>
-              <div class="form-field">
-                <label>Workflow starter pack</label>
-                <div class="token-list">
-                  <span class="token-pill" *ngFor="let item of preset.workflowTemplateHighlights">{{ item }}</span>
-                </div>
-              </div>
-            </div>
-
-          </section>
-
+              <!-- ═══════════════ TAB 2 — Operations ═══════════════ -->
+              <p-tabpanel value="operations">
           <section class="form-card">
             <h3 class="section-title section-title--warning">
               <i class="pi pi-stopwatch"></i>
@@ -444,167 +408,6 @@
 
           <section class="form-card">
             <h3 class="section-title section-title--info">
-              <i class="pi pi-home"></i>
-              CRM Modules
-            </h3>
-            <p class="section-description">Control CRM module availability for this workspace.</p>
-
-            <div class="form-grid form-grid--2col">
-              <div class="form-field">
-                <label class="checkbox-field">
-                  <p-checkbox formControlName="featureProperties" [binary]="true"></p-checkbox>
-                  <span>Enable Properties module</span>
-                </label>
-                <small class="field-hint">Real Estate Brokerage presets enable this by default, but you can override it here per tenant.</small>
-              </div>
-            </div>
-          </section>
-
-          <section class="form-card">
-            <h3 class="section-title section-title--info">
-              <i class="pi pi-bolt"></i>
-              Realtime Features
-            </h3>
-            <p class="section-description">Enable or disable tenant-level realtime UX behaviors.</p>
-
-            <div class="form-grid form-grid--2col">
-              <div class="form-field">
-                <label class="checkbox-field">
-                  <p-checkbox formControlName="featureRealtimeDashboard" [binary]="true"></p-checkbox>
-                  <span>Dashboard live metrics</span>
-                </label>
-              </div>
-              <div class="form-field">
-                <label class="checkbox-field">
-                  <p-checkbox formControlName="featureRealtimePipeline" [binary]="true"></p-checkbox>
-                  <span>Pipeline live updates</span>
-                </label>
-              </div>
-              <div class="form-field">
-                <label class="checkbox-field">
-                  <p-checkbox formControlName="featureRealtimeEntityCrud" [binary]="true"></p-checkbox>
-                  <span>Entity CRUD broadcasts</span>
-                </label>
-              </div>
-              <div class="form-field">
-                <label class="checkbox-field">
-                  <p-checkbox formControlName="featureRealtimeImportProgress" [binary]="true"></p-checkbox>
-                  <span>Import progress streaming</span>
-                </label>
-              </div>
-              <div class="form-field">
-                <label class="checkbox-field">
-                  <p-checkbox formControlName="featureRealtimeRecordPresence" [binary]="true"></p-checkbox>
-                  <span>Record presence indicators</span>
-                </label>
-              </div>
-              <div class="form-field">
-                <label class="checkbox-field">
-                  <p-checkbox formControlName="featureRealtimeAssistantStreaming" [binary]="true"></p-checkbox>
-                  <span>Assistant token streaming</span>
-                </label>
-              </div>
-            </div>
-          </section>
-
-          <section class="form-card">
-            <h3 class="section-title section-title--warning">
-              <i class="pi pi-headphones"></i>
-              Help Desk Feature Flags
-            </h3>
-            <p class="section-description">Control help desk rollout and intake channels per tenant.</p>
-
-            <div class="form-grid form-grid--2col">
-              <div class="form-field">
-                <label class="checkbox-field">
-                  <p-checkbox formControlName="featureHelpDeskCases" [binary]="true"></p-checkbox>
-                  <span>Enable Help Desk module</span>
-                </label>
-              </div>
-              <div class="form-field">
-                <label class="checkbox-field">
-                  <p-checkbox formControlName="featureHelpDeskEmailIntake" [binary]="true"></p-checkbox>
-                  <span>Email-to-case intake</span>
-                </label>
-              </div>
-              <div class="form-field">
-                <label class="checkbox-field">
-                  <p-checkbox formControlName="featureHelpDeskRealtime" [binary]="true"></p-checkbox>
-                  <span>Help Desk realtime events</span>
-                </label>
-              </div>
-            </div>
-          </section>
-
-          <section class="form-card">
-            <h3 class="section-title section-title--warning">
-              <i class="pi pi-send"></i>
-              Communications
-            </h3>
-            <p class="section-description">Control tenant-wide outbound email delivery and delivery-status popups for test, demo, and live environments.</p>
-
-            <div class="form-grid form-grid--2col">
-              <div class="form-field">
-                <div class="checkbox-option checkbox-option--primary">
-                  <p-checkbox inputId="ws-email-delivery-master" formControlName="featureEmailDelivery" [binary]="true"></p-checkbox>
-                  <label class="checkbox-field" for="ws-email-delivery-master">
-                    <span>Enable outbound email delivery</span>
-                  </label>
-                </div>
-                <small class="field-hint">Master switch for all outbound CRM email sends in this workspace.</small>
-              </div>
-
-              <div class="form-field">
-                <div class="checkbox-option checkbox-option--primary" [class.checkbox-option--muted]="!emailDeliveryEnabled()">
-                  <p-checkbox
-                    inputId="ws-email-delivery-status"
-                    formControlName="featureEmailDeliveryStatusNotifications"
-                    [binary]="true"
-                  ></p-checkbox>
-                  <label class="checkbox-field" for="ws-email-delivery-status">
-                    <span>Show email delivery status notifications in app</span>
-                  </label>
-                </div>
-                <small class="field-hint">Keeps the inbox-style delivery popup separate from actual send permissions.</small>
-              </div>
-            </div>
-
-            <div class="form-grid form-grid--2col">
-              <div class="form-field" *ngFor="let option of emailDeliveryOptions">
-                <div class="checkbox-option" [class.checkbox-option--muted]="!emailDeliveryEnabled()">
-                  <p-checkbox
-                    [inputId]="option.inputId"
-                    [formControlName]="option.controlName"
-                    [binary]="true"
-                    [disabled]="!emailDeliveryEnabled()"
-                  ></p-checkbox>
-                  <label class="checkbox-field" [for]="option.inputId">
-                    <span>{{ option.label }}</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section class="form-card">
-            <h3 class="section-title section-title--info">
-              <i class="pi pi-microchip-ai"></i>
-              AI Features
-            </h3>
-            <p class="section-description">Control AI-powered capabilities for this workspace.</p>
-
-            <div class="form-grid form-grid--2col">
-              <div class="form-field">
-                <label class="checkbox-field">
-                  <p-checkbox formControlName="featureAiKnowledgeSearch" [binary]="true"></p-checkbox>
-                  <span>AI Knowledge Search (Azure AI Search grounding)</span>
-                </label>
-              </div>
-            </div>
-          </section>
-
-          <section class="form-card">
-            <h3 class="section-title section-title--info">
               <i class="pi pi-briefcase"></i>
               Delivery & Renewal Defaults
             </h3>
@@ -641,7 +444,10 @@
               </div>
             </div>
           </section>
+              </p-tabpanel>
 
+              <!-- ═══════════════ TAB 3 — Regional ═══════════════ -->
+              <p-tabpanel value="regional">
           <section class="form-card">
             <h3 class="section-title section-title--info">
               <i class="pi pi-globe"></i>
@@ -707,49 +513,10 @@
               </div>
             </div>
           </section>
-
-          <!-- Reports Configuration Section -->
-          <section class="form-card">
-            <h3 class="section-title section-title--info">
-              <i class="pi pi-shield"></i>
-              Enterprise Authentication
-            </h3>
-            <p class="section-description">Control Microsoft Entra sign-in availability for this tenant while keeping local login as fallback.</p>
-
-            <div class="settings-grid settings-grid--flags">
-              <div class="setting-toggle-card">
-                <div class="setting-toggle-copy">
-                  <strong>Enable Microsoft Entra sign-in</strong>
-                  <span>Shows the Microsoft sign-in path on the login page for this tenant.</span>
-                </div>
-                <p-checkbox formControlName="featureAuthEntra" [binary]="true"></p-checkbox>
-              </div>
+              </p-tabpanel>
+            </p-tabpanels>
             </div>
-          </section>
-
-          <section class="form-card">
-            <h3 class="section-title section-title--info">
-              <i class="pi pi-file-pdf"></i>
-              Reports Configuration
-            </h3>
-            <p class="section-description">Configure access permissions for the report designer</p>
-            
-            <div class="form-grid">
-              <div class="form-field">
-                <label for="ws-reportDesignerRequiredPermission">Report Designer Access</label>
-                <p-select inputId="ws-reportDesignerRequiredPermission" appendTo="body"
-                  [options]="reportDesignerPermissionOptions"
-                  optionLabel="label"
-                  optionValue="value"
-                  formControlName="reportDesignerRequiredPermission"
-                  placeholder="Select permission level"
-                  styleClass="w-full"
-                >
-                </p-select>
-                <small class="field-hint">Users must have this permission to access the web report designer</small>
-              </div>
-            </div>
-          </section>
+          </p-tabs>
 
           <div class="form-actions">
             <button type="button" class="btn btn-ghost" (click)="loadSettings()" [disabled]="loading()">

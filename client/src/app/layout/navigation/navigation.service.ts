@@ -7,6 +7,7 @@ import { TenantContext, TenantContextService } from '../../core/tenant/tenant-co
 import { TenantBrandingStateService } from '../../core/tenant/tenant-branding-state.service';
 import { CrmEventsService } from '../../core/realtime/crm-events.service';
 import { OpportunityApprovalService } from '../../crm/features/opportunities/services/opportunity-approval.service';
+import { AuthService } from '../../core/auth/auth.service';
 import { NavLink } from './navigation.model';
 import { NAV_LINKS } from './navigation.config';
 
@@ -21,6 +22,7 @@ export class NavigationService {
   private readonly brandingState = inject(TenantBrandingStateService);
   private readonly crmEventsService = inject(CrmEventsService);
   private readonly approvalService = inject(OpportunityApprovalService);
+  private readonly authService = inject(AuthService);
 
   // Sidebar collapsed state
   private readonly _collapsed = signal(this.loadCollapsedState());
@@ -44,6 +46,8 @@ export class NavigationService {
 
   readonly visibleNavLinks = computed(() => {
     this.navVersion();
+    // Track auth state reactively so nav updates on login/logout
+    this.authService.currentUser();
     const context = readTokenContext();
 
     const hasPermission = (link: NavLink) => {
@@ -78,7 +82,10 @@ export class NavigationService {
     this.loadExpandedState();
     this.router.events.pipe(
       filter(event => event instanceof NavigationEnd)
-    ).subscribe(() => this.autoExpandActiveMenu());
+    ).subscribe(() => {
+      this.refreshNav();
+      this.autoExpandActiveMenu();
+    });
     
     this.autoExpandActiveMenu();
     this.loadTenantContext();
