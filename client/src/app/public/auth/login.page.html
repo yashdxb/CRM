@@ -6,8 +6,8 @@
       <div class="signal"></div>
       <div class="brand-logo">
         <img
-          src="https://nedgtdal2.blob.core.windows.net/assets/branding/logo-v2.png"
-          alt="North Edge CRM"
+          [src]="branding.logoUrl() ?? 'https://nedgtdal2.blob.core.windows.net/assets/branding/logo-v2.png'"
+          [alt]="branding.tenantName() ?? 'North Edge CRM'"
         />
       </div>
       <h1 class="card-title">Welcome Back</h1>

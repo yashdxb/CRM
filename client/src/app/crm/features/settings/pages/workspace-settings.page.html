@@ -188,6 +188,58 @@
             </div>
           </section>
 
+          <!-- Workspace Branding -->
+          <section class="form-card">
+            <h3 class="section-title">
+              <i class="pi pi-palette"></i>
+              Workspace Branding
+            </h3>
+            <p class="section-description">Customise logo displayed across the application</p>
+
+            <div class="branding-upload">
+              <div class="branding-preview">
+                @if (brandingLogoUrl()) {
+                  <img class="branding-preview__img" [src]="brandingLogoUrl()" alt="Tenant logo" />
+                } @else {
+                  <div class="branding-preview__placeholder">
+                    <i class="pi pi-image"></i>
+                    <span>No logo uploaded</span>
+                  </div>
+                }
+              </div>
+
+              <div class="branding-actions">
+                <input
+                  #logoInput
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  class="sr-only"
+                  (change)="onLogoSelected($event)"
+                />
+                <button
+                  pButton
+                  type="button"
+                  label="Upload Logo"
+                  icon="pi pi-upload"
+                  class="p-button-outlined p-button-sm"
+                  [disabled]="brandingUploading()"
+                  (click)="logoInput.click()"
+                ></button>
+                <button
+                  pButton
+                  type="button"
+                  label="Remove"
+                  icon="pi pi-trash"
+                  class="p-button-outlined p-button-sm p-button-danger"
+                  *ngIf="brandingLogoUrl()"
+                  [disabled]="brandingUploading()"
+                  (click)="removeLogo()"
+                ></button>
+                <small class="field-hint">PNG, JPG or WebP. Max 2 MB.</small>
+              </div>
+            </div>
+          </section>
+
           <section class="form-card">
             <h3 class="section-title section-title--info">
               <i class="pi pi-compass"></i>

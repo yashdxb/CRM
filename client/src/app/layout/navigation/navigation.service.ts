@@ -4,6 +4,7 @@ import { filter } from 'rxjs/operators';
 import { readTokenContext, tokenHasPermission } from '../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../core/auth/permission.constants';
 import { TenantContext, TenantContextService } from '../../core/tenant/tenant-context.service';
+import { TenantBrandingStateService } from '../../core/tenant/tenant-branding-state.service';
 import { CrmEventsService } from '../../core/realtime/crm-events.service';
 import { OpportunityApprovalService } from '../../crm/features/opportunities/services/opportunity-approval.service';
 import { NavLink } from './navigation.model';
@@ -17,6 +18,7 @@ export class NavigationService {
   
   private readonly router = inject(Router);
   private readonly tenantContextService = inject(TenantContextService);
+  private readonly brandingState = inject(TenantBrandingStateService);
   private readonly crmEventsService = inject(CrmEventsService);
   private readonly approvalService = inject(OpportunityApprovalService);
 
@@ -80,6 +82,7 @@ export class NavigationService {
     
     this.autoExpandActiveMenu();
     this.loadTenantContext();
+    this.brandingState.loadBranding();
     this.refreshDecisionPendingCount();
     this.crmEventsService.events$
       .pipe(filter((event) => event.eventType.startsWith('decision.')))

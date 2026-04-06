@@ -29,7 +29,8 @@ public class TenantResolutionMiddleware
         }
 
         if (path.StartsWith("/api/auth/login", StringComparison.OrdinalIgnoreCase) ||
-            path.StartsWith("/api/auth/config", StringComparison.OrdinalIgnoreCase))
+            path.StartsWith("/api/auth/config", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("/api/tenant-branding/public", StringComparison.OrdinalIgnoreCase))
         {
             // Allow public auth bootstrapping even if the tenant header is stale, but set it if we can resolve it.
             var loginHost = context.Request.Host.Host;

@@ -28,6 +28,7 @@ public class Tenant : Entity
     public string? RecordNumberingPolicyJson { get; set; }
     public string? FeatureFlagsJson { get; set; }
     public string? ReportDesignerRequiredPermission { get; set; }
+    public string? LogoUrl { get; set; }
     public int? LeadFirstTouchSlaHours { get; set; }
     public int? DefaultContractTermMonths { get; set; }
     public Guid? DefaultDeliveryOwnerRoleId { get; set; }

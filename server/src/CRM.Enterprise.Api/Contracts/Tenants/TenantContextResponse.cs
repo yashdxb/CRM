@@ -7,4 +7,5 @@ public record TenantContextResponse(
     string? IndustryPreset,
     CRM.Enterprise.Application.Tenants.VerticalPresetConfiguration VerticalPresetConfiguration,
     IReadOnlyList<string> IndustryModules,
-    IReadOnlyDictionary<string, bool> FeatureFlags);
+    IReadOnlyDictionary<string, bool> FeatureFlags,
+    string? LogoUrl);

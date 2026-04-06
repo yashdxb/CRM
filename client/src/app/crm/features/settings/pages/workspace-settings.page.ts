@@ -24,6 +24,8 @@ import { UserAdminDataService } from '../services/user-admin-data.service';
 import { RoleSummary } from '../models/user-admin.model';
 import { ReferenceDataService } from '../../../../core/services/reference-data.service';
 import { TenantContextService } from '../../../../core/tenant/tenant-context.service';
+import { TenantBrandingService } from '../../../../core/tenant/tenant-branding.service';
+import { TenantBrandingStateService } from '../../../../core/tenant/tenant-branding-state.service';
 
 interface Option<T = string> {
   label: string;
@@ -71,6 +73,11 @@ export class WorkspaceSettingsPage {
   private readonly timeZoneService = inject(TimeZoneService);
   private readonly referenceData = inject(ReferenceDataService);
   private readonly tenantContext = inject(TenantContextService);
+  private readonly brandingService = inject(TenantBrandingService);
+  private readonly brandingState = inject(TenantBrandingStateService);
+
+  protected readonly brandingLogoUrl = this.brandingState.logoUrl;
+  protected readonly brandingUploading = signal(false);
 
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
@@ -481,6 +488,39 @@ export class WorkspaceSettingsPage {
   ): RecordNumberingPolicy {
     return policies?.find((policy) => policy.moduleKey === moduleKey)
       ?? { moduleKey, prefix: defaultPrefix, enabled: moduleKey === 'Leads', padding: 6 };
+  }
+
+  protected onLogoSelected(event: Event): void {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+
+    this.brandingUploading.set(true);
+    this.brandingService.uploadLogo(file).subscribe({
+      next: (result) => {
+        this.brandingState.logoUrl.set(result.logoUrl);
+        this.brandingUploading.set(false);
+        this.toastService.show('success', 'Logo uploaded successfully');
+      },
+      error: () => {
+        this.brandingUploading.set(false);
+        this.toastService.show('error', 'Logo upload failed. Ensure the file is PNG, JPG, or WebP and under 2 MB.');
+      }
+    });
+  }
+
+  protected removeLogo(): void {
+    this.brandingUploading.set(true);
+    this.brandingService.removeLogo().subscribe({
+      next: () => {
+        this.brandingState.logoUrl.set(null);
+        this.brandingUploading.set(false);
+        this.toastService.show('success', 'Logo removed');
+      },
+      error: () => {
+        this.brandingUploading.set(false);
+        this.toastService.show('error', 'Failed to remove logo');
+      }
+    });
   }
 
 }

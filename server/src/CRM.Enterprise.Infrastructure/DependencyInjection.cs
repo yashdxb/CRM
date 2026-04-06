@@ -58,6 +58,9 @@ using CRM.Enterprise.Infrastructure.Lookups;
 using CRM.Enterprise.Application.Reporting;
 using CRM.Enterprise.Infrastructure.Reporting;
 using CRM.Enterprise.Infrastructure.Workflows;
+using CRM.Enterprise.Application.Storage;
+using CRM.Enterprise.Infrastructure.Storage;
+using Azure.Storage.Blobs;
 using MediatR;
 using Azure.Messaging.ServiceBus;
 using Microsoft.AspNetCore.Identity;
@@ -99,6 +102,17 @@ public static class DependencyInjection
         services.AddScoped<IDatabaseInitializer, DatabaseInitializer>();
         services.AddScoped<ITenantProvider, TenantProvider>();
         services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
+        services.AddScoped<ITenantBrandingService, TenantBrandingService>();
+        var blobConnectionString = configuration.GetConnectionString("AzureBlobStorage");
+        if (!string.IsNullOrWhiteSpace(blobConnectionString))
+        {
+            services.AddSingleton(new BlobServiceClient(blobConnectionString));
+        }
+        else
+        {
+            services.AddSingleton(new BlobServiceClient("UseDevelopmentStorage=true"));
+        }
+        services.AddScoped<IBlobStorageService, BlobStorageService>();
         services.AddScoped<IRecordNumberAllocator, RecordNumberAllocator>();
         services.AddScoped<IIndustryPresetService, IndustryPresetService>();
         services.AddScoped<IDashboardReadService, DashboardReadService>();

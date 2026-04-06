@@ -127,7 +127,8 @@ public class TenantContextController : ControllerBase
             tenant.IndustryPreset,
             ResolveVerticalPresetConfiguration(tenant),
             modules,
-            featureFlags));
+            featureFlags,
+            tenant.LogoUrl));
     }
 
     private bool IsRealtimeFlagEnabled(string flagName, string tenantKey, bool realtimeTenantEnabled)

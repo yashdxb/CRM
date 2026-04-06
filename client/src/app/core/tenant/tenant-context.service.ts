@@ -31,6 +31,7 @@ export interface TenantContext {
   };
   industryModules?: string[];
   featureFlags?: Record<string, boolean>;
+  logoUrl?: string | null;
 }
 
 @Injectable({ providedIn: 'root' })

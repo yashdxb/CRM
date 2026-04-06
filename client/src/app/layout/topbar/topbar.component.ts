@@ -7,6 +7,7 @@ import { AssistantService } from '../../core/assistant/assistant.service';
 import { NotificationCenterComponent } from '../../core/notifications';
 import { UserMenuComponent } from '../../core/user-menu';
 import { NavigationService } from '../navigation';
+import { TenantBrandingStateService } from '../../core/tenant/tenant-branding-state.service';
 
 @Component({
   selector: 'app-topbar',
@@ -25,6 +26,7 @@ export class TopbarComponent {
   protected readonly commandPaletteService = inject(CommandPaletteService);
   protected readonly assistantService = inject(AssistantService);
   protected readonly nav = inject(NavigationService);
+  protected readonly branding = inject(TenantBrandingStateService);
 
   readonly toggleSidebar = output<void>();
   readonly openQuickAdd = output<void>();

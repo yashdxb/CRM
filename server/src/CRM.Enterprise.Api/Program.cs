@@ -314,8 +314,8 @@ app.UseWhen(
     branch => branch.UseHttpsRedirection());
 app.UseRouting();
 app.UseCors(CorsPolicyName);
-app.UseMiddleware<TenantResolutionMiddleware>();
 app.UseAuthentication();
+app.UseMiddleware<TenantResolutionMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();

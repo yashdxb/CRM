@@ -1,11 +1,11 @@
 
     <header class="topbar" [ngClass]="{ 'topbar--hidden': nav.topbarHidden() }">
       <div class="topbar__left">
-        <div class="topbar__brand" aria-label="North Edge CRM">
+        <div class="topbar__brand" [attr.aria-label]="branding.tenantName() ?? 'North Edge CRM'">
           <img
             class="topbar__brand-logo"
-            src="assets/branding/logo-v2-light.png"
-            alt="North Edge CRM"
+            [src]="branding.logoUrl() ?? 'assets/branding/logo-v2-light.png'"
+            [alt]="branding.tenantName() ?? 'North Edge CRM'"
             loading="eager"
           />
         </div>

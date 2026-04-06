@@ -7,6 +7,7 @@ import { environment } from '../../../environments/environment';
 import { NavigationService, NavLink } from '../navigation';
 import { ThemeService } from '../../core/theme/theme.service';
 import { KeyboardShortcutsService } from '../../core/keyboard-shortcuts';
+import { TenantBrandingStateService } from '../../core/tenant/tenant-branding-state.service';
 
 @Component({
   selector: 'app-sidebar',
@@ -38,6 +39,7 @@ export class SidebarComponent implements AfterViewInit, OnDestroy {
   protected readonly nav = inject(NavigationService);
   protected readonly themeService = inject(ThemeService);
   protected readonly shortcutsService = inject(KeyboardShortcutsService);
+  protected readonly branding = inject(TenantBrandingStateService);
   protected readonly environment = environment;
   private readonly host = inject(ElementRef<HTMLElement>);
   private resizeObserver?: ResizeObserver;

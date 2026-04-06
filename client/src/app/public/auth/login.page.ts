@@ -1,4 +1,4 @@
-import { Component, NgZone, OnInit } from '@angular/core';
+import { Component, inject, NgZone, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { NgIf } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -14,6 +14,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { finalize, timeout } from 'rxjs';
 import { PublicClientApplication } from '@azure/msal-browser';
 import { environment } from '../../../environments/environment';
+import { TenantBrandingStateService } from '../../core/tenant/tenant-branding-state.service';
 
 @Component({
   selector: 'app-login-page',
@@ -44,6 +45,7 @@ export class LoginPage implements OnInit {
   private entraClientId = environment.auth?.entra?.clientId ?? '';
   private entraAuthority = environment.auth?.entra?.authority ?? 'https://login.microsoftonline.com/organizations';
   private entraRedirectUri = environment.auth?.entra?.redirectUri ?? (typeof window !== 'undefined' ? `${window.location.origin}/login` : '/login');
+  protected readonly branding = inject(TenantBrandingStateService);
 
   constructor(
     private fb: FormBuilder,
@@ -64,6 +66,8 @@ export class LoginPage implements OnInit {
     this.auth.warmUpApi().subscribe((ok) => {
       this.apiReachable = ok;
     });
+
+    this.branding.loadPublicBranding();
 
     this.auth.getPublicAuthConfig().subscribe({
       next: (config) => {

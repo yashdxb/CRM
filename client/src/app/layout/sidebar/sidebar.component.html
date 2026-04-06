@@ -2,7 +2,11 @@
     <aside class="sidebar">
       <div class="sidebar__header">
         <div class="brand">
-          <div class="brand__mark">CRM</div>
+          @if (branding.logoUrl()) {
+            <img class="brand__logo" [src]="branding.logoUrl()" [alt]="branding.tenantName() ?? 'CRM'" />
+          } @else {
+            <div class="brand__mark">CRM</div>
+          }
           <div class="brand__env" [ngClass]="{ 'brand__env--prod': environment.production }">{{ environment.envLabel }}</div>
         </div>
         <button pButton type="button" icon="pi pi-bars" class="brand__toggle p-button-text p-button-sm" (click)="toggleSidebar.emit()"></button>
