@@ -42,7 +42,7 @@ public sealed class EmbeddedReportWorkspaceService
             var absolutePath = Path.Combine(crmFolder, fileName);
             var relativePath = $"CRM/{fileName}".Replace('\\', '/');
 
-            if (!File.Exists(absolutePath))
+            // Always regenerate to pick up parameter / SQL definition changes
             {
                 using var stream = File.Create(absolutePath);
                 packager.Package(CreateReportDocument(item), stream);

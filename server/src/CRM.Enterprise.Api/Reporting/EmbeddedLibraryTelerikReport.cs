@@ -758,7 +758,9 @@ public sealed class EmbeddedLibraryTelerikReport : Report
             Name = name,
             Type = ReportParameterType.String,
             Visible = false,
-            AllowBlank = true
+            AllowBlank = true,
+            AllowNull = true,
+            Value = string.Empty
         });
     }
 
