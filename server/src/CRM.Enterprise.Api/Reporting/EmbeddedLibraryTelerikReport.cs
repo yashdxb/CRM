@@ -244,27 +244,34 @@ public sealed class EmbeddedLibraryTelerikReport : Report
 
         IF @ReportKey = 'win-loss-analysis'
         BEGIN
+            ;WITH WinLoss AS (
+                SELECT
+                    CASE WHEN o.IsWon = 1 THEN 'Won' ELSE 'Lost' END AS Outcome,
+                    CASE WHEN o.IsWon = 1 THEN 0 ELSE 1 END AS SortOrder,
+                    o.Amount
+                FROM [crm].[Opportunities] o
+                WHERE o.TenantId = @TenantId
+                  AND o.IsDeleted = 0
+                  AND o.IsClosed = 1
+                  AND (
+                        @OwnerUserId = '' OR EXISTS (
+                            SELECT 1
+                            FROM STRING_SPLIT(@OwnerUserId, ',') ownerIds
+                            WHERE LTRIM(RTRIM(ownerIds.value)) = CAST(o.OwnerId AS nvarchar(36))
+                        )
+                      )
+                  AND (@DateFrom = '' OR CAST(o.UpdatedAtUtc AS date) >= CAST(@DateFrom AS date))
+                  AND (@DateTo = '' OR CAST(o.UpdatedAtUtc AS date) <= CAST(@DateTo AS date))
+            )
             SELECT
-                CASE WHEN o.IsWon = 1 THEN 'Won' ELSE 'Lost' END AS Col1,
+                Outcome AS Col1,
                 CAST(COUNT(*) AS nvarchar(50)) AS Col2,
-                CONCAT('$', FORMAT(SUM(o.Amount), '#,0')) AS Col3,
-                CONCAT('$', FORMAT(AVG(o.Amount), '#,0')) AS Col4,
-                ROW_NUMBER() OVER (ORDER BY o.IsWon DESC) AS Sort1
-            FROM [crm].[Opportunities] o
-            WHERE o.TenantId = @TenantId
-              AND o.IsDeleted = 0
-              AND o.IsClosed = 1
-              AND (
-                    @OwnerUserId = '' OR EXISTS (
-                        SELECT 1
-                        FROM STRING_SPLIT(@OwnerUserId, ',') ownerIds
-                        WHERE LTRIM(RTRIM(ownerIds.value)) = CAST(o.OwnerId AS nvarchar(36))
-                    )
-                  )
-              AND (@DateFrom = '' OR CAST(o.UpdatedAtUtc AS date) >= CAST(@DateFrom AS date))
-              AND (@DateTo = '' OR CAST(o.UpdatedAtUtc AS date) <= CAST(@DateTo AS date))
-            GROUP BY o.IsWon
-            ORDER BY o.IsWon DESC;
+                CONCAT('$', FORMAT(SUM(Amount), '#,0')) AS Col3,
+                CONCAT('$', FORMAT(AVG(Amount), '#,0')) AS Col4,
+                ROW_NUMBER() OVER (ORDER BY MIN(SortOrder)) AS Sort1
+            FROM WinLoss
+            GROUP BY Outcome
+            ORDER BY MIN(SortOrder);
             RETURN;
         END
 
