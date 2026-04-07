@@ -977,10 +977,21 @@
                 <span class="summary-chip">Lead data {{ leadDataQualityTotal() }}/100</span>
                 <span class="summary-chip">Confidence {{ qualificationConfidenceDisplayLabel() }}</span>
                 <span class="summary-chip">Conversation {{ conversationScoreDisplayLabel() }}</span>
+                <span class="summary-chip summary-chip--ai" *ngIf="conversationAiDimensionScore() !== null">
+                  <i class="pi pi-sparkles" aria-hidden="true"></i> AI +{{ conversationAiDimensionScore() }}/20
+                </span>
               </div>
             </div>
 
             <p class="status-error qualification-summary-card__error" *ngIf="qualificationInlineError()">{{ qualificationInlineError() }}</p>
+
+            <!-- Qualification progress indicator -->
+            <div class="qualification-progress-bar" *ngIf="activeQualificationFactorCount() > 0">
+              <div class="qualification-progress-bar__track">
+                <div class="qualification-progress-bar__fill" [style.width.%]="qualificationProgressPercent()" [attr.data-tone]="qualificationProgressRemaining() === 0 ? 'complete' : (qualificationProgressPercent() >= 50 ? 'progress' : 'early')"></div>
+              </div>
+              <span class="qualification-progress-bar__label" [attr.data-tone]="qualificationProgressRemaining() === 0 ? 'complete' : 'progress'">{{ qualificationProgressLabel() }}</span>
+            </div>
 
             <div class="qualification-summary-card__metrics">
               <article class="summary-metric summary-metric--primary">
@@ -996,7 +1007,7 @@
                   <span class="summary-metric__hint">Current qualification strength</span>
                 </div>
               </article>
-              <article class="summary-metric summary-metric--confidence">
+              <article class="summary-metric summary-metric--confidence" [attr.data-tone]="confidenceMetricTone()">
                 <div class="summary-metric__icon">
                   <i class="pi pi-shield" aria-hidden="true"></i>
                 </div>
@@ -1005,19 +1016,19 @@
                   <div class="summary-metric__value-row">
                     <strong class="summary-metric__value">{{ qualificationConfidenceDisplayLabel() }}</strong>
                   </div>
-                  <span class="summary-metric__hint">{{ qualificationConfidencePercent() }}%</span>
+                  <span class="summary-metric__hint">{{ qualificationConfidencePercent() }}% verified</span>
                 </div>
               </article>
-              <article class="summary-metric summary-metric--coverage">
+              <article class="summary-metric summary-metric--coverage" [attr.data-tone]="coverageMetricTone()">
                 <div class="summary-metric__icon">
-                  <i class="pi pi-check-circle" aria-hidden="true"></i>
+                  <i class="pi" [ngClass]="coverageMetricIcon()" aria-hidden="true"></i>
                 </div>
                 <div class="summary-metric__content">
                   <span class="summary-metric__label">Evidence Coverage</span>
                   <div class="summary-metric__value-row">
                     <strong class="summary-metric__value">{{ truthCoveragePercent() }}%</strong>
                   </div>
-                  <span class="summary-metric__hint">Truth coverage</span>
+                  <span class="summary-metric__hint">{{ truthCoveragePercent() === 0 ? 'No evidence verified yet' : 'Truth coverage' }}</span>
                 </div>
               </article>
               <article class="summary-metric summary-metric--factors">
@@ -1029,12 +1040,12 @@
                   <div class="summary-metric__value-row">
                     <strong class="summary-metric__value">{{ qualificationFactorsSelectedLabel() }}</strong>
                   </div>
-                  <span class="summary-metric__hint">Required 3+ to qualify</span>
+                  <span class="summary-metric__hint">{{ qualificationProgressRemaining() > 0 ? qualificationProgressRemaining() + ' more needed' : 'Minimum met' }}</span>
                 </div>
               </article>
-              <article class="summary-metric summary-metric--conversation">
+              <article class="summary-metric summary-metric--conversation" [attr.data-tone]="conversationMetricTone()">
                 <div class="summary-metric__icon">
-                  <i class="pi pi-comments" aria-hidden="true"></i>
+                  <i class="pi" [ngClass]="conversationMetricIcon()" aria-hidden="true"></i>
                 </div>
                 <div class="summary-metric__content">
                   <span class="summary-metric__label">Conversation Score</span>
@@ -1047,28 +1058,25 @@
             </div>
 
             <div class="qualification-insight-grid">
-            <div class="qualification-feedback qualification-feedback--summary qualification-feedback--readiness" *ngIf="conversionReadiness() as readiness">
+            <div class="qualification-feedback qualification-feedback--summary qualification-feedback--readiness" [attr.data-tone]="conversionReadinessTone()" *ngIf="conversionReadiness() as readiness">
               <span class="feedback-title"><i class="pi pi-bolt" aria-hidden="true"></i> Conversion readiness</span>
-              <div class="qualification-summary-card__focus">
-                <span class="focus-pill">Readiness</span>
-                <strong>{{ conversionReadinessScoreLabel() }}</strong>
-                <span class="focus-state">{{ conversionReadinessDisplayLabel() }}</span>
-              </div>
-              <div class="feedback-metrics">
-                <span class="feedback-item feedback-item--confidence">
-                  <i class="pi pi-flag feedback-icon" aria-hidden="true"></i>
-                  Summary:
-                  <strong>{{ conversionReadinessSummary() }}</strong>
-                </span>
-                <span class="feedback-item feedback-item--weakest" *ngIf="conversionReadinessPrimaryGap() as gap">
-                  <i class="pi pi-bolt feedback-icon" aria-hidden="true"></i>
-                  Primary gap:
-                  <strong>{{ gap }}</strong>
-                </span>
-                <span class="feedback-item feedback-item--assumptions" *ngIf="conversionReadinessManagerReview()">
-                  <i class="pi pi-user-edit feedback-icon" aria-hidden="true"></i>
+              <div class="readiness-score-row">
+                <div class="readiness-score-badge" [attr.data-tone]="conversionReadinessTone()">
+                  <strong>{{ conversionReadinessScoreLabel() }}</strong>
+                  <span>{{ conversionReadinessDisplayLabel() }}</span>
+                </div>
+                <span class="readiness-manager-chip" *ngIf="conversionReadinessManagerReview()">
+                  <i class="pi pi-user-edit" aria-hidden="true"></i>
                   Manager review recommended
                 </span>
+              </div>
+              <p class="readiness-summary">{{ conversionReadinessSummary() }}</p>
+              <div class="readiness-primary-gap" *ngIf="conversionReadinessPrimaryGap() as gap">
+                <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+                <div>
+                  <span class="readiness-primary-gap__label">Primary gap</span>
+                  <strong>{{ gap }}</strong>
+                </div>
               </div>
               <div class="feedback-suggestions" *ngIf="conversionReadinessReasons().length">
                 <span class="feedback-title">Why the lead is or is not conversion-ready</span>
@@ -1275,7 +1283,12 @@
 
             <div class="email-engagement-panel__empty" *ngIf="!leadEmailsLoading() && !leadEmails().length && !conversationAiSummary()">
               <i class="pi pi-inbox" aria-hidden="true"></i>
-              <span>No conversation signal exists yet. Log outreach, replies, or meetings for this lead so the CRM can score engagement and recommend the next action.</span>
+              <strong>No conversation signal yet</strong>
+              <span>Log outreach, replies, or meetings for this lead so the CRM can score engagement and recommend the next action.</span>
+              <button type="button" class="action-btn action-btn--add empty-state-cta" (click)="onGenerateConversationSummary()" [disabled]="conversationAiSummaryLoading()">
+                <span class="action-btn__icon"><i class="pi" [ngClass]="conversationAiSummaryLoading() ? 'pi-spin pi-spinner' : 'pi-sparkles'" aria-hidden="true"></i></span>
+                <span>Generate AI insight</span>
+              </button>
             </div>
 
             <div class="email-engagement-panel__loading" *ngIf="leadEmailsLoading() && !leadEmails().length">

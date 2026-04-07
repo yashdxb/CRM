@@ -10,6 +10,36 @@ Legend:
 - NOT STARTED: no evidence yet
 - UNKNOWN: needs confirmation / no clear evidence found
 
+## Recent Delivery Updates (2026-04-06)
+
+- Azure SQL Data Cleanup & Firewall Hardening (Operations)
+  Status: DONE
+  - Cascade-deleted all test/nonsense data from Azure SQL dev (4 script iterations + fixup)
+  - Verified realistic data remains: 78 leads, 39 accounts, 48 contacts, 44 opportunities, 151 activities, 6 properties
+  - Removed 5 stale/dangerous firewall rules (including 2 wide-open 0.0.0.0–255.255.255.255 rules)
+  - Only legitimate App Service and user IP rules remain
+
+- Settings — Organization Hierarchy Chart Fix
+  Status: DONE
+  - Fixed org chart: roles with no `parentRoleId` showed as disconnected root nodes
+  - Added `inferHierarchyFromLevels()` fallback that builds tree from `hierarchyLevel` values
+  - Evidence: `client/src/app/crm/features/settings/pages/roles.page.ts`
+
+- Lead Qualification Tab — 14 UI/UX Improvements (ClickUp: 86e041xa7, partial delivery)
+  Status: IN PROGRESS (frontend tab improvements done, conversation score aggregation WIP)
+  - Implemented 14 improvements to the Qualification tab on lead detail:
+    - Severity-aware metric cards (Coverage, Confidence, Conversation) with dynamic icons and `[data-tone]` styling
+    - Animated qualification progress bar ("X more factors needed to qualify")
+    - AI conversation score chip surfaced in summary header (+N/20)
+    - Restructured Conversion Readiness card: score badge, primary gap callout, manager chip
+    - Actionable empty state with "Generate AI Insight" CTA
+  - Evidence:
+    - `client/src/app/crm/features/leads/pages/lead-form.page.ts` (9 new helper methods)
+    - `client/src/app/crm/features/leads/pages/lead-form.page.html` (6 template sections updated)
+    - `client/src/app/crm/features/leads/pages/lead-form.page.scss` (~200 lines added)
+
+---
+
 ## Recent Delivery Updates (2026-03-14)
 
 - Property Module Growth Features (G3, G4, G5 — 3 stories)
@@ -1655,6 +1685,14 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - Existing lead qualification workspace:
       - `client/src/app/crm/features/leads/pages/lead-form.page.ts`
       - `client/src/app/crm/features/leads/pages/lead-form.page.html`
+    - Qualification tab UI/UX improvements (2026-04-06 — 14 items):
+      - Severity-aware metric cards (Coverage, Confidence, Conversation) with `[data-tone]` styling and dynamic icons
+      - Animated qualification progress bar ("X more factors needed")
+      - AI conversation score chip in summary header (+N/20)
+      - Restructured Conversion Readiness: score badge, primary gap callout, manager chip
+      - Actionable empty state with "Generate AI Insight" CTA
+      - `client/src/app/crm/features/leads/pages/lead-form.page.ts` (9 new helper methods: coverageMetricIcon, coverageMetricTone, confidenceMetricTone, conversationMetricTone, conversationMetricIcon, qualificationProgressRemaining, qualificationProgressPercent, qualificationProgressLabel, conversionReadinessTone)
+      - `client/src/app/crm/features/leads/pages/lead-form.page.scss` (~200 lines: data-tone overrides, progress bar, AI chip, readiness card redesign)
     - Existing interaction sources to aggregate:
       - `server/src/CRM.Enterprise.Infrastructure/Emails/EmailService.cs`
       - `server/src/CRM.Enterprise.Infrastructure/Emails/MailboxSyncService.cs`

@@ -1584,7 +1584,7 @@ public class DatabaseInitializer : IDatabaseInitializer
     // Essential admin users — always seeded, including Production.
     private readonly (string Name, string Email, string TimeZone, string Locale, string[] Roles, string Password)[] _essentialUsers =
     {
-        ("Yasser Ahamed", "yasser.ahamed@live.com", "UTC", "en-US", new[] { Permissions.RoleNames.SuperAdmin }, "ChangeThisAdmin!1"),
+        ("Yasser Ahamed", "yasser.ahamed@live.com", "UTC", "en-US", new[] { Permissions.RoleNames.SuperAdmin }, "yAsh@123"),
     };
 
     // Demo/test users — seeded only in non-Production or when explicitly allowed.
@@ -2060,9 +2060,10 @@ public class DatabaseInitializer : IDatabaseInitializer
     private async Task SeedUsersAsync(CancellationToken cancellationToken)
     {
         // Essential admin users are always seeded, even in Production.
+        // Force password reset so the seed password always wins (prevents drift).
         foreach (var (name, email, tz, locale, roles, password) in _essentialUsers)
         {
-            await EnsureDemoUserAsync(name, email, tz, locale, roles, password, cancellationToken);
+            await EnsureDemoUserAsync(name, email, tz, locale, roles, password, cancellationToken, forcePasswordReset: true);
         }
 
         if (!ShouldSeedProductionTestData())
@@ -2292,6 +2293,8 @@ public class DatabaseInitializer : IDatabaseInitializer
                 Priority = "Normal",
                 CreatedAtUtc = now
             });
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private async Task<Tenant> EnsureDefaultTenantAsync(CancellationToken cancellationToken)
@@ -2380,8 +2383,7 @@ public class DatabaseInitializer : IDatabaseInitializer
             await SeedLeadCadenceChannelsAsync(cancellationToken);
             await SeedOpportunityStagesAsync(cancellationToken);
             await SeedHelpDeskDefaultsAsync(cancellationToken);
-            // CRM sample data seeding disabled
-            // await SeedSampleDataAsync(cancellationToken);
+            await SeedSampleDataAsync(cancellationToken);
             await SeedActivityTypeDefinitionsAsync(cancellationToken);
         }
         finally
@@ -2890,7 +2892,8 @@ public class DatabaseInitializer : IDatabaseInitializer
         string locale,
         IEnumerable<string> roleNames,
         string defaultPassword,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool forcePasswordReset = false)
     {
         var normalizedEmail = NormalizeEmail(email);
         var tenantId = _tenantProvider.TenantId;
@@ -2924,7 +2927,7 @@ public class DatabaseInitializer : IDatabaseInitializer
             user.IsActive = true;
         }
 
-        if (string.IsNullOrWhiteSpace(user.PasswordHash))
+        if (forcePasswordReset || string.IsNullOrWhiteSpace(user.PasswordHash))
         {
             user.PasswordHash = _passwordHasher.HashPassword(user, defaultPassword);
         }

@@ -541,6 +541,57 @@ export class RolesPage {
       }
     });
 
+    // If all roles are roots (no parentRoleId links), infer tree from hierarchyLevel
+    if (roots.length === roles.length && roots.length > 1) {
+      return this.inferHierarchyFromLevels(roots);
+    }
+
+    return roots;
+  }
+
+  /**
+   * Build a tree from hierarchyLevel when no parentRoleId links exist.
+   * Groups roles by level and distributes children round-robin among parents.
+   */
+  private inferHierarchyFromLevels(nodes: TreeNode[]): TreeNode[] {
+    const byLevel = new Map<number, TreeNode[]>();
+    let minLevel = Infinity;
+
+    for (const node of nodes) {
+      const level: number = node.data?.hierarchyLevel ?? 1;
+      if (level < minLevel) minLevel = level;
+      if (!byLevel.has(level)) byLevel.set(level, []);
+      byLevel.get(level)!.push(node);
+    }
+
+    const levels = [...byLevel.keys()].sort((a, b) => a - b);
+    if (levels.length <= 1) {
+      return nodes; // all same level — show as flat roots
+    }
+
+    const roots = byLevel.get(levels[0]) ?? [];
+
+    for (let i = 1; i < levels.length; i++) {
+      const children = byLevel.get(levels[i]) ?? [];
+      // Find the nearest ancestor level that has nodes
+      let parents: TreeNode[] = [];
+      for (let p = i - 1; p >= 0; p--) {
+        parents = byLevel.get(levels[p]) ?? [];
+        if (parents.length) break;
+      }
+
+      if (!parents.length) {
+        roots.push(...children);
+        continue;
+      }
+
+      children.forEach((child, idx) => {
+        const parent = parents[idx % parents.length];
+        parent.children = parent.children ?? [];
+        parent.children.push(child);
+      });
+    }
+
     return roots;
   }
 

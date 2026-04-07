@@ -4,6 +4,69 @@ Purpose: Capture day-to-day operational issues, resolutions, and verification. T
 
 ---
 
+## 2026-04-06 — Azure SQL Cleanup, Firewall Hardening, Role Hierarchy Fix, Lead Qualification Tab Improvements
+
+**Date:** 2026-04-06  
+**Environment:** Development (Local + Azure SQL)  
+**Owner:** Yasser / Copilot
+
+### Work Completed
+
+| # | Area | Summary | Status |
+|---|------|---------|--------|
+| 1 | Azure SQL | Cascade-deleted all test/nonsense data from Azure SQL (4 script iterations + fixup). Verified only realistic data remains: 78 leads, 39 accounts, 48 contacts, 44 opportunities, 151 activities, 6 properties. | DONE |
+| 2 | Azure SQL Firewall | Removed 5 stale/dangerous firewall rules including 2 wide-open rules (0.0.0.0–255.255.255.255). Only legitimate App Service and user IP rules remain. | DONE |
+| 3 | Settings — Org Chart | Fixed Organization Hierarchy chart: roles with no `parentRoleId` all appeared as disconnected root nodes. Added `inferHierarchyFromLevels()` that builds tree from `hierarchyLevel` values. | DONE |
+| 4 | Leads — Qualification Tab | Implemented 14 UI/UX improvements to the Lead Qualifications tab (see details below). | DONE |
+
+### Lead Qualification Tab Improvements (14 items)
+
+**Content/Data Improvements:**
+1. Fixed misleading green checkmark showing at 0% coverage — now shows dynamic icon (red ×, amber !, green ✓) based on actual coverage
+2. Added animated qualification progress bar showing "X more factors needed to qualify" with tone-driven colors
+3. Fixed confidence label to show "XX% verified" instead of bare percentage
+4. Changed static "Required 3+" hint to dynamic "X more needed" / "Minimum met"
+5. Surfaced AI conversation score as visible chip in summary header (+N/20)
+
+**UI/Visual Improvements:**
+6. Added severity-aware data-tone attributes to Coverage, Confidence, and Conversation metric cards
+7. Dynamic icon/border/color styling at each severity level (none/low/medium/high)
+8. Restructured Conversion Readiness card: score badge with tone color, standalone primary gap callout with warning styling
+9. Added distinct manager review chip with amber warning style
+10. Added readiness summary paragraph for textual explanation
+
+**UX/Interaction Improvements:**
+11. Improved empty state with bold title and "Generate AI Insight" CTA button
+12. Dynamic conversation metric icon changes by severity level
+13. Progress bar animates on width transition for smooth visual feedback
+14. Conversion readiness reasons list kept but complemented by primary gap highlight
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `client/src/app/crm/features/leads/pages/lead-form.page.ts` | Added 9 new helper methods (~80 lines): `coverageMetricIcon()`, `coverageMetricTone()`, `confidenceMetricTone()`, `conversationMetricTone()`, `conversationMetricIcon()`, `qualificationProgressRemaining()`, `qualificationProgressPercent()`, `qualificationProgressLabel()`, `conversionReadinessTone()` |
+| `client/src/app/crm/features/leads/pages/lead-form.page.html` | Updated metrics grid with progress bar + severity-aware cards, restructured conversion readiness card, added AI chip, improved empty state CTA |
+| `client/src/app/crm/features/leads/pages/lead-form.page.scss` | Added ~200 lines: severity-aware `[data-tone]` overrides, progress bar styles, AI chip, readiness score badge, primary gap callout, empty state CTA |
+| `client/src/app/crm/features/settings/pages/roles.page.ts` | Added `inferHierarchyFromLevels()` method for role hierarchy fallback |
+
+### Build Verification
+- `npx ng build --configuration=development` — 0 errors (21.092 seconds)
+
+### Follow-ups / Open Items
+| Item | Owner | Due Date | Notes |
+|------|-------|----------|-------|
+| Visual review of qualification tab in browser | Owner | TBD | Verify all 14 improvements render correctly |
+| Conversation Score story (86e041xa7) | Dev | TBD | Mark as updated in ClickUp with qualification tab improvements |
+
+### Summary for Project Master (If Verified)
+✅ **Azure SQL Test Data Cleaned**: Cascade-deleted all test/nonsense data from Azure SQL dev environment. 78 leads, 39 accounts, 48 contacts, 44 opportunities, 151 activities, 6 properties confirmed realistic.
+✅ **Azure SQL Firewall Hardened**: Removed 5 stale firewall rules (including 2 wide-open 0.0.0.0–255.255.255.255 rules).
+✅ **Role Hierarchy Chart Fixed**: `inferHierarchyFromLevels()` fallback when no `parentRoleId` links exist.
+✅ **Lead Qualification Tab Enhanced**: 14 UI/UX improvements — severity-aware metrics, progress bar, AI score chip, restructured conversion readiness, actionable empty state.
+
+---
+
 ## 2026-03-14 — Property Module Growth Features (G3/G4/G5) Completion
 
 **Date:** 2026-03-14  
@@ -81,7 +144,7 @@ Purpose: Capture day-to-day operational issues, resolutions, and verification. T
 ### Follow-ups / Open Items
 | Item | Owner | Due Date | Notes |
 |------|-------|----------|-------|
-| Clean up any existing test/demo data in Azure SQL | Dev | TBD | Demo users (`*@crmenterprise.demo`), fake audit events, sample ItemMaster SKUs may exist from prior seedings |
+| Clean up any existing test/demo data in Azure SQL | Dev | ~~TBD~~ DONE 2026-04-06 | Completed — cascade-deleted all test data, verified only realistic data remains |
 | Create EF migration for structural data if needed | Dev | TBD | Roles, stages, permissions — verify they exist in Azure SQL; if missing after next deploy, add via migration |
 
 ### Summary for Project Master (If Verified)

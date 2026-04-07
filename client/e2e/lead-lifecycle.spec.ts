@@ -4,8 +4,8 @@ const API_BASE_URL =
   process.env.API_BASE_URL ??
   process.env.E2E_API_URL ??
   'https://crm-enterprise-api-dev-01122345.azurewebsites.net';
-const SALES_REP_EMAIL = process.env.E2E_SALES_REP_EMAIL ?? process.env.E2E_ADMIN_EMAIL ?? 'yasser0503@outlook.com';
-const SALES_REP_PASSWORD = process.env.E2E_SALES_REP_PASSWORD ?? process.env.E2E_ADMIN_PASSWORD ?? 'yAsh@123';
+const SALES_REP_EMAIL = process.env.E2E_SALES_REP_EMAIL ?? process.env.E2E_ADMIN_EMAIL ?? 'super.admin@crmenterprise.demo';
+const SALES_REP_PASSWORD = process.env.E2E_SALES_REP_PASSWORD ?? process.env.E2E_ADMIN_PASSWORD ?? 'ChangeThisSuper!1';
 
 async function login(page, request) {
   const response = await request.post(`${API_BASE_URL}/api/auth/login`, {

@@ -3470,6 +3470,78 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     return 'low';
   }
 
+  /** Dynamic icon class for Evidence Coverage metric (red at 0%, amber <50%, green ≥50%) */
+  protected coverageMetricIcon(): string {
+    const pct = this.truthCoveragePercent();
+    if (pct === 0) return 'pi-times-circle';
+    if (pct < 50) return 'pi-exclamation-circle';
+    return 'pi-check-circle';
+  }
+
+  /** Severity tone for Evidence Coverage metric card */
+  protected coverageMetricTone(): 'none' | 'low' | 'medium' | 'high' {
+    const pct = this.truthCoveragePercent();
+    if (pct === 0) return 'none';
+    if (pct < 30) return 'low';
+    if (pct < 60) return 'medium';
+    return 'high';
+  }
+
+  /** Severity tone for Confidence metric card */
+  protected confidenceMetricTone(): 'none' | 'low' | 'medium' | 'high' {
+    if (!this.hasQualificationFactors()) return 'none';
+    const pct = this.qualificationConfidencePercent();
+    if (pct < 30) return 'low';
+    if (pct < 60) return 'medium';
+    return 'high';
+  }
+
+  /** Severity tone for Conversation Score metric card */
+  protected conversationMetricTone(): 'none' | 'low' | 'medium' | 'high' {
+    if (!this.conversationSignalAvailable()) return 'none';
+    const score = this.conversationScore() ?? 0;
+    if (score < 25) return 'low';
+    if (score < 55) return 'medium';
+    return 'high';
+  }
+
+  /** Icon for Conversation Score metric (dynamic based on signal availability) */
+  protected conversationMetricIcon(): string {
+    if (!this.conversationSignalAvailable()) return 'pi-minus-circle';
+    const score = this.conversationScore() ?? 0;
+    if (score < 25) return 'pi-exclamation-circle';
+    return 'pi-comments';
+  }
+
+  /** Qualification progress — how many more factors needed to meet minimum */
+  protected qualificationProgressRemaining(): number {
+    return Math.max(0, this.minimumRequiredQualificationFactors() - this.countQualificationFactors());
+  }
+
+  /** Qualification progress percentage (factors selected / minimum required) */
+  protected qualificationProgressPercent(): number {
+    const min = this.minimumRequiredQualificationFactors();
+    if (min === 0) return 0;
+    return Math.min(100, Math.round((this.countQualificationFactors() / min) * 100));
+  }
+
+  /** Text for the qualification progress indicator */
+  protected qualificationProgressLabel(): string {
+    const remaining = this.qualificationProgressRemaining();
+    if (remaining === 0 && this.countQualificationFactors() > 0) return 'Minimum factors met';
+    if (remaining === 0) return 'Select qualification factors to begin';
+    return `${remaining} more factor${remaining === 1 ? '' : 's'} needed to qualify`;
+  }
+
+  /** Severity tone for Conversion Readiness */
+  protected conversionReadinessTone(): 'none' | 'low' | 'medium' | 'high' {
+    const score = this.conversionReadiness()?.score ?? 0;
+    if (score === 0) return 'none';
+    if (score < 35) return 'low';
+    if (score < 65) return 'medium';
+    return 'high';
+  }
+
   protected qualificationRequiredBadgeLabel(): string | null {
     const remaining = Math.max(0, this.minimumRequiredQualificationFactors() - this.countQualificationFactors());
     return remaining > 0 ? `${remaining} more to qualify` : null;

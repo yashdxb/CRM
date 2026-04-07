@@ -1141,6 +1141,243 @@
       background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
     }
 
+    /* Severity-aware metric card overrides via data-tone attribute */
+    .summary-metric[data-tone="none"] {
+      border-color: rgba(148, 163, 184, 0.22);
+
+      .summary-metric__value { color: rgba(100, 116, 139, 0.8); }
+      .summary-metric__hint { color: rgba(239, 68, 68, 0.8); font-weight: 600; }
+    }
+
+    .summary-metric--coverage[data-tone="none"] .summary-metric__icon,
+    .summary-metric--confidence[data-tone="none"] .summary-metric__icon,
+    .summary-metric--conversation[data-tone="none"] .summary-metric__icon {
+      background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+    }
+
+    .summary-metric[data-tone="low"] {
+      border-color: rgba(239, 68, 68, 0.18);
+
+      &::after {
+        background: linear-gradient(180deg, rgba(239, 68, 68, 0.7), rgba(251, 146, 60, 0.3));
+      }
+    }
+
+    .summary-metric--coverage[data-tone="low"] .summary-metric__icon {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    }
+
+    .summary-metric--confidence[data-tone="low"] .summary-metric__icon {
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+    }
+
+    .summary-metric--conversation[data-tone="low"] .summary-metric__icon {
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+    }
+
+    .summary-metric[data-tone="medium"] {
+      border-color: rgba(245, 158, 11, 0.18);
+
+      &::after {
+        background: linear-gradient(180deg, rgba(245, 158, 11, 0.7), rgba(234, 179, 8, 0.3));
+      }
+    }
+
+    /* ─── Qualification progress bar ─── */
+    .qualification-progress-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0;
+      margin-bottom: 0.55rem;
+    }
+
+    .qualification-progress-bar__track {
+      flex: 1;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.18);
+      overflow: hidden;
+      box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
+    }
+
+    .qualification-progress-bar__fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.6s ease-out, background 0.4s ease;
+      background: linear-gradient(90deg, #f59e0b, #ea580c);
+
+      &[data-tone="complete"] {
+        background: linear-gradient(90deg, #22c55e, #16a34a);
+      }
+
+      &[data-tone="progress"] {
+        background: linear-gradient(90deg, #3b82f6, #6366f1);
+      }
+
+      &[data-tone="early"] {
+        background: linear-gradient(90deg, #f59e0b, #ea580c);
+      }
+    }
+
+    .qualification-progress-bar__label {
+      font-size: 0.74rem;
+      font-weight: 700;
+      white-space: nowrap;
+      color: rgba(100, 116, 139, 0.85);
+      letter-spacing: 0.01em;
+
+      &[data-tone="complete"] {
+        color: #16a34a;
+      }
+    }
+
+    /* ─── AI score chip ─── */
+    .summary-chip--ai {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.14), rgba(168, 85, 247, 0.1));
+      border-color: rgba(99, 102, 241, 0.22);
+      color: #4338ca;
+
+      i {
+        font-size: 0.68rem;
+        color: #6366f1;
+      }
+    }
+
+    /* ─── Conversion readiness card improvements ─── */
+    .readiness-score-row {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      flex-wrap: wrap;
+      margin: 0.45rem 0 0.35rem;
+    }
+
+    .readiness-score-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.32rem 0.72rem;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.7);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 6px 12px rgba(15, 23, 42, 0.04);
+
+      strong {
+        font-size: 1rem;
+        color: rgba(15, 23, 42, 0.9);
+      }
+
+      span {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: rgba(100, 116, 139, 0.8);
+      }
+
+      &[data-tone="high"] {
+        background: rgba(34, 197, 94, 0.12);
+        border-color: rgba(34, 197, 94, 0.22);
+
+        strong { color: #166534; }
+        span { color: #15803d; }
+      }
+
+      &[data-tone="medium"] {
+        background: rgba(59, 130, 246, 0.1);
+        border-color: rgba(59, 130, 246, 0.2);
+
+        strong { color: #1e40af; }
+        span { color: #2563eb; }
+      }
+
+      &[data-tone="low"] {
+        background: rgba(245, 158, 11, 0.12);
+        border-color: rgba(245, 158, 11, 0.2);
+
+        strong { color: #92400e; }
+        span { color: #b45309; }
+      }
+
+      &[data-tone="none"] {
+        strong { color: rgba(100, 116, 139, 0.7); }
+      }
+    }
+
+    .readiness-manager-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.28rem 0.62rem;
+      border-radius: 999px;
+      font-size: 0.74rem;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.2);
+      color: #92400e;
+
+      i {
+        font-size: 0.72rem;
+        color: #f59e0b;
+      }
+    }
+
+    .readiness-summary {
+      margin: 0.25rem 0 0.45rem;
+      font-size: 0.84rem;
+      line-height: 1.55;
+      color: #334155;
+      font-weight: 500;
+    }
+
+    .readiness-primary-gap {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.45rem;
+      padding: 0.55rem 0.68rem;
+      border-radius: 12px;
+      background: rgba(239, 68, 68, 0.06);
+      border: 1px solid rgba(239, 68, 68, 0.14);
+      margin-bottom: 0.45rem;
+
+      > i {
+        color: #ef4444;
+        font-size: 0.88rem;
+        margin-top: 2px;
+        flex-shrink: 0;
+      }
+
+      &__label {
+        display: block;
+        font-size: 0.68rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: rgba(239, 68, 68, 0.8);
+        margin-bottom: 1px;
+      }
+
+      strong {
+        font-size: 0.84rem;
+        color: #991b1b;
+        font-weight: 600;
+      }
+    }
+
+    /* ─── Empty state CTA improvements ─── */
+    .email-engagement-panel__empty {
+      strong {
+        display: block;
+        font-size: 0.88rem;
+        color: rgba(15, 23, 42, 0.8);
+        margin-top: 0.3rem;
+      }
+
+      .empty-state-cta {
+        margin-top: 0.65rem;
+      }
+    }
+
     .qualification-insight-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
