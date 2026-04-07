@@ -287,6 +287,63 @@
   100% { background-position: -200% 0; }
 }
 
+/* ── Weight distribution bar ── */
+.weight-distribution {
+  padding: $space-3 $space-4;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+
+  &__label {
+    font-size: $font-size-xs;
+    font-weight: 600;
+    color: $gray-500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: $space-2;
+  }
+
+  &__bar {
+    display: flex;
+    height: 24px;
+    border-radius: $radius-full;
+    overflow: hidden;
+    gap: 2px;
+    background: $gray-200;
+  }
+
+  &__segment {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: width 500ms ease-out;
+    min-width: 4px;
+  }
+
+  &__segment-label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  }
+}
+
+/* ── Column headers ── */
+.dimension-columns {
+  display: grid;
+  grid-template-columns: auto 36px 1fr 100px minmax(140px, 200px) auto;
+  align-items: center;
+  gap: $space-3;
+  padding: $space-2 $space-4;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.dimension-col {
+  font-size: $font-size-xs;
+  font-weight: 600;
+  color: $gray-500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 /* ── Dimension list ── */
 .dimension-list {
   padding: $space-2;
@@ -315,13 +372,15 @@
 }
 
 .dimension-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 36px 1fr 100px minmax(140px, 200px) auto;
   align-items: center;
   gap: $space-3;
   padding: $space-3 $space-4;
 
-  @media (max-width: 768px) {
-    flex-wrap: wrap;
+  @media (max-width: 900px) {
+    grid-template-columns: auto 36px 1fr;
+    grid-template-rows: auto auto auto;
   }
 }
 
@@ -336,23 +395,110 @@
   align-items: center;
   justify-content: center;
   border-radius: $radius-md;
-  background: $primary-gradient;
   color: white;
   font-size: $font-size-lg;
   flex-shrink: 0;
 }
 
 .dimension-info {
-  flex: 1;
-  min-width: 180px;
+  min-width: 0;
 }
 
-.dimension-score {
-  width: 160px;
-  flex-shrink: 0;
+.dimension-name {
+  &__label {
+    font-size: $font-size-base;
+    font-weight: 600;
+    color: $gray-800;
+    display: block;
+    line-height: 1.3;
+  }
+}
 
-  @media (max-width: 768px) {
+.dimension-desc {
+  font-size: $font-size-xs;
+  color: $gray-500;
+  margin: 2px 0 0;
+  line-height: 1.4;
+}
+
+/* ── Type chips ── */
+.dimension-type {
+  @media (max-width: 900px) {
+    grid-column: 1 / -1;
+  }
+}
+
+.type-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-1;
+  padding: 3px $space-2;
+  font-size: $font-size-xs;
+  font-weight: 600;
+  border-radius: $radius-full;
+  letter-spacing: 0.02em;
+  cursor: default;
+
+  i { font-size: 0.7rem; }
+
+  &--bracket {
+    background: rgba(99, 102, 241, 0.12);
+    color: #6366f1;
+  }
+
+  &--ratio {
+    background: rgba(34, 197, 94, 0.12);
+    color: #16a34a;
+  }
+}
+
+/* ── Weight display ── */
+.dimension-weight {
+  min-width: 0;
+
+  @media (max-width: 900px) {
+    grid-column: 1 / -1;
+  }
+}
+
+.weight-display {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+}
+
+.weight-input-group {
+  flex: 1;
+  min-width: 0;
+}
+
+.weight-pct {
+  font-size: $font-size-xs;
+  font-weight: 700;
+  color: $primary;
+  white-space: nowrap;
+  background: rgba(102, 126, 234, 0.1);
+  padding: 2px 6px;
+  border-radius: $radius-full;
+}
+
+/* Ensure p-inputNumber expands inside inputgroup */
+:host ::ng-deep .dimension-weight {
+  p-inputnumber {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .p-inputnumber {
     width: 100%;
+  }
+
+  .p-inputnumber-input {
+    width: 100%;
+    min-width: 50px;
+    text-align: center;
+    font-weight: 600;
+    font-size: $font-size-base;
   }
 }
 
@@ -361,18 +507,39 @@
   align-items: center;
   gap: $space-2;
   flex-shrink: 0;
+
+  @media (max-width: 900px) {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
 }
 
-.ratio-badge {
+/* ── Bracket toggle button ── */
+.bracket-toggle-btn {
   display: inline-flex;
-  padding: 2px $space-2;
+  align-items: center;
+  gap: $space-1;
+  padding: 4px $space-3;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: $radius-md;
+  background: rgba(99, 102, 241, 0.06);
+  color: #6366f1;
   font-size: $font-size-xs;
   font-weight: 600;
-  border-radius: $radius-full;
-  background: rgba($primary, 0.12);
-  color: $primary;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 200ms;
+
+  i { font-size: 0.7rem; }
+
+  &:hover {
+    background: rgba(99, 102, 241, 0.14);
+    border-color: rgba(99, 102, 241, 0.4);
+  }
+
+  &--active {
+    background: rgba(99, 102, 241, 0.14);
+    border-color: #6366f1;
+  }
 }
 
 /* ── Brackets panel ── */
@@ -490,7 +657,8 @@
 
   &--inline {
     > label {
-      min-width: 70px;
+      min-width: auto;
+      text-align: left;
     }
   }
 }
@@ -556,4 +724,394 @@
     height: 22px;
     font-size: $font-size-xs;
   }
+}
+
+/* ── Dimension description ── */
+.dimension-desc {
+  margin: 2px 0 0;
+  font-size: $font-size-xs;
+  color: $gray-400;
+  line-height: 1.4;
+  padding-left: 82px; // aligns with input after label
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SIDEBAR TABS — same pattern as Qualification Policy & Workspace Settings
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.dh-sidebar-tabs {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  border-radius: 0;
+  position: relative;
+  z-index: 1;
+}
+
+/* Side-by-side grid: sidebar | content */
+.dh-sidebar-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 1.5rem;
+  min-height: 480px;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+/* ── Sidebar navigation column ── */
+:host ::ng-deep .dh-sidebar-nav.p-tablist {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem 0.65rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.88));
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  border-radius: 20px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 8px 24px rgba(15, 23, 42, 0.06),
+    0 2px 8px rgba(15, 23, 42, 0.04);
+  backdrop-filter: blur(16px) saturate(120%);
+  -webkit-backdrop-filter: blur(16px) saturate(120%);
+  height: fit-content;
+  position: sticky;
+  top: 1.5rem;
+}
+
+:host ::ng-deep .dh-sidebar-nav .p-tablist-tab-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.35rem;
+  border: none !important;
+}
+
+/* Content panel area */
+:host ::ng-deep .dh-sidebar-content.p-tabpanels {
+  background: transparent;
+  border: none;
+  padding: 0;
+  min-width: 0;
+}
+
+/* ── Individual sidebar tab ── */
+:host ::ng-deep .p-tab.dh-sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border: none;
+  border-radius: 14px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition:
+    background 0.22s ease,
+    color 0.22s ease,
+    transform 0.18s ease,
+    box-shadow 0.22s ease;
+  background: rgba(255, 255, 255, 0.35);
+  text-shadow: none;
+  white-space: nowrap;
+  text-align: left;
+  justify-content: flex-start;
+  min-height: 0;
+  line-height: 1.3;
+  opacity: 1 !important;
+}
+
+/* Sidebar item icon (direct child of the p-tab root) */
+:host ::ng-deep .p-tab.dh-sidebar-item > i.pi {
+  font-size: 1.1rem;
+  width: 22px;
+  text-align: center;
+  flex-shrink: 0;
+  transition: transform 0.22s ease, color 0.22s ease;
+}
+
+.dh-sidebar-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.dh-sidebar-label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  letter-spacing: 0.005em;
+}
+
+.dh-sidebar-hint {
+  font-size: 0.72rem;
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+/* Glass sheen top half */
+:host ::ng-deep .p-tab.dh-sidebar-item::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 50%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), transparent);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Hover */
+:host ::ng-deep .p-tab.dh-sidebar-item:hover:not(.p-tab-active):not([data-p-active='true']):not([aria-selected='true']) {
+  background: rgba(99, 102, 241, 0.08);
+  color: #1e293b;
+  transform: translateX(3px);
+}
+
+:host ::ng-deep .p-tab.dh-sidebar-item:hover:not(.p-tab-active):not([data-p-active='true']):not([aria-selected='true']) i.pi {
+  transform: scale(1.08);
+}
+
+/* Focus */
+:host ::ng-deep .p-tab.dh-sidebar-item:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.8),
+    0 0 0 4px rgba(99, 102, 241, 0.2);
+}
+
+/* ── Active state — gradient glow pill ── */
+:host ::ng-deep .p-tab.dh-sidebar-item.p-tab-active,
+:host ::ng-deep .p-tab.dh-sidebar-item[aria-selected='true'],
+:host ::ng-deep .p-tab.dh-sidebar-item[data-p-active='true'] {
+  color: #ffffff !important;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.06)),
+    var(--dh-side-bg, linear-gradient(135deg, #3b82f6, #1d4ed8));
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.22),
+    0 8px 20px rgba(59, 130, 246, 0.30),
+    0 0 28px rgba(125, 211, 252, 0.18);
+  transform: translateX(4px);
+  animation: dh-side-breathe 2.2s ease-in-out infinite;
+}
+
+:host ::ng-deep .p-tab.dh-sidebar-item.p-tab-active .dh-sidebar-label,
+:host ::ng-deep .p-tab.dh-sidebar-item[aria-selected='true'] .dh-sidebar-label,
+:host ::ng-deep .p-tab.dh-sidebar-item[data-p-active='true'] .dh-sidebar-label {
+  color: #ffffff !important;
+}
+
+:host ::ng-deep .p-tab.dh-sidebar-item.p-tab-active .dh-sidebar-hint,
+:host ::ng-deep .p-tab.dh-sidebar-item[aria-selected='true'] .dh-sidebar-hint,
+:host ::ng-deep .p-tab.dh-sidebar-item[data-p-active='true'] .dh-sidebar-hint {
+  color: rgba(255, 255, 255, 0.8) !important;
+  opacity: 1;
+}
+
+:host ::ng-deep .p-tab.dh-sidebar-item.p-tab-active i.pi,
+:host ::ng-deep .p-tab.dh-sidebar-item[aria-selected='true'] i.pi,
+:host ::ng-deep .p-tab.dh-sidebar-item[data-p-active='true'] i.pi {
+  color: #ffffff !important;
+  transform: scale(1.12);
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.3));
+}
+
+/* Rainbow accent strip */
+:host ::ng-deep .p-tab.dh-sidebar-item.p-tab-active::after,
+:host ::ng-deep .p-tab.dh-sidebar-item[aria-selected='true']::after,
+:host ::ng-deep .p-tab.dh-sidebar-item[data-p-active='true']::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 15%;
+  bottom: 15%;
+  width: 3px;
+  border-radius: 0 4px 4px 0;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.2) 0%,
+    rgba(239, 68, 68, 0.9) 14%,
+    rgba(245, 158, 11, 0.9) 28%,
+    rgba(34, 197, 94, 0.9) 50%,
+    rgba(59, 130, 246, 0.95) 72%,
+    rgba(139, 92, 246, 0.95) 86%,
+    rgba(255, 255, 255, 0.2) 100%
+  );
+  box-shadow:
+    0 0 8px rgba(59, 130, 246, 0.4),
+    2px 0 12px rgba(139, 92, 246, 0.2);
+  background-size: 100% 300%;
+  animation: dh-side-strip 3s linear infinite;
+}
+
+/* Per-tab gradient colors */
+:host ::ng-deep .p-tab.dh-sidebar-item:nth-child(1) {
+  --dh-side-bg: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
+}
+
+:host ::ng-deep .p-tab.dh-sidebar-item:nth-child(2) {
+  --dh-side-bg: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+/* Hide PrimeNG default ink bar */
+:host ::ng-deep .dh-sidebar-nav .p-tablist-active-bar {
+  display: none !important;
+}
+
+/* ── Animations ── */
+@keyframes dh-side-breathe {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.18),
+      0 6px 16px rgba(59, 130, 246, 0.22),
+      0 0 20px rgba(125, 211, 252, 0.12);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.26),
+      0 8px 22px rgba(59, 130, 246, 0.30),
+      0 0 32px rgba(125, 211, 252, 0.20),
+      0 0 40px rgba(255, 255, 255, 0.06);
+  }
+}
+
+@keyframes dh-side-strip {
+  0% { background-position: 100% 0%; }
+  100% { background-position: 100% 300%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host ::ng-deep .p-tab.dh-sidebar-item.p-tab-active,
+  :host ::ng-deep .p-tab.dh-sidebar-item[aria-selected='true'],
+  :host ::ng-deep .p-tab.dh-sidebar-item[data-p-active='true'] {
+    animation: none;
+  }
+  :host ::ng-deep .p-tab.dh-sidebar-item.p-tab-active::after,
+  :host ::ng-deep .p-tab.dh-sidebar-item[aria-selected='true']::after,
+  :host ::ng-deep .p-tab.dh-sidebar-item[data-p-active='true']::after {
+    animation: none;
+  }
+}
+
+/* ── Mobile: horizontal tabs ── */
+@media (max-width: 900px) {
+  .dh-sidebar-layout {
+    grid-template-columns: 1fr;
+  }
+
+  :host ::ng-deep .dh-sidebar-nav.p-tablist {
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 0.65rem;
+    border-radius: 14px;
+    position: static;
+  }
+
+  :host ::ng-deep .dh-sidebar-nav .p-tablist-tab-list {
+    flex-direction: row !important;
+    gap: 0.35rem;
+  }
+
+  :host ::ng-deep .p-tab.dh-sidebar-item {
+    flex: 0 0 auto;
+    padding: 0.65rem 1rem;
+  }
+
+  .dh-sidebar-hint {
+    display: none;
+  }
+
+  :host ::ng-deep .p-tab.dh-sidebar-item.p-tab-active,
+  :host ::ng-deep .p-tab.dh-sidebar-item[aria-selected='true'],
+  :host ::ng-deep .p-tab.dh-sidebar-item[data-p-active='true'] {
+    transform: translateY(-2px);
+  }
+
+  :host ::ng-deep .p-tab.dh-sidebar-item.p-tab-active::after,
+  :host ::ng-deep .p-tab.dh-sidebar-item[aria-selected='true']::after,
+  :host ::ng-deep .p-tab.dh-sidebar-item[data-p-active='true']::after {
+    left: 15%;
+    right: 15%;
+    top: auto;
+    bottom: 0;
+    width: auto;
+    height: 3px;
+    border-radius: 4px 4px 0 0;
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.2) 0%,
+      rgba(59, 130, 246, 0.95) 30%,
+      rgba(139, 92, 246, 0.95) 70%,
+      rgba(255, 255, 255, 0.2) 100%
+    );
+    background-size: 300% 100%;
+    animation: dh-side-strip-h 3s linear infinite;
+  }
+}
+
+@keyframes dh-side-strip-h {
+  0% { background-position: 0% 100%; }
+  100% { background-position: 300% 100%; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BAND PREVIEW BAR — visual representation of score band ranges
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.band-preview {
+  margin-bottom: $space-5;
+  padding: $space-4;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: $radius-xl;
+}
+
+.band-bar {
+  display: flex;
+  height: 36px;
+  border-radius: $radius-md;
+  overflow: hidden;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.band-segment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  transition: width 0.4s ease;
+  position: relative;
+  cursor: default;
+
+  &:not(:last-child) {
+    border-right: 2px solid rgba(255, 255, 255, 0.5);
+  }
+}
+
+.band-segment-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 4px;
+}
+
+.band-bar-legend {
+  display: flex;
+  justify-content: space-between;
+  padding: $space-1 $space-1 0;
+  font-size: $font-size-xs;
+  color: $gray-400;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }

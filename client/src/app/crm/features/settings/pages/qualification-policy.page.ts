@@ -13,6 +13,7 @@ import { SelectModule } from 'primeng/select';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { SkeletonModule } from 'primeng/skeleton';
 import { AccordionModule } from 'primeng/accordion';
+import { TabsModule } from 'primeng/tabs';
 
 import { AppToastService } from '../../../../core/app-toast.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
@@ -51,6 +52,7 @@ interface Option<T = string> {
     RouterLink,
     SkeletonModule,
     AccordionModule,
+    TabsModule,
     NgIf,
     NgFor,
     BreadcrumbsComponent
@@ -93,6 +95,7 @@ export class QualificationPolicyPage {
   protected readonly policyAccordionValue = signal<string[]>([
     ...QualificationPolicyPage.defaultAccordionPanels
   ]);
+  protected readonly activeTab = signal<string>('scoring');
 
   protected readonly modifierKeyOptions: Option[] = [
     { label: 'Competitive deal', value: 'competitive' },
@@ -187,6 +190,12 @@ export class QualificationPolicyPage {
         this.raiseToast('error', 'Unable to save qualification policy');
       }
     });
+  }
+
+  protected onActiveTabChange(tab: unknown) {
+    if (typeof tab === 'string') {
+      this.activeTab.set(tab);
+    }
   }
 
   protected onPolicyAccordionValueChange(value: string[] | number[] | string | number | null | undefined) {

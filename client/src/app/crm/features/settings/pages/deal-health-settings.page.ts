@@ -9,6 +9,7 @@ import { InputGroupModule } from 'primeng/inputgroup';
 import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { InputTextModule } from 'primeng/inputtext';
 import { SkeletonModule } from 'primeng/skeleton';
+import { TabsModule } from 'primeng/tabs';
 import { TooltipModule } from 'primeng/tooltip';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 
@@ -38,6 +39,7 @@ import {
     FormsModule,
     RouterLink,
     SkeletonModule,
+    TabsModule,
     TooltipModule,
     ToggleSwitchModule,
     NgIf,
@@ -60,6 +62,7 @@ export class DealHealthSettingsPage {
 
   protected readonly policy = signal<DealHealthScoringPolicy>(DealHealthSettingsPage.defaultPolicy());
   protected readonly expandedDimension = signal<string | null>(null);
+  protected readonly activeTab = signal<string>('0');
 
   private loadedSettings: WorkspaceSettings | null = null;
 
@@ -253,6 +256,70 @@ export class DealHealthSettingsPage {
       ProcessCompliance: 'pi-shield'
     };
     return icons[key] ?? 'pi-sliders-h';
+  }
+
+  protected dimensionDescription(key: string): string {
+    const descs: Record<string, string> = {
+      StageProgression: 'How consistently the deal advances through pipeline stages',
+      ActivityRecency: 'Days since last meaningful activity (call, email, meeting)',
+      CloseDateHealth: 'Whether the expected close date is realistic and hasn\'t slipped',
+      StakeholderCoverage: 'Number of key decision-makers identified and engaged',
+      DealCompleteness: 'Percentage of required deal fields that are filled in',
+      TeamCoverage: 'Number of internal team members actively working the deal',
+      ProcessCompliance: 'Adherence to defined sales process steps and requirements'
+    };
+    return descs[key] ?? '';
+  }
+
+  protected onActiveTabChange(value: string | number | undefined) {
+    this.activeTab.set(String(value ?? '0'));
+  }
+
+  /** Percentage weight of a dimension relative to total enabled max score */
+  protected dimensionWeightPct(dim: DealHealthDimensionConfig): number {
+    const total = this.totalMaxScore();
+    if (!total || !dim.enabled) return 0;
+    return Math.round((dim.maxScore / total) * 100);
+  }
+
+  /** Color for the weight bar segments — unique per dimension key */
+  protected dimensionColor(key: string): string {
+    const colors: Record<string, string> = {
+      StageProgression: '#6366f1',
+      ActivityRecency: '#3b82f6',
+      CloseDateHealth: '#06b6d4',
+      StakeholderCoverage: '#8b5cf6',
+      DealCompleteness: '#22c55e',
+      TeamCoverage: '#f59e0b',
+      ProcessCompliance: '#ec4899'
+    };
+    return colors[key] ?? '#6b7280';
+  }
+
+  /** Weight bar segments for the visual dimension proportion chart */
+  protected dimensionWeightSegments(): { key: string; label: string; pct: number; color: string }[] {
+    const total = this.totalMaxScore();
+    if (!total) return [];
+    return this.policy().dimensions
+      .filter(d => d.enabled)
+      .map(d => ({
+        key: d.key,
+        label: d.label,
+        pct: Math.round((d.maxScore / total) * 100),
+        color: this.dimensionColor(d.key)
+      }));
+  }
+
+  /** Band preview segments for the visual bar */
+  protected bandSegments(): { label: string; from: number; to: number; color: string }[] {
+    const b = this.policy().bands;
+    return [
+      { label: 'Critical', from: 0, to: b.atRisk, color: '#ef4444' },
+      { label: 'At Risk', from: b.atRisk, to: b.fair, color: '#f97316' },
+      { label: 'Fair', from: b.fair, to: b.good, color: '#eab308' },
+      { label: 'Good', from: b.good, to: b.excellent, color: '#22c55e' },
+      { label: 'Excellent', from: b.excellent, to: 100, color: '#3b82f6' }
+    ];
   }
 
   private raiseToast(tone: 'success' | 'error', message: string) {

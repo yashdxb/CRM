@@ -95,12 +95,37 @@
         </div>
 
         <form class="settings-form" *ngIf="!loading()" [formGroup]="settingsForm" (ngSubmit)="saveSettings()">
-          <p-accordion
-            class="policy-accordion-shell"
-            [multiple]="true"
-            [value]="policyAccordionValue()"
-            (valueChange)="onPolicyAccordionValueChange($event)"
-          >
+
+          <!-- ═══════════════ VERTICAL SIDEBAR TABS ═══════════════ -->
+          <p-tabs class="qp-sidebar-tabs" [value]="activeTab()" (valueChange)="onActiveTabChange($event)">
+            <div class="qp-sidebar-layout">
+              <!-- Sidebar Navigation -->
+              <p-tablist class="qp-sidebar-nav">
+                <p-tab value="scoring" [pt]="{ root: { class: 'qp-sidebar-item' } }">
+                  <i class="pi pi-sliders-h"></i>
+                  <span class="qp-sidebar-label">Scoring Rules</span>
+                </p-tab>
+                <p-tab value="evidence" [pt]="{ root: { class: 'qp-sidebar-item' } }">
+                  <i class="pi pi-verified"></i>
+                  <span class="qp-sidebar-label">Evidence</span>
+                </p-tab>
+                <p-tab value="weights" [pt]="{ root: { class: 'qp-sidebar-item' } }">
+                  <i class="pi pi-chart-bar"></i>
+                  <span class="qp-sidebar-label">Weights &amp; Modifiers</span>
+                </p-tab>
+              </p-tablist>
+
+              <!-- Tab Content Area -->
+              <p-tabpanels class="qp-sidebar-content">
+
+              <!-- ═══════════════ TAB 1 — Scoring Rules ═══════════════ -->
+              <p-tabpanel value="scoring">
+                <p-accordion
+                  class="policy-accordion-shell"
+                  [multiple]="true"
+                  [value]="policyAccordionValue()"
+                  (valueChange)="onPolicyAccordionValueChange($event)"
+                >
           <p-accordion-panel value="thresholds">
             <p-accordion-header>
               <div class="policy-accordion-header">
@@ -370,6 +395,17 @@
               </section>
             </p-accordion-content>
           </p-accordion-panel>
+                </p-accordion>
+              </p-tabpanel>
+
+              <!-- ═══════════════ TAB 2 — Evidence ═══════════════ -->
+              <p-tabpanel value="evidence">
+                <p-accordion
+                  class="policy-accordion-shell"
+                  [multiple]="true"
+                  [value]="policyAccordionValue()"
+                  (valueChange)="onPolicyAccordionValueChange($event)"
+                >
 
           <p-accordion-panel value="evidence-enforcement">
             <p-accordion-header>
@@ -532,6 +568,74 @@
             </p-accordion-content>
           </p-accordion-panel>
 
+          <p-accordion-panel value="evidence-sources">
+            <p-accordion-header>
+              <div class="policy-accordion-header">
+                <div class="policy-accordion-title">
+                  <i class="pi pi-list-check"></i>
+                  <span>Evidence Sources</span>
+                </div>
+                <span class="policy-accordion-badge">{{ qualificationPolicy().evidenceSources.length }} sources</span>
+              </div>
+            </p-accordion-header>
+            <p-accordion-content>
+          <section class="form-card">
+            <h3 class="section-title section-title--info">
+              <i class="pi pi-list-check"></i>
+              Evidence Sources
+            </h3>
+            <p class="section-description">
+              Configure the evidence source list shown in Lead Qualification. Use clear source names that reps can pick quickly.
+            </p>
+
+            <div class="policy-block">
+              <div class="policy-header">
+                <h4>Evidence Source Catalog</h4>
+                <button type="button" class="btn btn-secondary" (click)="addEvidenceSource()">
+                  <i class="pi pi-plus"></i>
+                  Add source
+                </button>
+              </div>
+              <div class="policy-list" *ngIf="qualificationPolicy().evidenceSources.length; else noEvidenceSources">
+                <div class="policy-row policy-row--modifier" *ngFor="let source of qualificationPolicy().evidenceSources; let i = index">
+                  <input
+                    pInputText
+                    [ngModel]="source"
+                    (ngModelChange)="updateEvidenceSource(i, $event)"
+                    [ngModelOptions]="{ standalone: true }"
+                    class="w-full"
+                    [readonly]="source.toLowerCase() === 'no evidence yet'"
+                  />
+                  <span class="factor-suffix" *ngIf="source.toLowerCase() === 'no evidence yet'">Required</span>
+                  <button
+                    *ngIf="source.toLowerCase() !== 'no evidence yet'"
+                    type="button"
+                    class="btn btn-ghost"
+                    (click)="removeEvidenceSource(i)"
+                  >
+                    <i class="pi pi-times"></i>
+                  </button>
+                </div>
+              </div>
+              <ng-template #noEvidenceSources>
+                <p class="hint">No sources configured. Add at least one evidence source.</p>
+              </ng-template>
+            </div>
+          </section>
+            </p-accordion-content>
+          </p-accordion-panel>
+                </p-accordion>
+              </p-tabpanel>
+
+              <!-- ═══════════════ TAB 3 — Weights & Modifiers ═══════════════ -->
+              <p-tabpanel value="weights">
+                <p-accordion
+                  class="policy-accordion-shell"
+                  [multiple]="true"
+                  [value]="policyAccordionValue()"
+                  (valueChange)="onPolicyAccordionValueChange($event)"
+                >
+
           <p-accordion-panel value="modifiers">
             <p-accordion-header>
               <div class="policy-accordion-header">
@@ -689,64 +793,11 @@
           </section>
             </p-accordion-content>
           </p-accordion-panel>
-
-          <p-accordion-panel value="evidence-sources">
-            <p-accordion-header>
-              <div class="policy-accordion-header">
-                <div class="policy-accordion-title">
-                  <i class="pi pi-list-check"></i>
-                  <span>Evidence Sources</span>
-                </div>
-                <span class="policy-accordion-badge">{{ qualificationPolicy().evidenceSources.length }} sources</span>
-              </div>
-            </p-accordion-header>
-            <p-accordion-content>
-          <section class="form-card">
-            <h3 class="section-title section-title--info">
-              <i class="pi pi-list-check"></i>
-              Evidence Sources
-            </h3>
-            <p class="section-description">
-              Configure the evidence source list shown in Lead Qualification. Use clear source names that reps can pick quickly.
-            </p>
-
-            <div class="policy-block">
-              <div class="policy-header">
-                <h4>Evidence Source Catalog</h4>
-                <button type="button" class="btn btn-secondary" (click)="addEvidenceSource()">
-                  <i class="pi pi-plus"></i>
-                  Add source
-                </button>
-              </div>
-              <div class="policy-list" *ngIf="qualificationPolicy().evidenceSources.length; else noEvidenceSources">
-                <div class="policy-row policy-row--modifier" *ngFor="let source of qualificationPolicy().evidenceSources; let i = index">
-                  <input
-                    pInputText
-                    [ngModel]="source"
-                    (ngModelChange)="updateEvidenceSource(i, $event)"
-                    [ngModelOptions]="{ standalone: true }"
-                    class="w-full"
-                    [readonly]="source.toLowerCase() === 'no evidence yet'"
-                  />
-                  <span class="factor-suffix" *ngIf="source.toLowerCase() === 'no evidence yet'">Required</span>
-                  <button
-                    *ngIf="source.toLowerCase() !== 'no evidence yet'"
-                    type="button"
-                    class="btn btn-ghost"
-                    (click)="removeEvidenceSource(i)"
-                  >
-                    <i class="pi pi-times"></i>
-                  </button>
-                </div>
-              </div>
-              <ng-template #noEvidenceSources>
-                <p class="hint">No sources configured. Add at least one evidence source.</p>
-              </ng-template>
+                </p-accordion>
+              </p-tabpanel>
+            </p-tabpanels>
             </div>
-          </section>
-            </p-accordion-content>
-          </p-accordion-panel>
-          </p-accordion>
+          </p-tabs>
 
           <div class="form-actions">
             <button type="button" class="btn btn-ghost" (click)="loadSettings()" [disabled]="loading()">

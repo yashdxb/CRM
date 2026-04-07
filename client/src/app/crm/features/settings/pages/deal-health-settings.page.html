@@ -72,282 +72,391 @@
     </div>
   </section>
 
-  <!-- ── Dimensions Table ─────────────────────────────────────────────────── -->
-  <section class="data-section">
-    <div class="data-card">
-      <div class="data-header">
-        <div class="header-title">
-          <h2>Scoring Dimensions</h2>
-          <span class="record-count">Each dimension contributes a weighted score to the overall health rating</span>
-        </div>
-        <div class="header-actions">
-          <button type="button" class="action-btn action-btn--add" (click)="addDimension()">
-            <span class="action-btn__icon"><i class="pi pi-plus"></i></span>
-            <span>Add Dimension</span>
-          </button>
-        </div>
-      </div>
+  <!-- ── Loading State ── -->
+  <div class="loading-state" *ngIf="loading()">
+    <div class="skeleton-row" *ngFor="let _ of [0, 1, 2, 3]">
+      <div class="skeleton skeleton-text"></div>
+      <div class="skeleton skeleton-input"></div>
+    </div>
+  </div>
 
-      <div class="loading-state" *ngIf="loading()">
-        <div class="skeleton-row" *ngFor="let _ of [0, 1, 2, 3]">
-          <div class="skeleton skeleton-text"></div>
-          <div class="skeleton skeleton-input"></div>
-        </div>
-      </div>
-
-      <div class="dimension-list" *ngIf="!loading()">
-        <div
-          class="dimension-item"
-          *ngFor="let dim of policy().dimensions; let idx = index"
-          [class.dimension-item--disabled]="!dim.enabled"
-          [class.dimension-item--expanded]="expandedDimension() === dim.key"
-        >
-          <div class="dimension-row">
-            <div class="dimension-toggle">
-              <p-toggleSwitch
-                [ngModel]="dim.enabled"
-                (ngModelChange)="toggleDimension(idx, $event)"
-              ></p-toggleSwitch>
+  <!-- ── Sidebar + Content Layout ── -->
+  <div class="dh-layout" *ngIf="!loading()">
+    <p-tabs class="dh-sidebar-tabs" [value]="activeTab()" (valueChange)="onActiveTabChange($event)">
+      <div class="dh-sidebar-layout">
+        <!-- Sidebar Navigation -->
+        <p-tablist class="dh-sidebar-nav">
+          <p-tab value="0" [pt]="{ root: { class: 'dh-sidebar-item' } }">
+            <i class="pi pi-sliders-h"></i>
+            <div class="dh-sidebar-text">
+              <span class="dh-sidebar-label">Dimensions</span>
+              <span class="dh-sidebar-hint">Toggle &amp; configure scoring factors</span>
             </div>
-
-            <div class="dimension-icon">
-              <i class="pi" [ngClass]="dimensionIcon(dim.key)"></i>
+          </p-tab>
+          <p-tab value="1" [pt]="{ root: { class: 'dh-sidebar-item' } }">
+            <i class="pi pi-chart-bar"></i>
+            <div class="dh-sidebar-text">
+              <span class="dh-sidebar-label">Bands &amp; Confidence</span>
+              <span class="dh-sidebar-hint">Score thresholds &amp; reliability</span>
             </div>
+          </p-tab>
+        </p-tablist>
 
-            <div class="dimension-info">
-              <div class="form-field form-field--inline">
-                <label [for]="'dh-label-' + idx">Label</label>
-                <p-inputgroup>
-                  <p-inputgroup-addon class="icon-addon icon-addon--name">
-                    <i class="pi pi-tag"></i>
-                  </p-inputgroup-addon>
-                  <input
-                    pInputText
-                    [id]="'dh-label-' + idx"
-                    [ngModel]="dim.label"
-                    (ngModelChange)="updateDimensionLabel(idx, $event)"
-                    class="w-full"
-                  />
-                </p-inputgroup>
+        <!-- Tab Content Area -->
+        <p-tabpanels class="dh-sidebar-content">
+
+        <!-- ══ Tab 0: Dimensions ══ -->
+        <p-tabpanel value="0">
+          <section class="data-section">
+            <div class="data-card">
+              <div class="data-header">
+                <div class="header-title">
+                  <h2>Scoring Dimensions</h2>
+                  <span class="record-count">Each dimension contributes a weighted score to the overall health rating</span>
+                </div>
+                <div class="header-actions">
+                  <button type="button" class="action-btn action-btn--add" (click)="addDimension()">
+                    <span class="action-btn__icon"><i class="pi pi-plus"></i></span>
+                    <span>Add Dimension</span>
+                  </button>
+                </div>
               </div>
-            </div>
 
-            <div class="dimension-score">
-              <div class="form-field form-field--inline">
-                <label [for]="'dh-max-' + idx">Max Score</label>
-                <p-inputgroup>
-                  <p-inputgroup-addon class="icon-addon icon-addon--success">
-                    <i class="pi pi-star"></i>
-                  </p-inputgroup-addon>
-                  <p-inputNumber
-                    [id]="'dh-max-' + idx"
-                    [ngModel]="dim.maxScore"
-                    (ngModelChange)="updateDimensionMaxScore(idx, $event)"
-                    [min]="1"
-                    [max]="100"
-                    styleClass="w-full"
-                  ></p-inputNumber>
-                </p-inputgroup>
+              <!-- Weight distribution bar -->
+              <div class="weight-distribution" *ngIf="dimensionWeightSegments().length">
+                <div class="weight-distribution__label">Weight Distribution</div>
+                <div class="weight-distribution__bar">
+                  <div
+                    class="weight-distribution__segment"
+                    *ngFor="let seg of dimensionWeightSegments()"
+                    [style.width.%]="seg.pct"
+                    [style.background]="seg.color"
+                    [pTooltip]="seg.label + ': ' + seg.pct + '%'"
+                    tooltipPosition="top"
+                  >
+                    <span class="weight-distribution__segment-label" *ngIf="seg.pct >= 10">{{ seg.pct }}%</span>
+                  </div>
+                </div>
               </div>
-            </div>
 
-            <div class="dimension-actions">
-              <button
-                *ngIf="hasBrackets(dim)"
-                type="button"
-                class="row-action-btn row-action-btn--view"
-                [title]="expandedDimension() === dim.key ? 'Collapse brackets' : 'Edit brackets'"
-                (click)="toggleExpand(dim.key)"
-              >
-                <i class="pi" [ngClass]="expandedDimension() === dim.key ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
-              </button>
-              <span *ngIf="!hasBrackets(dim)" class="ratio-badge" pTooltip="This dimension uses ratio-based calculation" tooltipPosition="top">
-                Ratio
-              </span>
-              <button
-                *ngIf="!isBuiltIn(dim.key)"
-                type="button"
-                class="row-action-btn row-action-btn--delete"
-                title="Remove dimension"
-                (click)="removeDimension(idx)"
-              >
-                <i class="pi pi-trash"></i>
-              </button>
-            </div>
-          </div>
-
-          <!-- Brackets sub-table (expanded) -->
-          <div class="brackets-panel" *ngIf="expandedDimension() === dim.key && hasBrackets(dim)">
-            <div class="brackets-header">
-              <h4>Scoring Brackets</h4>
-              <small>When measured value &le; threshold, award the corresponding score</small>
-              <button type="button" class="action-btn action-btn--add action-btn--sm" (click)="addBracket(idx)">
-                <span class="action-btn__icon"><i class="pi pi-plus"></i></span>
-                <span>Add</span>
-              </button>
-            </div>
-            <div class="brackets-grid">
-              <div class="bracket-row bracket-row--header">
-                <span>Threshold (&le;)</span>
-                <span>Score Awarded</span>
-                <span></span>
+              <!-- Column headers -->
+              <div class="dimension-columns">
+                <span class="dimension-col dimension-col--toggle"></span>
+                <span class="dimension-col dimension-col--icon"></span>
+                <span class="dimension-col dimension-col--name">Dimension</span>
+                <span class="dimension-col dimension-col--type">Type</span>
+                <span class="dimension-col dimension-col--weight">Weight</span>
+                <span class="dimension-col dimension-col--actions"></span>
               </div>
-              <div class="bracket-row" *ngFor="let b of dim.brackets; let bi = index">
-                <p-inputNumber
-                  [ngModel]="b.threshold"
-                  (ngModelChange)="updateBracketThreshold(idx, bi, $event)"
-                  [min]="0"
-                  styleClass="w-full"
-                ></p-inputNumber>
-                <p-inputNumber
-                  [ngModel]="b.score"
-                  (ngModelChange)="updateBracketScore(idx, bi, $event)"
-                  [min]="0"
-                  [max]="dim.maxScore"
-                  styleClass="w-full"
-                ></p-inputNumber>
-                <button
-                  type="button"
-                  class="row-action-btn row-action-btn--delete"
-                  title="Remove bracket"
-                  (click)="removeBracket(idx, bi)"
+
+              <div class="dimension-list">
+                <div
+                  class="dimension-item"
+                  *ngFor="let dim of policy().dimensions; let idx = index"
+                  [class.dimension-item--disabled]="!dim.enabled"
+                  [class.dimension-item--expanded]="expandedDimension() === dim.key"
                 >
-                  <i class="pi pi-times"></i>
-                </button>
+                  <div class="dimension-row">
+                    <div class="dimension-toggle">
+                      <p-toggleSwitch
+                        [ngModel]="dim.enabled"
+                        (ngModelChange)="toggleDimension(idx, $event)"
+                      ></p-toggleSwitch>
+                    </div>
+
+                    <div class="dimension-icon" [style.background]="dimensionColor(dim.key)">
+                      <i class="pi" [ngClass]="dimensionIcon(dim.key)"></i>
+                    </div>
+
+                    <div class="dimension-info">
+                      <!-- Built-in: read-only display -->
+                      <div class="dimension-name" *ngIf="isBuiltIn(dim.key)">
+                        <strong class="dimension-name__label">{{ dim.label }}</strong>
+                        <p class="dimension-desc" *ngIf="dimensionDescription(dim.key)">{{ dimensionDescription(dim.key) }}</p>
+                      </div>
+                      <!-- Custom: editable input -->
+                      <div class="dimension-name" *ngIf="!isBuiltIn(dim.key)">
+                        <div class="form-field form-field--inline">
+                          <p-inputgroup>
+                            <p-inputgroup-addon class="icon-addon icon-addon--name">
+                              <i class="pi pi-tag"></i>
+                            </p-inputgroup-addon>
+                            <input
+                              pInputText
+                              [id]="'dh-label-' + idx"
+                              [ngModel]="dim.label"
+                              (ngModelChange)="updateDimensionLabel(idx, $event)"
+                              class="w-full"
+                              placeholder="Dimension name"
+                            />
+                          </p-inputgroup>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="dimension-type">
+                      <span
+                        *ngIf="hasBrackets(dim)"
+                        class="type-chip type-chip--bracket"
+                        pTooltip="Score is determined by threshold brackets you define"
+                        tooltipPosition="top"
+                      >
+                        <i class="pi pi-list"></i> Bracket
+                      </span>
+                      <span
+                        *ngIf="!hasBrackets(dim)"
+                        class="type-chip type-chip--ratio"
+                        pTooltip="Score is calculated automatically as a ratio of actual vs. maximum"
+                        tooltipPosition="top"
+                      >
+                        <i class="pi pi-percentage"></i> Ratio
+                      </span>
+                    </div>
+
+                    <div class="dimension-weight">
+                      <div class="weight-display">
+                        <p-inputgroup class="weight-input-group">
+                          <p-inputgroup-addon class="icon-addon icon-addon--success">
+                            <i class="pi pi-star"></i>
+                          </p-inputgroup-addon>
+                          <p-inputNumber
+                            [id]="'dh-max-' + idx"
+                            [ngModel]="dim.maxScore"
+                            (ngModelChange)="updateDimensionMaxScore(idx, $event)"
+                            [min]="1"
+                            [max]="100"
+                            styleClass="w-full"
+                          ></p-inputNumber>
+                        </p-inputgroup>
+                        <span class="weight-pct" *ngIf="dim.enabled">{{ dimensionWeightPct(dim) }}%</span>
+                      </div>
+                    </div>
+
+                    <div class="dimension-actions">
+                      <button
+                        *ngIf="hasBrackets(dim)"
+                        type="button"
+                        class="bracket-toggle-btn"
+                        [class.bracket-toggle-btn--active]="expandedDimension() === dim.key"
+                        (click)="toggleExpand(dim.key)"
+                      >
+                        <i class="pi" [ngClass]="expandedDimension() === dim.key ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
+                        <span>{{ expandedDimension() === dim.key ? 'Close' : 'Brackets' }}</span>
+                      </button>
+                      <button
+                        *ngIf="!isBuiltIn(dim.key)"
+                        type="button"
+                        class="row-action-btn row-action-btn--delete"
+                        title="Remove dimension"
+                        (click)="removeDimension(idx)"
+                      >
+                        <i class="pi pi-trash"></i>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Brackets sub-table (expanded) -->
+                  <div class="brackets-panel" *ngIf="expandedDimension() === dim.key && hasBrackets(dim)">
+                    <div class="brackets-header">
+                      <h4>Scoring Brackets</h4>
+                      <small>When measured value &le; threshold, award the corresponding score</small>
+                      <button type="button" class="action-btn action-btn--add action-btn--sm" (click)="addBracket(idx)">
+                        <span class="action-btn__icon"><i class="pi pi-plus"></i></span>
+                        <span>Add</span>
+                      </button>
+                    </div>
+                    <div class="brackets-grid">
+                      <div class="bracket-row bracket-row--header">
+                        <span>Threshold (&le;)</span>
+                        <span>Score Awarded</span>
+                        <span></span>
+                      </div>
+                      <div class="bracket-row" *ngFor="let b of dim.brackets; let bi = index">
+                        <p-inputNumber
+                          [ngModel]="b.threshold"
+                          (ngModelChange)="updateBracketThreshold(idx, bi, $event)"
+                          [min]="0"
+                          styleClass="w-full"
+                        ></p-inputNumber>
+                        <p-inputNumber
+                          [ngModel]="b.score"
+                          (ngModelChange)="updateBracketScore(idx, bi, $event)"
+                          [min]="0"
+                          [max]="dim.maxScore"
+                          styleClass="w-full"
+                        ></p-inputNumber>
+                        <button
+                          type="button"
+                          class="row-action-btn row-action-btn--delete"
+                          title="Remove bracket"
+                          (click)="removeBracket(idx, bi)"
+                        >
+                          <i class="pi pi-times"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ── Band Thresholds & Confidence ─────────────────────────────────────── -->
-  <section class="data-section" *ngIf="!loading()">
-    <div class="settings-layout">
-      <div class="data-card">
-        <div class="data-header">
-          <div class="header-title">
-            <h2>Score Bands &amp; Confidence</h2>
-            <span class="record-count">Normalised score (0-100) maps to a health label</span>
-          </div>
-        </div>
-
-        <div class="bands-form">
-          <section class="form-card">
-            <h3 class="section-title">
-              <i class="pi pi-sliders-h"></i>
-              Health Band Thresholds
-            </h3>
-
-            <div class="form-grid form-grid--2col">
-              <div class="form-field">
-                <label for="dh-excellent">Excellent (&ge;)</label>
-                <p-inputgroup>
-                  <p-inputgroup-addon class="icon-addon icon-addon--success">
-                    <i class="pi pi-star-fill"></i>
-                  </p-inputgroup-addon>
-                  <p-inputNumber
-                    id="dh-excellent"
-                    [ngModel]="policy().bands.excellent"
-                    (ngModelChange)="updateBand('excellent', $event)"
-                    [min]="0"
-                    [max]="100"
-                    styleClass="w-full"
-                  ></p-inputNumber>
-                </p-inputgroup>
-              </div>
-
-              <div class="form-field">
-                <label for="dh-good">Good (&ge;)</label>
-                <p-inputgroup>
-                  <p-inputgroup-addon class="icon-addon icon-addon--info">
-                    <i class="pi pi-thumbs-up"></i>
-                  </p-inputgroup-addon>
-                  <p-inputNumber
-                    id="dh-good"
-                    [ngModel]="policy().bands.good"
-                    (ngModelChange)="updateBand('good', $event)"
-                    [min]="0"
-                    [max]="100"
-                    styleClass="w-full"
-                  ></p-inputNumber>
-                </p-inputgroup>
-              </div>
-
-              <div class="form-field">
-                <label for="dh-fair">Fair (&ge;)</label>
-                <p-inputgroup>
-                  <p-inputgroup-addon class="icon-addon icon-addon--warning">
-                    <i class="pi pi-minus-circle"></i>
-                  </p-inputgroup-addon>
-                  <p-inputNumber
-                    id="dh-fair"
-                    [ngModel]="policy().bands.fair"
-                    (ngModelChange)="updateBand('fair', $event)"
-                    [min]="0"
-                    [max]="100"
-                    styleClass="w-full"
-                  ></p-inputNumber>
-                </p-inputgroup>
-              </div>
-
-              <div class="form-field">
-                <label for="dh-atrisk">At Risk (&ge;)</label>
-                <p-inputgroup>
-                  <p-inputgroup-addon class="icon-addon icon-addon--danger">
-                    <i class="pi pi-exclamation-triangle"></i>
-                  </p-inputgroup-addon>
-                  <p-inputNumber
-                    id="dh-atrisk"
-                    [ngModel]="policy().bands.atRisk"
-                    (ngModelChange)="updateBand('atRisk', $event)"
-                    [min]="0"
-                    [max]="100"
-                    styleClass="w-full"
-                  ></p-inputNumber>
-                </p-inputgroup>
-              </div>
-            </div>
-
-            <p class="band-note">
-              Scores below <strong>At Risk</strong> threshold are labeled <em>Critical</em>.
-            </p>
           </section>
+        </p-tabpanel>
 
-          <section class="form-card">
-            <h3 class="section-title">
-              <i class="pi pi-shield"></i>
-              Confidence Level
-            </h3>
+        <!-- ══ Tab 1: Bands & Confidence ══ -->
+        <p-tabpanel value="1">
+          <section class="data-section">
+            <div class="data-card">
+              <div class="data-header">
+                <div class="header-title">
+                  <h2>Score Bands &amp; Confidence</h2>
+                  <span class="record-count">Normalised score (0–100) maps to a health label</span>
+                </div>
+              </div>
 
-            <div class="form-grid form-grid--2col">
-              <div class="form-field">
-                <label for="dh-confidence">Confidence (0–1)</label>
-                <p-inputgroup>
-                  <p-inputgroup-addon class="icon-addon icon-addon--industry">
-                    <i class="pi pi-percentage"></i>
-                  </p-inputgroup-addon>
-                  <p-inputNumber
-                    id="dh-confidence"
-                    [ngModel]="policy().confidence"
-                    (ngModelChange)="updateConfidence($event)"
-                    [min]="0"
-                    [max]="1"
-                    [minFractionDigits]="2"
-                    [maxFractionDigits]="2"
-                    [step]="0.05"
-                    styleClass="w-full"
-                  ></p-inputNumber>
-                </p-inputgroup>
-                <small class="field-hint">How reliable the score is considered (shown to users)</small>
+              <div class="bands-form">
+                <!-- Visual Band Preview -->
+                <div class="band-preview">
+                  <div class="band-bar">
+                    <div
+                      class="band-segment"
+                      *ngFor="let seg of bandSegments()"
+                      [style.width.%]="seg.to - seg.from"
+                      [style.background]="seg.color"
+                      [pTooltip]="seg.label + ': ' + seg.from + '–' + seg.to"
+                      tooltipPosition="top"
+                    >
+                      <span class="band-segment-label" *ngIf="(seg.to - seg.from) >= 12">{{ seg.label }}</span>
+                    </div>
+                  </div>
+                  <div class="band-bar-legend">
+                    <span>0</span>
+                    <span>{{ policy().bands.atRisk }}</span>
+                    <span>{{ policy().bands.fair }}</span>
+                    <span>{{ policy().bands.good }}</span>
+                    <span>{{ policy().bands.excellent }}</span>
+                    <span>100</span>
+                  </div>
+                </div>
+
+                <section class="form-card">
+                  <h3 class="section-title">
+                    <i class="pi pi-sliders-h"></i>
+                    Health Band Thresholds
+                  </h3>
+
+                  <div class="form-grid form-grid--2col">
+                    <div class="form-field">
+                      <label for="dh-excellent">Excellent (&ge;)</label>
+                      <p-inputgroup>
+                        <p-inputgroup-addon class="icon-addon icon-addon--success">
+                          <i class="pi pi-star-fill"></i>
+                        </p-inputgroup-addon>
+                        <p-inputNumber
+                          id="dh-excellent"
+                          [ngModel]="policy().bands.excellent"
+                          (ngModelChange)="updateBand('excellent', $event)"
+                          [min]="0"
+                          [max]="100"
+                          styleClass="w-full"
+                        ></p-inputNumber>
+                      </p-inputgroup>
+                    </div>
+
+                    <div class="form-field">
+                      <label for="dh-good">Good (&ge;)</label>
+                      <p-inputgroup>
+                        <p-inputgroup-addon class="icon-addon icon-addon--info">
+                          <i class="pi pi-thumbs-up"></i>
+                        </p-inputgroup-addon>
+                        <p-inputNumber
+                          id="dh-good"
+                          [ngModel]="policy().bands.good"
+                          (ngModelChange)="updateBand('good', $event)"
+                          [min]="0"
+                          [max]="100"
+                          styleClass="w-full"
+                        ></p-inputNumber>
+                      </p-inputgroup>
+                    </div>
+
+                    <div class="form-field">
+                      <label for="dh-fair">Fair (&ge;)</label>
+                      <p-inputgroup>
+                        <p-inputgroup-addon class="icon-addon icon-addon--warning">
+                          <i class="pi pi-minus-circle"></i>
+                        </p-inputgroup-addon>
+                        <p-inputNumber
+                          id="dh-fair"
+                          [ngModel]="policy().bands.fair"
+                          (ngModelChange)="updateBand('fair', $event)"
+                          [min]="0"
+                          [max]="100"
+                          styleClass="w-full"
+                        ></p-inputNumber>
+                      </p-inputgroup>
+                    </div>
+
+                    <div class="form-field">
+                      <label for="dh-atrisk">At Risk (&ge;)</label>
+                      <p-inputgroup>
+                        <p-inputgroup-addon class="icon-addon icon-addon--danger">
+                          <i class="pi pi-exclamation-triangle"></i>
+                        </p-inputgroup-addon>
+                        <p-inputNumber
+                          id="dh-atrisk"
+                          [ngModel]="policy().bands.atRisk"
+                          (ngModelChange)="updateBand('atRisk', $event)"
+                          [min]="0"
+                          [max]="100"
+                          styleClass="w-full"
+                        ></p-inputNumber>
+                      </p-inputgroup>
+                    </div>
+                  </div>
+
+                  <p class="band-note">
+                    Scores below <strong>At Risk</strong> threshold are labeled <em>Critical</em>.
+                  </p>
+                </section>
+
+                <section class="form-card">
+                  <h3 class="section-title">
+                    <i class="pi pi-shield"></i>
+                    Confidence Level
+                  </h3>
+
+                  <div class="form-grid form-grid--2col">
+                    <div class="form-field">
+                      <label for="dh-confidence">Confidence (0–1)</label>
+                      <p-inputgroup>
+                        <p-inputgroup-addon class="icon-addon icon-addon--industry">
+                          <i class="pi pi-percentage"></i>
+                        </p-inputgroup-addon>
+                        <p-inputNumber
+                          id="dh-confidence"
+                          [ngModel]="policy().confidence"
+                          (ngModelChange)="updateConfidence($event)"
+                          [min]="0"
+                          [max]="1"
+                          [minFractionDigits]="2"
+                          [maxFractionDigits]="2"
+                          [step]="0.05"
+                          styleClass="w-full"
+                        ></p-inputNumber>
+                      </p-inputgroup>
+                      <small class="field-hint">How reliable the score is considered (shown to users)</small>
+                    </div>
+                  </div>
+                </section>
               </div>
             </div>
           </section>
-        </div>
+        </p-tabpanel>
+
+        </p-tabpanels>
       </div>
-    </div>
-  </section>
+    </p-tabs>
+  </div>
 
   <!-- ── Save bar ── -->
   <div class="save-bar" *ngIf="!loading()">
