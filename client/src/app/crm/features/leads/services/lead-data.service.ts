@@ -26,6 +26,7 @@ export interface SaveLeadRequest {
   firstName: string;
   lastName: string;
   companyName?: string;
+  leadSummary?: string;
   email?: string;
   phone?: string;
   phoneTypeId?: string;

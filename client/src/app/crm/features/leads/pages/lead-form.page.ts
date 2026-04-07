@@ -557,6 +557,7 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
       firstName: this.form.firstName,
       lastName: this.form.lastName,
       companyName: this.form.companyName,
+      leadSummary: this.form.leadSummary,
       email: this.form.email,
       phone: this.form.phone,
       status: this.form.status,
@@ -872,7 +873,7 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     }
 
     const hasFirstTouch = !!this.firstTouchedAtUtc();
-    const hasQualifiedSignals = this.countQualificationFactors() >= 3 && !!this.form.qualifiedNotes?.trim();
+    const hasQualifiedSignals = this.countQualificationFactors() >= 3;
 
     if ((this.form.status === 'New' || this.form.status === 'Nurture') && !hasFirstTouch) {
       return { label: 'Next recommended: Contacted', tone: 'warn' };
@@ -1140,7 +1141,6 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     const currentIdx = this.progressionIndex(current);
     const hasFirstTouch = !!this.firstTouchedAtUtc();
     const qualFactors = this.countQualificationFactors();
-    const hasQualNotes = !!this.form.qualifiedNotes?.trim();
     const meetsEvidence = !this.requiresEvidenceBeforeQualified() || this.truthCoveragePercent() >= this.minimumEvidenceCoveragePercent();
 
     const isAdmin = this.hasAdministrationManagePermission();
@@ -1249,20 +1249,20 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
       }));
   }
 
-  private isStepUnlocked(status: LeadStatus, hasFirstTouch: boolean, qualFactors: number, hasQualNotes: boolean, meetsEvidence: boolean): boolean {
+  private isStepUnlocked(status: LeadStatus, hasFirstTouch: boolean, qualFactors: number, meetsEvidence: boolean): boolean {
     switch (status) {
       case 'Contacted':
         return hasFirstTouch;
       case 'Nurture':
         return true; // Nurture is always available as a parking state
       case 'Qualified':
-        return hasFirstTouch && qualFactors >= 3 && hasQualNotes && meetsEvidence;
+        return hasFirstTouch && qualFactors >= 3 && meetsEvidence;
       default:
         return true;
     }
   }
 
-  private stepUnlockHint(status: LeadStatus, hasFirstTouch: boolean, qualFactors: number, hasQualNotes: boolean, meetsEvidence: boolean): string {
+  private stepUnlockHint(status: LeadStatus, hasFirstTouch: boolean, qualFactors: number, meetsEvidence: boolean): string {
     switch (status) {
       case 'Contacted':
         return 'Log a completed call, email, or meeting to unlock this step';
@@ -1271,7 +1271,6 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
         const minimum = this.minimumRequiredQualificationFactors();
         if (!hasFirstTouch) missing.push('log an activity');
         if (qualFactors < minimum) missing.push(`complete ${minimum - qualFactors} more qualification factor${minimum - qualFactors > 1 ? 's' : ''}`);
-        if (!hasQualNotes) missing.push('add qualification notes');
         if (!meetsEvidence) missing.push('add evidence to meet coverage threshold');
         return `To unlock: ${missing.join(', ')}`;
       }
@@ -1973,6 +1972,7 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
       autoScore: true,
       source: lead.source ?? '',
       jobTitle: lead.jobTitle ?? '',
+      leadSummary: lead.leadSummary ?? '',
       ownerId: lead.ownerId,
       assignmentStrategy: 'Manual',
       territory: lead.territory ?? '',
@@ -2391,7 +2391,6 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     const current = this.form.status as LeadStatus;
     const hasFirstTouch = !!this.firstTouchedAtUtc();
     const qualFactors = this.countQualificationFactors();
-    const hasQualNotes = !!this.form.qualifiedNotes?.trim();
     const meetsEvidence = !this.requiresEvidenceBeforeQualified() || this.truthCoveragePercent() >= this.minimumEvidenceCoveragePercent();
 
     if (target === current) {
@@ -2436,9 +2435,6 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
       const minimum = this.minimumRequiredQualificationFactors();
       if (qualFactors < minimum) {
         reasons.push(`Complete ${minimum - qualFactors} more qualification factor${minimum - qualFactors > 1 ? 's' : ''}.`);
-      }
-      if (!hasQualNotes) {
-        reasons.push('Add qualification notes.');
       }
       if (!meetsEvidence) {
         reasons.push('Add evidence to meet the coverage threshold.');
@@ -2518,6 +2514,7 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
       firstName: '',
       lastName: '',
       companyName: '',
+      leadSummary: '',
       email: '',
       phone: '',
       phoneTypeId: undefined,
@@ -3740,14 +3737,13 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   protected leadHeaderProgressMessage(): string {
     const status = this.form.status as LeadStatus;
     const hasFirstTouch = !!this.firstTouchedAtUtc();
-    const hasQualNotes = !!this.form.qualifiedNotes?.trim();
     const qualFactors = this.countQualificationFactors();
     const meetsEvidence = !this.requiresEvidenceBeforeQualified() || this.truthCoveragePercent() >= this.minimumEvidenceCoveragePercent();
     switch (status) {
       case 'New':
         return hasFirstTouch ? 'First outreach logged' : 'Awaiting first outreach';
       case 'Contacted':
-        return hasFirstTouch && qualFactors >= this.minimumRequiredQualificationFactors() && hasQualNotes && meetsEvidence
+        return hasFirstTouch && qualFactors >= this.minimumRequiredQualificationFactors() && meetsEvidence
           ? 'Ready for qualification'
           : 'Discovery in progress';
       case 'Nurture':
@@ -3787,10 +3783,6 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   }
 
   private validateOutcome(): string | null {
-    if (this.form.status === 'Qualified' && !this.form.qualifiedNotes?.trim()) {
-      return 'Qualification notes are required when qualifying a lead.';
-    }
-
     if (this.form.status === 'Qualified' && this.countQualificationFactors() < this.minimumRequiredQualificationFactors()) {
       return `At least ${this.minimumRequiredQualificationFactors()} qualification factors are required before marking a lead as Qualified.`;
     }

@@ -250,6 +250,7 @@ public sealed class LeadService : ILeadService
                 l.FirstName,
                 l.LastName,
                 l.CompanyName,
+                l.LeadSummary,
                 Status = l.Status != null ? l.Status.Name : "New",
                 l.Email,
                 l.Phone,
@@ -352,6 +353,7 @@ public sealed class LeadService : ILeadService
                 l.LeadNumber,
                 $"{l.FirstName} {l.LastName}".Trim(),
                 l.CompanyName ?? string.Empty,
+                l.LeadSummary,
                 l.Status,
                 l.Email,
                 l.Phone,
@@ -473,6 +475,7 @@ public sealed class LeadService : ILeadService
             lead.LeadNumber,
             $"{lead.FirstName} {lead.LastName}".Trim(),
             lead.CompanyName ?? string.Empty,
+            lead.LeadSummary,
             lead.Status?.Name ?? "New",
             lead.Email,
             lead.Phone,
@@ -920,6 +923,7 @@ public sealed class LeadService : ILeadService
             lead.Phone,
             lead.PhoneTypeId,
             lead.CompanyName,
+            lead.LeadSummary,
             lead.JobTitle,
             lead.Status?.Name,
             lead.OwnerId,
@@ -1016,6 +1020,7 @@ public sealed class LeadService : ILeadService
             Phone = request.Phone,
             PhoneTypeId = request.PhoneTypeId,
             CompanyName = request.CompanyName,
+            LeadSummary = request.LeadSummary,
             JobTitle = request.JobTitle,
             LeadStatusId = status.Id,
             OwnerId = assignment.OwnerId,
@@ -1112,6 +1117,7 @@ public sealed class LeadService : ILeadService
             lead.LeadNumber,
             $"{lead.FirstName} {lead.LastName}".Trim(),
             lead.CompanyName ?? string.Empty,
+            lead.LeadSummary,
             resolvedStatusName ?? "New",
             lead.Email,
             lead.Phone,
@@ -1227,6 +1233,7 @@ public sealed class LeadService : ILeadService
         lead.Phone = request.Phone;
         lead.PhoneTypeId = request.PhoneTypeId;
         lead.CompanyName = request.CompanyName;
+        lead.LeadSummary = request.LeadSummary;
         lead.JobTitle = request.JobTitle;
         if (!TryNormalizeStatusOrDefault(request.Status, out var normalizedUpdateStatus, out var normalizeUpdateError))
         {
@@ -1304,7 +1311,7 @@ public sealed class LeadService : ILeadService
             && actor.UserId != Guid.Empty
             && string.Equals(resolvedStatusName, "Qualified", StringComparison.OrdinalIgnoreCase))
         {
-            var handoffError = await ValidateQualifiedHandoffAsync(lead.Id, lead.QualifiedNotes, cancellationToken);
+            var handoffError = await ValidateQualifiedHandoffAsync(lead.Id, cancellationToken);
             if (handoffError is not null)
             {
                 return LeadOperationResult<bool>.Fail(handoffError);
@@ -2189,13 +2196,8 @@ public sealed class LeadService : ILeadService
         return LeadOperationResult<LeadCadenceTouchDto>.Ok(dto);
     }
 
-    private async Task<string?> ValidateQualifiedHandoffAsync(Guid leadId, string? qualifiedNotes, CancellationToken cancellationToken)
+    private async Task<string?> ValidateQualifiedHandoffAsync(Guid leadId, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(qualifiedNotes))
-        {
-            return "Qualified notes are required before handoff.";
-        }
-
         var hasMeeting = await _dbContext.Activities
             .AsNoTracking()
             .AnyAsync(a => !a.IsDeleted
@@ -2472,10 +2474,6 @@ public sealed class LeadService : ILeadService
             {
                 return $"At least {minimumRequired} qualification factors are required to set a lead to Qualified.";
             }
-
-            return string.IsNullOrWhiteSpace(request.QualifiedNotes)
-                ? "Qualification notes are required when qualifying a lead."
-                : null;
         }
 
         return null;

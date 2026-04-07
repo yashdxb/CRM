@@ -11,6 +11,7 @@ public class Lead : AuditableEntity
     public string? Phone { get; set; }
     public Guid? PhoneTypeId { get; set; }
     public string? CompanyName { get; set; }
+    public string? LeadSummary { get; set; }
     public string? JobTitle { get; set; }
     public Guid LeadStatusId { get; set; }
     public Guid OwnerId { get; set; }

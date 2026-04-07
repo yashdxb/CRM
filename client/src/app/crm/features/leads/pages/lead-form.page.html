@@ -580,6 +580,19 @@
                     <input pInputText id="lead-companyName" name="companyName" [(ngModel)]="form.companyName" placeholder="Company" class="w-full" />
                   </p-inputgroup>
                 </div>
+                <div class="form-field full-row">
+                  <label for="lead-leadSummary">Lead summary</label>
+                  <p class="hint-text compact">Initial business context for the lead.</p>
+                  <textarea
+                    pTextarea
+                    id="lead-leadSummary"
+                    name="leadSummary"
+                    rows="3"
+                    placeholder="What is this lead about, what are they evaluating, and why now?"
+                    class="w-full"
+                    [(ngModel)]="form.leadSummary"
+                  ></textarea>
+                </div>
                 <div class="form-field form-field--status-fallback">
                   <label>Status</label>
                   <p-select
@@ -1939,7 +1952,7 @@
                 <section class="form-section form-section--qualification form-section--accordion-body">
                   <div class="form-grid">
               <div class="form-field full-row">
-                <label for="lead-qualifiedNotes">Context &amp; supporting notes <span class="required" *ngIf="form.status === 'Qualified'">*</span></label>
+                <label for="lead-qualifiedNotes">Context &amp; supporting notes</label>
                 <p class="hint-text compact">Context only. Does not change Score.</p>
                 <textarea
                   pTextarea

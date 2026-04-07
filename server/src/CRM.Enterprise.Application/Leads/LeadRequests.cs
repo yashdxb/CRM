@@ -15,6 +15,7 @@ public sealed record LeadUpsertRequest(
     string? Phone,
     Guid? PhoneTypeId,
     string? CompanyName,
+    string? LeadSummary,
     string? JobTitle,
     string? Status,
     Guid? OwnerId,

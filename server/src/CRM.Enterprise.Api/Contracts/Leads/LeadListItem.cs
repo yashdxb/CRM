@@ -8,6 +8,7 @@ public record LeadListItem(
     string LeadNumber,
     string Name,
     string Company,
+    string? LeadSummary,
     string Status,
     string? Email,
     string? Phone,

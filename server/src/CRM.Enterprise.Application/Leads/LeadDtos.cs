@@ -5,6 +5,7 @@ public sealed record LeadListItemDto(
     string LeadNumber,
     string Name,
     string CompanyName,
+    string? LeadSummary,
     string Status,
     string? Email,
     string? Phone,

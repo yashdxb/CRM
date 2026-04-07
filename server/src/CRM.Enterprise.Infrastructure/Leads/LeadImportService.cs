@@ -78,6 +78,7 @@ public sealed class LeadImportService : ILeadImportService
                 Phone: LeadCsvImportHelper.ReadValue(row, "phone"),
                 PhoneTypeId: null,
                 CompanyName: LeadCsvImportHelper.ReadValue(row, "company", "companyname"),
+                LeadSummary: null,
                 JobTitle: LeadCsvImportHelper.ReadValue(row, "jobtitle", "title"),
                 Status: LeadLifecycle.NormalizeOrDefault(statusName),
                 OwnerId: ownerId,
