@@ -2852,29 +2852,37 @@ public class DatabaseInitializer : IDatabaseInitializer
     /// </summary>
     private async Task EnsureSuperAdminPermissionsAsync(CancellationToken cancellationToken)
     {
+        // Use a projection with AsNoTracking to avoid loading full entities into the
+        // change tracker.  Previously, tracked RolePermission entities that no longer
+        // existed in the DB caused DbUpdateConcurrencyException on SaveChanges, crashing
+        // the Production container on startup.
         var superAdminRoles = await _dbContext.Roles
             .IgnoreQueryFilters()
+            .AsNoTracking()
             .Where(r => r.Name == Permissions.RoleNames.SuperAdmin)
-            .Include(r => r.Permissions)
+            .Select(r => new
+            {
+                r.Id,
+                Permissions = r.Permissions.Select(p => p.Permission).ToList()
+            })
             .ToListAsync(cancellationToken);
 
         if (superAdminRoles.Count == 0)
             return;
 
         var allKeys = Permissions.AllKeys;
+        var newPermissions = new List<RolePermission>();
 
         foreach (var role in superAdminRoles)
         {
-            var existing = new HashSet<string>(
-                role.Permissions.Select(rp => rp.Permission),
-                StringComparer.OrdinalIgnoreCase);
+            var existing = new HashSet<string>(role.Permissions, StringComparer.OrdinalIgnoreCase);
 
             foreach (var key in allKeys)
             {
                 if (existing.Contains(key))
                     continue;
 
-                role.Permissions.Add(new RolePermission
+                newPermissions.Add(new RolePermission
                 {
                     RoleId = role.Id,
                     Permission = key
@@ -2882,7 +2890,11 @@ public class DatabaseInitializer : IDatabaseInitializer
             }
         }
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        if (newPermissions.Count > 0)
+        {
+            _dbContext.Set<RolePermission>().AddRange(newPermissions);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
     }
 
     private async Task<User> EnsureDemoUserAsync(
