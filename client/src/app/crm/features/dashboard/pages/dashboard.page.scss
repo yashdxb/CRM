@@ -2162,7 +2162,8 @@
 
 .card-header {
   padding: $space-4 $space-5;
-  border-bottom: 1px solid rgba($glass-border, 0.5);
+  background: linear-gradient(180deg, #f0f7ff 0%, #e6f0fa 100%);
+  border-bottom: 2px solid rgba(59, 130, 246, 0.2);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2245,69 +2246,6 @@
 
     &::before {
       background: $warning;
-    }
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// PER-CARD SOLID COLOR HEADER STRIPS
-// ═══════════════════════════════════════════════════════════════════════════════
-
-$card-header-colors: (
-  'ai-orchestration':    #6366f1,
-  'pipeline':            #8b5cf6,
-  'truth-metrics':       #0891b2,
-  'risk-register':       #e11d48,
-  'execution-guide':     #4f46e5,
-  'confidence-forecast': #2563eb,
-  'forecast-scenarios':  #475569,
-  'my-forecast':         #d97706,
-  'expansion-signals':   #059669,
-  'accounts':            #2563eb,
-  'manager-health':      #0891b2,
-  'activity-mix':        #7c3aed,
-  'conversion':          #16a34a,
-  'top-performers':      #ca8a04,
-  'my-tasks':            #4f46e5,
-  'timeline':            #64748b,
-  'health':              #e11d48,
-);
-
-@each $id, $color in $card-header-colors {
-  :host ::ng-deep .dashboard-card[data-card-id='#{$id}'] > .card-header {
-    background: $color;
-    border-bottom: 1px solid color.adjust($color, $lightness: -8%);
-
-    .card-title {
-      color: #fff;
-
-      i { color: rgba(255, 255, 255, 0.85); }
-    }
-
-    .card-badge {
-      background: rgba(255, 255, 255, 0.2);
-      color: #fff;
-
-      &::before { background: #fff; }
-
-      &.warn {
-        background: rgba(255, 255, 255, 0.25);
-        color: #fff;
-
-        &::before { background: #fbbf24; }
-      }
-    }
-
-    .card-controls .card-control {
-      background: rgba(255, 255, 255, 0.15);
-      border-color: rgba(255, 255, 255, 0.25);
-      color: rgba(255, 255, 255, 0.8);
-
-      &:hover {
-        background: rgba(255, 255, 255, 0.3);
-        border-color: rgba(255, 255, 255, 0.4);
-        color: #fff;
-      }
     }
   }
 }
