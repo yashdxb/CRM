@@ -644,8 +644,16 @@ export class DashboardPage implements OnInit {
     const upcoming = data?.upcomingActivities ?? 0;
     const overdue = data?.overdueActivities ?? 0;
     const total = upcoming + overdue;
-    const completion = total ? Math.round((upcoming / total) * 100) : 100;
+    const completion = total ? Math.round((upcoming / total) * 100) : 0;
     return { upcoming, overdue, completion };
+  });
+
+  protected readonly hasHealthData = computed(() => {
+    const s = this.summary();
+    return (s?.upcomingActivities ?? 0) > 0
+      || (s?.overdueActivities ?? 0) > 0
+      || (s?.customerLifetimeValue ?? 0) > 0
+      || (s?.churnRate ?? 0) > 0;
   });
   
   protected readonly totalPipelineValue = computed(() => {
@@ -655,6 +663,23 @@ export class DashboardPage implements OnInit {
       return summary.pipelineValueTotal;
     }
     return pipeline.reduce((sum, stage) => sum + stage.value, 0);
+  });
+
+  /** Percentage of raw pipeline retained after confidence weighting (0–100). */
+  protected readonly pipelineRetentionPct = computed(() => {
+    const raw = this.totalPipelineValue();
+    const weighted = this.summary()?.confidenceWeightedPipelineValue ?? 0;
+    if (!raw || raw <= 0) return 0;
+    return Math.round((weighted / raw) * 100);
+  });
+
+  /** Calibration quality label derived from calibration score. */
+  protected readonly calibrationLevel = computed<'excellent' | 'good' | 'fair' | 'poor'>(() => {
+    const score = this.summary()?.confidenceCalibrationScore ?? 0;
+    if (score >= 80) return 'excellent';
+    if (score >= 60) return 'good';
+    if (score >= 40) return 'fair';
+    return 'poor';
   });
 
   protected openCoaching(deal: ManagerReviewDeal) {
@@ -2032,18 +2057,18 @@ export class DashboardPage implements OnInit {
     const pipelineSeries = summary.pipelineValue.length
       ? summary.pipelineValue
       : [
-          { stage: 'Qualification', count: 0, value: 125000 },
-          { stage: 'Proposal', count: 0, value: 196000 },
-          { stage: 'Negotiation', count: 0, value: 180000 },
-          { stage: 'Closed Won', count: 0, value: 312000 }
+          { stage: 'Qualification', count: 0, value: 0 },
+          { stage: 'Proposal', count: 0, value: 0 },
+          { stage: 'Negotiation', count: 0, value: 0 },
+          { stage: 'Closed Won', count: 0, value: 0 }
         ];
     const activitySeries = summary.activityBreakdown.length
       ? summary.activityBreakdown
       : [
-          { type: 'Call', count: 25, percentage: 25 },
-          { type: 'Email', count: 35, percentage: 35 },
-          { type: 'Meeting', count: 20, percentage: 20 },
-          { type: 'Task', count: 20, percentage: 20 }
+          { type: 'Call', count: 0, percentage: 0 },
+          { type: 'Email', count: 0, percentage: 0 },
+          { type: 'Meeting', count: 0, percentage: 0 },
+          { type: 'Task', count: 0, percentage: 0 }
         ];
 
     // Revenue Chart (Area)

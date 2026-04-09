@@ -1594,7 +1594,6 @@ public class DatabaseInitializer : IDatabaseInitializer
         ("Jordan Patel", "jordan.patel@crmenterprise.demo", "America/New_York", "en-US", new[] { "Sales Manager" }, "ChangeThisSales!1"),
         ("Ava Chen", "ava.chen@crmenterprise.demo", "America/Los_Angeles", "en-US", new[] { "Sales Rep" }, "ChangeThisRep!1"),
         ("Leo Martin", "leo.martin@crmenterprise.demo", "Europe/London", "en-GB", new[] { "Sales Rep" }, "ChangeThisRep!1"),
-        ("Leo Martins", "leo.martins@crmenterprise.demo", "Europe/London", "en-GB", new[] { "Marketing Ops" }, "ChangeThisMops!1"),
         ("Priya Nair", "priya.nair@crmenterprise.demo", "Asia/Kolkata", "en-IN", new[] { "Customer Success" }, "ChangeThisCsm!1"),
         ("Nina Okafor", "nina.okafor@crmenterprise.demo", "America/Chicago", "en-US", new[] { "Support" }, "ChangeThisSup!1" )
     };

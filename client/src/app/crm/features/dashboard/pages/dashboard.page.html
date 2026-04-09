@@ -643,43 +643,83 @@
                 <i class="pi pi-chart-line"></i>
                 Confidence Forecast
               </h3>
-              <span class="risk-intelligence-subtitle">What the pipeline is worth after confidence weighting and uncertainty exposure.</span>
+              <span class="risk-intelligence-subtitle">Pipeline value after confidence weighting &amp; uncertainty exposure.</span>
             </div>
             <div class="card-actions">
               <ng-container *ngTemplateOutlet="cardControls; context: { $implicit: cardId }"></ng-container>
             </div>
           </div>
           <div class="card-body">
-            <div class="forecast-value">
-              {{ summary().confidenceWeightedPipelineValue | currency:resolveCurrencyCode():'symbol':'1.0-0' }}
-            </div>
-            <div class="forecast-meta">
-              <span>Weighted pipeline</span>
-              <span class="forecast-delta" [class.negative]="weightedPipelineDelta() < 0">
-                {{ weightedPipelineDelta() | currency:resolveCurrencyCode():'symbol':'1.0-0' }}
-              </span>
-            </div>
-            <div class="forecast-footnote">
-              Raw pipeline: {{ totalPipelineValue() | currency:resolveCurrencyCode():'symbol':'1.0-0' }}
-            </div>
-            <div class="forecast-aux">
-              <div class="forecast-row">
-                <span>Cost of Not Knowing</span>
-                <span>{{ summary().costOfNotKnowingValue | currency:resolveCurrencyCode():'symbol':'1.0-0' }}</span>
+            <!-- Hero zone: weighted value + retention ring -->
+            <div class="cf-hero">
+              <div class="cf-hero__main">
+                <span class="cf-hero__label">Weighted Pipeline</span>
+                <span class="cf-hero__value">
+                  {{ summary().confidenceWeightedPipelineValue | currency:resolveCurrencyCode():'symbol':'1.0-0' }}
+                </span>
+                <div class="cf-hero__delta" [class.negative]="weightedPipelineDelta() < 0">
+                  <i class="pi" [class.pi-arrow-down]="weightedPipelineDelta() < 0" [class.pi-arrow-up]="weightedPipelineDelta() >= 0"></i>
+                  {{ weightedPipelineDelta() | currency:resolveCurrencyCode():'symbol':'1.0-0' }}
+                  <span class="cf-hero__delta-hint">vs raw pipeline</span>
+                </div>
               </div>
-              <div class="forecast-row">
-                <span>Low-confidence deals</span>
-                <span>{{ summary().costOfNotKnowingDeals }}</span>
-              </div>
-              <div class="forecast-row">
-                <span>Calibration score</span>
-                <span>{{ summary().confidenceCalibrationScore | number:'1.0-0' }}%</span>
-              </div>
-              <div class="forecast-row" *ngIf="summary().confidenceCalibrationSample > 0">
-                <span>Calibration sample</span>
-                <span>{{ summary().confidenceCalibrationSample }}</span>
+              <div class="cf-hero__ring">
+                <svg viewBox="0 0 80 80">
+                  <circle class="cf-ring-bg" cx="40" cy="40" r="34" />
+                  <circle class="cf-ring-fill"
+                          [class.excellent]="pipelineRetentionPct() >= 80"
+                          [class.good]="pipelineRetentionPct() >= 60 && pipelineRetentionPct() < 80"
+                          [class.fair]="pipelineRetentionPct() >= 40 && pipelineRetentionPct() < 60"
+                          [class.poor]="pipelineRetentionPct() < 40"
+                          cx="40" cy="40" r="34"
+                          [attr.stroke-dasharray]="(pipelineRetentionPct() / 100 * 213.6) + ' 213.6'" />
+                </svg>
+                <div class="cf-ring-label">
+                  <strong>{{ pipelineRetentionPct() }}%</strong>
+                  <span>retained</span>
+                </div>
               </div>
             </div>
+
+            <!-- Raw pipeline reference -->
+            <div class="cf-raw">
+              <span>Raw pipeline</span>
+              <span class="cf-raw__value">{{ totalPipelineValue() | currency:resolveCurrencyCode():'symbol':'1.0-0' }}</span>
+            </div>
+
+            <!-- Metric tiles -->
+            <div class="cf-metrics">
+              <div class="cf-metric cf-metric--danger">
+                <div class="cf-metric__icon"><i class="pi pi-exclamation-triangle"></i></div>
+                <div class="cf-metric__body">
+                  <span class="cf-metric__value">{{ summary().costOfNotKnowingValue | currency:resolveCurrencyCode():'symbol':'1.0-0' }}</span>
+                  <span class="cf-metric__label">Cost of Not Knowing</span>
+                </div>
+              </div>
+              <div class="cf-metric cf-metric--warning">
+                <div class="cf-metric__icon"><i class="pi pi-flag"></i></div>
+                <div class="cf-metric__body">
+                  <span class="cf-metric__value">{{ summary().costOfNotKnowingDeals }}</span>
+                  <span class="cf-metric__label">Low-confidence deals</span>
+                </div>
+              </div>
+              <div class="cf-metric" [ngClass]="'cf-metric--' + calibrationLevel()">
+                <div class="cf-metric__icon"><i class="pi pi-bullseye"></i></div>
+                <div class="cf-metric__body">
+                  <span class="cf-metric__value">{{ summary().confidenceCalibrationScore | number:'1.0-0' }}%</span>
+                  <span class="cf-metric__label">Calibration score</span>
+                </div>
+              </div>
+              <div class="cf-metric cf-metric--info" *ngIf="summary().confidenceCalibrationSample > 0">
+                <div class="cf-metric__icon"><i class="pi pi-database"></i></div>
+                <div class="cf-metric__body">
+                  <span class="cf-metric__value">{{ summary().confidenceCalibrationSample }}</span>
+                  <span class="cf-metric__label">Calibration sample</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Top Cost Drivers -->
             <div class="cost-breakdown" *ngIf="summary().costOfNotKnowingBreakdown.length">
               <div class="cost-breakdown__header">
                 <h4>Top Cost Drivers</h4>
@@ -709,6 +749,8 @@
                 </div>
               </div>
             </div>
+
+            <!-- Exposure Trend -->
             <div class="cost-trend" *ngIf="costTrendChartData">
               <div class="cost-trend__header">
                 <h4>Exposure Trend</h4>
@@ -1015,170 +1057,192 @@
 
         <!-- My Tasks -->
         <ng-container *ngSwitchCase="'my-tasks'">
-          <div class="card-header priority-header">
-            <div class="priority-header-left">
-              <button class="priority-filter">
-                <span class="priority-filter-label">Scope:</span>
-                <span class="priority-filter-value">Assigned to Me</span>
-                <i class="pi pi-chevron-down"></i>
+          <div class="aq-card">
+            <!-- ── Floating header ribbon ── -->
+            <div class="aq-header">
+              <div class="aq-header__left">
+                <div class="aq-header__icon-ring">
+                  <i class="pi pi-bolt"></i>
+                </div>
+                <div class="aq-header__text">
+                  <h3 class="aq-header__title">
+                    <span class="aq-header__title-gradient">Action</span> Queue
+                  </h3>
+                  <span class="aq-header__subtitle">{{ actionQueueSubtitle() }}</span>
+                </div>
+              </div>
+              <div class="card-actions">
+                <span class="aq-header__count" *ngIf="priorityStreamItems().length">
+                  <span class="aq-header__count-num">{{ priorityStreamItems().length }}</span> items
+                </span>
+                <ng-container *ngTemplateOutlet="cardControls; context: { $implicit: cardId }"></ng-container>
+              </div>
+            </div>
+
+            <!-- ── Stat chips row ── -->
+            <div class="aq-chips">
+              <button type="button"
+                class="aq-chip aq-chip--danger"
+                [class.aq-chip--active]="priorityFilter() === 'overdue'"
+                (click)="setPriorityFilter('overdue')">
+                <span class="aq-chip__dot"></span>
+                <span class="aq-chip__label">Overdue</span>
+                <span class="aq-chip__count">{{ prioritySummary().overdue }}</span>
+              </button>
+              <button type="button"
+                class="aq-chip aq-chip--warning"
+                [class.aq-chip--active]="priorityFilter() === 'today'"
+                (click)="setPriorityFilter('today')">
+                <span class="aq-chip__dot"></span>
+                <span class="aq-chip__label">Due Today</span>
+                <span class="aq-chip__count">{{ prioritySummary().today }}</span>
+              </button>
+              <button type="button"
+                class="aq-chip aq-chip--purple"
+                [class.aq-chip--active]="priorityFilter() === 'decisions'"
+                (click)="setPriorityFilter('decisions')">
+                <span class="aq-chip__dot"></span>
+                <span class="aq-chip__label">Decisions</span>
+                <span class="aq-chip__count">{{ prioritySummary().decisions }}</span>
+              </button>
+              <button type="button"
+                class="aq-chip aq-chip--cyan"
+                [class.aq-chip--active]="priorityFilter() === 'new-leads'"
+                (click)="setPriorityFilter('new-leads')">
+                <span class="aq-chip__dot"></span>
+                <span class="aq-chip__label">New Leads</span>
+                <span class="aq-chip__count">{{ prioritySummary().newLeads }}</span>
+              </button>
+              <button type="button"
+                class="aq-chip aq-chip--orange"
+                [class.aq-chip--active]="priorityFilter() === 'at-risk'"
+                (click)="setPriorityFilter('at-risk')">
+                <span class="aq-chip__dot"></span>
+                <span class="aq-chip__label">At-Risk</span>
+                <span class="aq-chip__count">{{ prioritySummary().atRisk }}</span>
+              </button>
+              <button type="button"
+                class="aq-chip aq-chip--slate"
+                [class.aq-chip--active]="priorityFilter() === 'no-next-step'"
+                (click)="setPriorityFilter('no-next-step')">
+                <span class="aq-chip__dot"></span>
+                <span class="aq-chip__label">No Next Step</span>
+                <span class="aq-chip__count">{{ prioritySummary().noNextStep }}</span>
               </button>
             </div>
-            <div class="priority-header-center">
-              <h3 class="priority-header-title">{{ actionQueueTitle() }}</h3>
-              <span class="priority-header-subtitle">{{ actionQueueSubtitle() }}</span>
+
+            <!-- ── Segmented tab bar ── -->
+            <div class="aq-tabs">
+              <div class="aq-tabs__track">
+                <button type="button"
+                  class="aq-tabs__btn"
+                  [class.aq-tabs__btn--active]="priorityFilter() === 'all'"
+                  (click)="setPriorityFilter('all')">
+                  All
+                  <span class="aq-tabs__badge">{{ priorityStreamItems().length }}</span>
+                </button>
+                <button type="button"
+                  class="aq-tabs__btn"
+                  [class.aq-tabs__btn--active]="priorityFilter() === 'overdue'"
+                  (click)="setPriorityFilter('overdue')">
+                  Overdue
+                  <span class="aq-tabs__badge aq-tabs__badge--danger">{{ prioritySummary().overdue }}</span>
+                </button>
+                <button type="button"
+                  class="aq-tabs__btn"
+                  [class.aq-tabs__btn--active]="priorityFilter() === 'today'"
+                  (click)="setPriorityFilter('today')">
+                  Today
+                  <span class="aq-tabs__badge aq-tabs__badge--warning">{{ prioritySummary().today }}</span>
+                </button>
+                <button type="button"
+                  class="aq-tabs__btn"
+                  [class.aq-tabs__btn--active]="priorityFilter() === 'decisions'"
+                  (click)="setPriorityFilter('decisions')">
+                  Decisions
+                  <span class="aq-tabs__badge aq-tabs__badge--purple">{{ prioritySummary().decisions }}</span>
+                </button>
+                <button type="button"
+                  class="aq-tabs__btn"
+                  [class.aq-tabs__btn--active]="priorityFilter() === 'new-leads'"
+                  (click)="setPriorityFilter('new-leads')">
+                  Leads
+                  <span class="aq-tabs__badge aq-tabs__badge--cyan">{{ prioritySummary().newLeads }}</span>
+                </button>
+                <button type="button"
+                  class="aq-tabs__btn"
+                  [class.aq-tabs__btn--active]="priorityFilter() === 'at-risk'"
+                  (click)="setPriorityFilter('at-risk')">
+                  At-Risk
+                  <span class="aq-tabs__badge aq-tabs__badge--orange">{{ prioritySummary().atRisk }}</span>
+                </button>
+              </div>
             </div>
-            <div class="card-actions">
-              <span class="card-badge" *ngIf="priorityStreamItems().length">{{ priorityStreamItems().length }} items</span>
-              <ng-container *ngTemplateOutlet="cardControls; context: { $implicit: cardId }"></ng-container>
-            </div>
-          </div>
-          <div class="card-body">
-            <div class="priority-summary">
-              <button
-                type="button"
-                class="priority-summary-card overdue"
-                [class.active]="priorityFilter() === 'overdue'"
-                (click)="setPriorityFilter('overdue')"
-              >
-                <i class="pi pi-exclamation-circle"></i>
-                <span>Overdue</span>
-                <strong>{{ prioritySummary().overdue }}</strong>
-              </button>
-              <button
-                type="button"
-                class="priority-summary-card today"
-                [class.active]="priorityFilter() === 'today'"
-                (click)="setPriorityFilter('today')"
-              >
-                <i class="pi pi-calendar"></i>
-                <span>Due Today Queue</span>
-                <strong>{{ prioritySummary().today }}</strong>
-              </button>
-              <button
-                type="button"
-                class="priority-summary-card warn"
-                [class.active]="priorityFilter() === 'decisions'"
-                (click)="setPriorityFilter('decisions')"
-              >
-                <i class="pi pi-inbox"></i>
-                <span>Decisions</span>
-                <strong>{{ prioritySummary().decisions }}</strong>
-              </button>
-              <button
-                type="button"
-                class="priority-summary-card warn"
-                [class.active]="priorityFilter() === 'at-risk'"
-                (click)="setPriorityFilter('at-risk')"
-              >
-                <i class="pi pi-flag"></i>
-                <span>At-Risk Deals Queue</span>
-                <strong>{{ prioritySummary().atRisk }}</strong>
-              </button>
-              <button
-                type="button"
-                class="priority-summary-card info"
-                [class.active]="priorityFilter() === 'no-next-step'"
-                (click)="setPriorityFilter('no-next-step')"
-              >
-                <i class="pi pi-flag-fill"></i>
-                <span>Missing Next Step</span>
-                <strong>{{ prioritySummary().noNextStep }}</strong>
-              </button>
-            </div>
-            <div class="priority-tabs">
-              <button
-                type="button"
-                class="priority-tab"
-                [class.active]="priorityFilter() === 'overdue'"
-                (click)="setPriorityFilter('overdue')"
-              >
-                Overdue ({{ prioritySummary().overdue }})
-              </button>
-              <button
-                type="button"
-                class="priority-tab"
-                [class.active]="priorityFilter() === 'today'"
-                (click)="setPriorityFilter('today')"
-              >
-                Due Today ({{ prioritySummary().today }})
-              </button>
-              <button
-                type="button"
-                class="priority-tab"
-                [class.active]="priorityFilter() === 'decisions'"
-                (click)="setPriorityFilter('decisions')"
-              >
-                Decisions ({{ prioritySummary().decisions }})
-              </button>
-              <button
-                type="button"
-                class="priority-tab"
-                [class.active]="priorityFilter() === 'new-leads'"
-                (click)="setPriorityFilter('new-leads')"
-              >
-                New Leads ({{ prioritySummary().newLeads }})
-              </button>
-              <button
-                type="button"
-                class="priority-tab"
-                [class.active]="priorityFilter() === 'at-risk'"
-                (click)="setPriorityFilter('at-risk')"
-              >
-                At-Risk Deals ({{ prioritySummary().atRisk }})
-              </button>
-              <button
-                type="button"
-                class="priority-tab"
-                [class.active]="priorityFilter() === 'no-next-step'"
-                (click)="setPriorityFilter('no-next-step')"
-              >
-                No Next Step ({{ prioritySummary().noNextStep }})
-              </button>
-              <button
-                type="button"
-                class="priority-tab"
-                [class.active]="priorityFilter() === 'all'"
-                (click)="setPriorityFilter('all')"
-              >
-                All ({{ priorityStreamItems().length }})
-              </button>
-            </div>
-            <div class="priority-list" *ngIf="filteredPriorityStreamItems().length; else emptyMyTasks">
-              <div class="priority-item" *ngFor="let item of filteredPriorityStreamItems()" [class.is-filter-active]="priorityFilter() !== 'all'">
-                <div class="priority-main">
-                  <div class="priority-marker" [class.overdue]="item.type === 'deal' || item.dueClass === 'due-overdue'">
+
+            <!-- ── Item list ── -->
+            <div class="aq-list" *ngIf="filteredPriorityStreamItems().length; else emptyMyTasks">
+              <div class="aq-item" *ngFor="let item of filteredPriorityStreamItems(); let i = index"
+                [style.animation-delay]="(i * 40) + 'ms'">
+                <!-- Type indicator strip -->
+                <div class="aq-item__strip" [ngClass]="{
+                  'aq-item__strip--danger': item.dueClass === 'due-overdue' || item.type === 'deal',
+                  'aq-item__strip--warning': item.dueClass === 'due-today',
+                  'aq-item__strip--purple': item.type === 'decision',
+                  'aq-item__strip--cyan':   item.type === 'lead',
+                  'aq-item__strip--default': item.dueClass !== 'due-overdue' && item.dueClass !== 'due-today' && item.type === 'task'
+                }"></div>
+
+                <div class="aq-item__body">
+                  <!-- Icon -->
+                  <div class="aq-item__icon" [ngClass]="{
+                    'aq-item__icon--danger':  item.dueClass === 'due-overdue' || item.type === 'deal',
+                    'aq-item__icon--warning': item.dueClass === 'due-today' && item.type !== 'deal',
+                    'aq-item__icon--purple':  item.type === 'decision',
+                    'aq-item__icon--cyan':    item.type === 'lead',
+                    'aq-item__icon--primary': item.type === 'task' && item.dueClass !== 'due-overdue' && item.dueClass !== 'due-today'
+                  }">
                     <i class="pi" [ngClass]="{
-                      'pi-exclamation-circle': item.type === 'deal' || item.dueClass === 'due-overdue',
-                      'pi-check-square': item.type === 'task' && item.dueClass !== 'due-overdue',
-                      'pi-user-plus': item.type === 'lead',
-                      'pi-inbox': item.type === 'decision'
+                      'pi-exclamation-triangle': item.type === 'deal' || item.dueClass === 'due-overdue',
+                      'pi-check-square':         item.type === 'task' && item.dueClass !== 'due-overdue',
+                      'pi-user-plus':            item.type === 'lead',
+                      'pi-inbox':                item.type === 'decision'
                     }"></i>
                   </div>
-                  <div class="priority-details">
-                    <div class="priority-title">{{ item.title }}</div>
-                    <div class="priority-subtitle">{{ item.subtitle }}</div>
-                    <div class="priority-meta">
-                      <span *ngFor="let meta of item.meta">{{ meta }}</span>
+
+                  <!-- Content -->
+                  <div class="aq-item__content">
+                    <div class="aq-item__row-top">
+                      <span class="aq-item__title">{{ item.title }}</span>
+                      <span class="aq-item__due" [ngClass]="item.dueClass">{{ item.dueColumn }}</span>
                     </div>
-                    <div class="priority-meta">
-                      <span class="task-pill" [ngClass]="item.dueClass">{{ item.dueColumn }}</span>
-                      <span class="task-pill status-pill" [class.overdue]="item.type === 'deal'">{{ item.status }}</span>
+                    <div class="aq-item__subtitle">{{ item.subtitle }}</div>
+                    <div class="aq-item__tags">
+                      <span class="aq-item__tag" *ngFor="let meta of item.meta">{{ meta }}</span>
+                      <span class="aq-item__tag aq-item__tag--status" [class.aq-item__tag--overdue]="item.type === 'deal'">{{ item.status }}</span>
                     </div>
                   </div>
-                </div>
-                <div class="priority-actions">
-                  <ng-container *ngIf="item.type !== 'decision'; else decisionAction">
-                    <button type="button" class="priority-icon-btn" [class.is-filter-active]="priorityFilter() !== 'all'" aria-label="Call">
-                      <i class="pi pi-phone"></i>
-                    </button>
-                    <button type="button" class="priority-icon-btn" [class.is-filter-active]="priorityFilter() !== 'all'" aria-label="Email">
-                      <i class="pi pi-envelope"></i>
-                    </button>
-                    <button type="button" class="priority-complete-btn" [class.is-filter-active]="priorityFilter() !== 'all'" (click)="onPriorityComplete(item)">Complete</button>
-                  </ng-container>
-                  <ng-template #decisionAction>
-                    <button type="button" class="priority-complete-btn" [class.is-filter-active]="priorityFilter() !== 'all'" (click)="onPriorityComplete(item)">Review</button>
-                  </ng-template>
+
+                  <!-- Actions -->
+                  <div class="aq-item__actions">
+                    <ng-container *ngIf="item.type !== 'decision'; else aqDecisionAction">
+                      <button type="button" class="aq-item__action-btn aq-item__action-btn--phone" title="Call">
+                        <i class="pi pi-phone"></i>
+                      </button>
+                      <button type="button" class="aq-item__action-btn aq-item__action-btn--email" title="Email">
+                        <i class="pi pi-envelope"></i>
+                      </button>
+                      <button type="button" class="aq-item__action-btn aq-item__action-btn--complete" (click)="onPriorityComplete(item)">
+                        <i class="pi pi-check"></i>
+                        <span>Done</span>
+                      </button>
+                    </ng-container>
+                    <ng-template #aqDecisionAction>
+                      <button type="button" class="aq-item__action-btn aq-item__action-btn--review" (click)="onPriorityComplete(item)">
+                        <i class="pi pi-eye"></i>
+                        <span>Review</span>
+                      </button>
+                    </ng-template>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1250,7 +1314,7 @@
               <ng-container *ngTemplateOutlet="cardControls; context: { $implicit: cardId }"></ng-container>
             </div>
           </div>
-          <div class="card-body">
+          <div class="card-body" *ngIf="hasHealthData(); else emptyHealth">
             <div class="health-meter">
               <svg viewBox="0 0 120 120" class="circular-progress">
                 <circle cx="60" cy="60" r="54" class="progress-bg"></circle>
@@ -1365,6 +1429,16 @@
 
       </div>
     </div>
+
+<ng-template #emptyHealth>
+  <div class="empty-state">
+    <div class="empty-icon">
+      <i class="pi pi-heart"></i>
+    </div>
+    <h4>No health data yet</h4>
+    <p>Activity stats, CLV, and churn metrics will appear here</p>
+  </div>
+</ng-template>
 
 <ng-template #emptyMyTasks>
   <div class="empty-state">
