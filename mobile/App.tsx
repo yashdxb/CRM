@@ -1,16 +1,10 @@
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useState } from 'react';
-import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { Animated, Easing, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  Easing,
-} from 'react-native-reanimated';
 import { CrmTheme } from './src/theme';
 import { AuthProvider, useAuth } from './src/auth/AuthContext';
 import LoginScreen from './src/screens/LoginScreen';
@@ -87,25 +81,47 @@ function AppShell() {
     setTimeout(() => setRefreshing(false), 600);
   }, []);
   // Tab switch fade animation
-  const contentOpacity = useSharedValue(1);
-  const contentTranslateY = useSharedValue(0);
+  const contentOpacity = useRef(new Animated.Value(1)).current;
+  const contentTranslateY = useRef(new Animated.Value(0)).current;
 
   const switchTab = (tab: TabKey) => {
     if (tab === activeTab) return;
-    const cfg = { duration: 150, easing: Easing.out(Easing.cubic) };
-    contentOpacity.value = withTiming(0, cfg);
-    contentTranslateY.value = withTiming(8, cfg);
-    setTimeout(() => {
+    Animated.parallel([
+      Animated.timing(contentOpacity, {
+        toValue: 0,
+        duration: 150,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(contentTranslateY, {
+        toValue: 8,
+        duration: 150,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
       setActiveTab(tab);
-      contentOpacity.value = withTiming(1, { duration: 280, easing: Easing.out(Easing.cubic) });
-      contentTranslateY.value = withTiming(0, { duration: 280, easing: Easing.out(Easing.cubic) });
-    }, 150);
+      Animated.parallel([
+        Animated.timing(contentOpacity, {
+          toValue: 1,
+          duration: 280,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(contentTranslateY, {
+          toValue: 0,
+          duration: 280,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]).start();
+    });
   };
 
-  const contentAnimStyle = useAnimatedStyle(() => ({
-    opacity: contentOpacity.value,
-    transform: [{ translateY: contentTranslateY.value }],
-  }));
+  const contentAnimStyle = {
+    opacity: contentOpacity,
+    transform: [{ translateY: contentTranslateY }],
+  };
 
   return (
     <LinearGradient

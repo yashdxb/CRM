@@ -1,12 +1,5 @@
-import React, { useEffect } from 'react';
-import { type StyleProp, type ViewStyle } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withDelay,
-  withTiming,
-  Easing,
-} from 'react-native-reanimated';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Easing, type StyleProp, type ViewStyle } from 'react-native';
 
 interface FadeInProps {
   /** Zero-based index for stagger calculation */
@@ -36,23 +29,33 @@ export default function FadeIn({
   style,
   children,
 }: FadeInProps) {
-  const opacity = useSharedValue(0);
-  const offsetY = useSharedValue(translateY);
+  const opacity = useRef(new Animated.Value(0)).current;
+  const offsetY = useRef(new Animated.Value(translateY)).current;
 
   useEffect(() => {
     const delay = baseDelay + index * staggerMs;
-    const config = { duration, easing: Easing.out(Easing.cubic) };
-    opacity.value = withDelay(delay, withTiming(1, config));
-    offsetY.value = withDelay(delay, withTiming(0, config));
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration,
+        delay,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(offsetY, {
+        toValue: 0,
+        duration,
+        delay,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
   }, []);
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [{ translateY: offsetY.value }],
-  }));
-
   return (
-    <Animated.View style={[animatedStyle, style]}>
+    <Animated.View
+      style={[{ opacity, transform: [{ translateY: offsetY }] }, style]}
+    >
       {children}
     </Animated.View>
   );
