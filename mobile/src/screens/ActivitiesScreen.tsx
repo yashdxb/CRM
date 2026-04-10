@@ -6,6 +6,7 @@ import { LoadingState, EmptyState, ErrorState } from '../components/StateViews';
 import GlassCard from '../components/GlassCard';
 import EntityCard from '../components/EntityCard';
 import Icon from '../components/Icon';
+import FadeIn from '../components/FadeIn';
 import { Colors, Spacing } from '../theme/tokens';
 import type { ActivityListItem } from '../models';
 
@@ -17,11 +18,13 @@ export default function ActivitiesScreen() {
 
   return (
     <View style={s.stack}>
+      <FadeIn index={0}>
       <SectionHeading
         title="Actions"
         subtitle="Execution layer for calls, tasks, and meetings"
         icon="activities"
       />
+      </FadeIn>
 
       {isLoading ? <LoadingState label="Loading activities…" /> : null}
       {!isLoading && error ? <ErrorState message={error} onRetry={refresh} /> : null}
@@ -34,9 +37,9 @@ export default function ActivitiesScreen() {
       ) : null}
 
       {!isLoading &&
-        items.map((activity) => (
+        items.map((activity, i) => (
+          <FadeIn key={activity.id} index={i} baseDelay={100}>
           <EntityCard
-            key={activity.id}
             title={activity.subject}
             subtitle={activity.relatedEntityName ?? ''}
             icon="activities"
@@ -51,9 +54,14 @@ export default function ActivitiesScreen() {
             }
             onPress={() => setSelectedId(activity.id)}
           />
+          </FadeIn>
         ))}
 
-      {selected ? <ActivityDetailCard activity={selected} /> : null}
+      {selected ? (
+        <FadeIn index={0} baseDelay={100}>
+          <ActivityDetailCard activity={selected} />
+        </FadeIn>
+      ) : null}
     </View>
   );
 }

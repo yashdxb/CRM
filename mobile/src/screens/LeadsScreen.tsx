@@ -7,6 +7,7 @@ import { LoadingState, EmptyState, ErrorState } from '../components/StateViews';
 import GlassCard from '../components/GlassCard';
 import EntityCard from '../components/EntityCard';
 import Icon from '../components/Icon';
+import FadeIn from '../components/FadeIn';
 import { Colors, Spacing, Radius } from '../theme/tokens';
 import type { LeadListItem } from '../models';
 
@@ -31,12 +32,15 @@ export default function LeadsScreen() {
 
   return (
     <View style={s.stack}>
+      <FadeIn index={0}>
       <SectionHeading
         title="Leads"
         subtitle="Rep-owned lead list with quick selection"
         icon="leads"
       />
+      </FadeIn>
 
+      <FadeIn index={1}>
       <Searchbar
         placeholder="Search leads, companies, or status"
         value={searchQuery}
@@ -46,6 +50,7 @@ export default function LeadsScreen() {
         placeholderTextColor={Colors.textMuted}
         iconColor={Colors.textMuted}
       />
+      </FadeIn>
 
       {isLoading ? <LoadingState label="Loading leads…" /> : null}
       {!isLoading && error ? <ErrorState message={error} onRetry={refresh} /> : null}
@@ -58,9 +63,9 @@ export default function LeadsScreen() {
       ) : null}
 
       {!isLoading &&
-        items.map((lead) => (
+        items.map((lead, i) => (
+          <FadeIn key={lead.id} index={i} baseDelay={150}>
           <EntityCard
-            key={lead.id}
             title={lead.name}
             subtitle={lead.company}
             icon="leads"
@@ -71,9 +76,14 @@ export default function LeadsScreen() {
             meta={lead.source ?? ''}
             onPress={() => setSelectedId(lead.id)}
           />
+          </FadeIn>
         ))}
 
-      {selected ? <LeadDetailCard lead={selected} /> : null}
+      {selected ? (
+        <FadeIn index={0} baseDelay={100}>
+          <LeadDetailCard lead={selected} />
+        </FadeIn>
+      ) : null}
     </View>
   );
 }

@@ -1,10 +1,16 @@
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 import { CrmTheme } from './src/theme';
 import { AuthProvider, useAuth } from './src/auth/AuthContext';
 import LoginScreen from './src/screens/LoginScreen';
@@ -58,6 +64,7 @@ function AppGate() {
         style={styles.screen}
       >
         <SafeAreaView style={styles.screen}>
+          <StatusBar style="dark" />
           <LoadingState label="Restoring session…" />
         </SafeAreaView>
       </LinearGradient>
@@ -71,6 +78,34 @@ function AppGate() {
 function AppShell() {
   const { session, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<TabKey>('home');
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    setRefreshKey((k) => k + 1);
+    setTimeout(() => setRefreshing(false), 600);
+  }, []);
+  // Tab switch fade animation
+  const contentOpacity = useSharedValue(1);
+  const contentTranslateY = useSharedValue(0);
+
+  const switchTab = (tab: TabKey) => {
+    if (tab === activeTab) return;
+    const cfg = { duration: 150, easing: Easing.out(Easing.cubic) };
+    contentOpacity.value = withTiming(0, cfg);
+    contentTranslateY.value = withTiming(8, cfg);
+    setTimeout(() => {
+      setActiveTab(tab);
+      contentOpacity.value = withTiming(1, { duration: 280, easing: Easing.out(Easing.cubic) });
+      contentTranslateY.value = withTiming(0, { duration: 280, easing: Easing.out(Easing.cubic) });
+    }, 150);
+  };
+
+  const contentAnimStyle = useAnimatedStyle(() => ({
+    opacity: contentOpacity.value,
+    transform: [{ translateY: contentTranslateY.value }],
+  }));
 
   return (
     <LinearGradient
@@ -112,17 +147,25 @@ function AppShell() {
           </View>
 
           {/* Content */}
-          <ScrollView
-            style={styles.content}
+          <Animated.ScrollView
+            style={[styles.content, contentAnimStyle]}
             contentContainerStyle={styles.contentContainer}
             showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={Colors.primary}
+                colors={[Colors.primary]}
+              />
+            }
           >
-            {activeTab === 'home' ? <HomeScreen /> : null}
-            {activeTab === 'leads' ? <LeadsScreen /> : null}
-            {activeTab === 'contacts' ? <ContactsScreen /> : null}
-            {activeTab === 'deals' ? <DealsScreen /> : null}
-            {activeTab === 'activities' ? <ActivitiesScreen /> : null}
-          </ScrollView>
+            {activeTab === 'home' ? <HomeScreen key={refreshKey} /> : null}
+            {activeTab === 'leads' ? <LeadsScreen key={refreshKey} /> : null}
+            {activeTab === 'contacts' ? <ContactsScreen key={refreshKey} /> : null}
+            {activeTab === 'deals' ? <DealsScreen key={refreshKey} /> : null}
+            {activeTab === 'activities' ? <ActivitiesScreen key={refreshKey} /> : null}
+          </Animated.ScrollView>
 
           {/* Frosted Glass Tab Bar */}
           <View style={styles.tabBarShell}>
@@ -137,7 +180,7 @@ function AppShell() {
                   return (
                     <Pressable
                       key={tab.key}
-                      onPress={() => setActiveTab(tab.key)}
+                      onPress={() => switchTab(tab.key)}
                       style={[styles.tabButton, isActive && styles.tabButtonActive]}
                     >
                       <View

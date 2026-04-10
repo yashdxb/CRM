@@ -6,6 +6,7 @@ import { LoadingState, EmptyState, ErrorState } from '../components/StateViews';
 import GlassCard from '../components/GlassCard';
 import EntityCard from '../components/EntityCard';
 import Icon from '../components/Icon';
+import FadeIn from '../components/FadeIn';
 import { Colors, Spacing } from '../theme/tokens';
 import type { OpportunityListItem } from '../models';
 
@@ -17,11 +18,13 @@ export default function DealsScreen() {
 
   return (
     <View style={s.stack}>
+      <FadeIn index={0}>
       <SectionHeading
         title="Deals"
         subtitle="Stage visibility, commercial value, and health"
         icon="deals"
       />
+      </FadeIn>
 
       {isLoading ? <LoadingState label="Loading deals…" /> : null}
       {!isLoading && error ? <ErrorState message={error} onRetry={refresh} /> : null}
@@ -34,9 +37,9 @@ export default function DealsScreen() {
       ) : null}
 
       {!isLoading &&
-        items.map((deal) => (
+        items.map((deal, i) => (
+          <FadeIn key={deal.id} index={i} baseDelay={100}>
           <EntityCard
-            key={deal.id}
             title={deal.name}
             subtitle={deal.account}
             icon="deals"
@@ -47,9 +50,14 @@ export default function DealsScreen() {
             meta={`${deal.currency} ${deal.amount.toLocaleString()}`}
             onPress={() => setSelectedId(deal.id)}
           />
+          </FadeIn>
         ))}
 
-      {selected ? <DealDetailCard deal={selected} /> : null}
+      {selected ? (
+        <FadeIn index={0} baseDelay={100}>
+          <DealDetailCard deal={selected} />
+        </FadeIn>
+      ) : null}
     </View>
   );
 }

@@ -6,6 +6,7 @@ import { LoadingState, EmptyState, ErrorState } from '../components/StateViews';
 import GlassCard from '../components/GlassCard';
 import EntityCard from '../components/EntityCard';
 import Icon from '../components/Icon';
+import FadeIn from '../components/FadeIn';
 import { Colors, Spacing } from '../theme/tokens';
 import type { ContactListItem } from '../models';
 
@@ -17,11 +18,13 @@ export default function ContactsScreen() {
 
   return (
     <View style={s.stack}>
+      <FadeIn index={0}>
       <SectionHeading
         title="People"
         subtitle="Relationship lookup and conversation prep"
         icon="contacts"
       />
+      </FadeIn>
 
       {isLoading ? <LoadingState label="Loading contacts…" /> : null}
       {!isLoading && error ? <ErrorState message={error} onRetry={refresh} /> : null}
@@ -34,9 +37,9 @@ export default function ContactsScreen() {
       ) : null}
 
       {!isLoading &&
-        items.map((contact) => (
+        items.map((contact, i) => (
+          <FadeIn key={contact.id} index={i} baseDelay={100}>
           <EntityCard
-            key={contact.id}
             title={contact.name}
             subtitle={contact.accountName ?? ''}
             icon="contacts"
@@ -47,9 +50,14 @@ export default function ContactsScreen() {
             meta={contact.email ?? ''}
             onPress={() => setSelectedId(contact.id)}
           />
+          </FadeIn>
         ))}
 
-      {selected ? <ContactDetailCard contact={selected} /> : null}
+      {selected ? (
+        <FadeIn index={0} baseDelay={100}>
+          <ContactDetailCard contact={selected} />
+        </FadeIn>
+      ) : null}
     </View>
   );
 }

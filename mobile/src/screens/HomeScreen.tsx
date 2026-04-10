@@ -7,6 +7,7 @@ import { fetchLeads, fetchContacts, fetchOpportunities, fetchActivities } from '
 import GlassCard from '../components/GlassCard';
 import MetricCard from '../components/MetricCard';
 import Icon from '../components/Icon';
+import FadeIn from '../components/FadeIn';
 import { Colors, Spacing, Radius, Typography } from '../theme/tokens';
 import { primaryGradient } from '../theme/gradients';
 
@@ -20,6 +21,7 @@ export default function HomeScreen() {
   return (
     <View style={s.stack}>
       {/* Hero Card */}
+      <FadeIn index={0}>
       <GlassCard variant="elevated">
         <View style={s.heroBadge}>
           <View style={s.badgeDot} />
@@ -48,8 +50,10 @@ export default function HomeScreen() {
           </View>
         </GlassCard>
       </GlassCard>
+      </FadeIn>
 
       {/* Metrics Row 1 */}
+      <FadeIn index={1}>
       <View style={s.metricRow}>
         <MetricCard
           label="Open Leads"
@@ -64,8 +68,10 @@ export default function HomeScreen() {
           variant="deals"
         />
       </View>
+      </FadeIn>
 
       {/* Metrics Row 2 */}
+      <FadeIn index={2}>
       <View style={s.metricRow}>
         <MetricCard
           label="Contacts"
@@ -80,8 +86,10 @@ export default function HomeScreen() {
           variant="activities"
         />
       </View>
+      </FadeIn>
 
       {/* Getting Started Section */}
+      <FadeIn index={3}>
       <GlassCard>
         <Text style={s.sectionTitle}>Getting started</Text>
         <Text style={s.sectionSubtitle}>
@@ -108,6 +116,7 @@ export default function HomeScreen() {
           />
         </View>
       </GlassCard>
+      </FadeIn>
     </View>
   );
 }
