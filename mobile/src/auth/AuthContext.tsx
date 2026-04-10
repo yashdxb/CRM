@@ -32,10 +32,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const s = await doLogin({ email, password });
       setSession(s);
     } catch (e: any) {
-      const msg =
-        e?.status === 401
-          ? 'Invalid email or password'
-          : e?.message || 'Unable to connect to the server';
+      let msg: string;
+      if (e?.status === 401) {
+        msg = 'Invalid email or password';
+      } else if (e?.name === 'AbortError' || (e instanceof DOMException && e.name === 'AbortError')) {
+        msg = 'Server is taking too long to respond. It may be restarting — please try again in a moment.';
+      } else if (e instanceof TypeError) {
+        msg = 'Unable to reach the server. Check your internet connection.';
+      } else {
+        msg = e?.message || 'Unable to connect to the server';
+      }
       setError(msg);
       throw e;
     } finally {

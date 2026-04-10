@@ -33,5 +33,9 @@ function resolveApiUrl(): string {
 export const Config = {
   apiUrl: resolveApiUrl(),
   defaultTenantKey: 'default',
-  requestTimeoutMs: 15_000,
+  /** Must be ≥ 30 s — Azure App Service cold starts can take 10-30 s */
+  requestTimeoutMs: 30_000,
+  /** Retry transient failures (timeout / 502 / 503 / 504) */
+  maxRetries: 3,
+  retryDelaysMs: [1_000, 2_000, 4_000],
 } as const;
