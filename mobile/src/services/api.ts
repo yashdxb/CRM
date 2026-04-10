@@ -26,8 +26,8 @@ const TRANSIENT_STATUSES = new Set([502, 503, 504]);
 
 function isTransient(err: unknown): boolean {
   if (err instanceof ApiError) return TRANSIENT_STATUSES.has(err.status);
-  // AbortController timeout or network error
-  if (err instanceof DOMException && err.name === 'AbortError') return true;
+  // AbortController timeout — RN Hermes may not have DOMException
+  if (err && typeof err === 'object' && (err as any).name === 'AbortError') return true;
   if (err instanceof TypeError) return true; // fetch network failure
   return false;
 }
@@ -56,23 +56,27 @@ export async function apiFetch<T>(
 
   for (let attempt = 0; attempt <= Config.maxRetries; attempt++) {
     if (attempt > 0) {
-      await delay(Config.retryDelaysMs[attempt - 1] ?? 4_000);
+      const delayMs = Config.retryDelaysMs[attempt - 1] ?? 4_000;
+      console.log(`[apiFetch] Retry ${attempt}/${Config.maxRetries} after ${delayMs}ms...`);
+      await delay(delayMs);
     }
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), Config.requestTimeoutMs);
-
     try {
-      const response = await fetch(url, {
-        ...options,
-        headers,
-        signal: controller.signal,
-      });
+      console.log(`[apiFetch] Attempt ${attempt} → ${url} (timeout: ${Config.requestTimeoutMs}ms)`);
+
+      // Use Promise.race for timeout — AbortController is unreliable on Hermes/RN
+      const fetchPromise = fetch(url, { ...options, headers });
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('REQUEST_TIMEOUT')), Config.requestTimeoutMs),
+      );
+
+      const response = await Promise.race([fetchPromise, timeoutPromise]);
+
+      console.log(`[apiFetch] Response status: ${response.status}`);
 
       if (!response.ok) {
         const body = await response.text().catch(() => '');
         const err = new ApiError(response.status, body || `HTTP ${response.status}`);
-        // Only retry transient statuses; 4xx should fail immediately
         if (isTransient(err) && attempt < Config.maxRetries) {
           lastError = err;
           continue;
@@ -84,14 +88,22 @@ export async function apiFetch<T>(
       if (response.status === 204) return undefined as T;
 
       return (await response.json()) as T;
-    } catch (e) {
+    } catch (e: any) {
+      console.log(`[apiFetch] Error on attempt ${attempt}: ${e?.name ?? 'unknown'} — ${e?.message ?? String(e)}`);
       lastError = e;
+      // Treat our own timeout error as transient
+      if (e?.message === 'REQUEST_TIMEOUT') {
+        if (attempt < Config.maxRetries) continue;
+        const timeoutErr = new Error(
+          'Server is taking too long to respond. It may be restarting — please try again in a moment.',
+        );
+        (timeoutErr as any).name = 'TimeoutError';
+        throw timeoutErr;
+      }
       if (isTransient(e) && attempt < Config.maxRetries) {
         continue;
       }
       throw e;
-    } finally {
-      clearTimeout(timeoutId);
     }
   }
 

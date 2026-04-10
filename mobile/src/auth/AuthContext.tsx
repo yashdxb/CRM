@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Alert } from 'react-native';
 import type { AuthSession } from '../models';
 import { login as doLogin, restoreSession, clearSession } from '../services/auth';
+import { Config } from '../config';
 
 interface AuthState {
   session: AuthSession | null;
@@ -35,13 +37,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       let msg: string;
       if (e?.status === 401) {
         msg = 'Invalid email or password';
-      } else if (e?.name === 'AbortError' || (e instanceof DOMException && e.name === 'AbortError')) {
+      } else if (
+        e?.name === 'TimeoutError' ||
+        e?.name === 'AbortError' ||
+        e?.message === 'REQUEST_TIMEOUT' ||
+        (e && typeof e === 'object' && e.name === 'AbortError')
+      ) {
         msg = 'Server is taking too long to respond. It may be restarting — please try again in a moment.';
       } else if (e instanceof TypeError) {
         msg = 'Unable to reach the server. Check your internet connection.';
       } else {
         msg = e?.message || 'Unable to connect to the server';
       }
+
+      // Debug alert — remove after confirming login works
+      if (__DEV__) {
+        Alert.alert(
+          'Login Debug',
+          `API: ${Config.apiUrl}\n\nError type: ${e?.constructor?.name ?? typeof e}\nName: ${e?.name}\nStatus: ${e?.status ?? 'N/A'}\nMessage: ${e?.message ?? String(e)}`,
+        );
+      }
+
       setError(msg);
       throw e;
     } finally {
