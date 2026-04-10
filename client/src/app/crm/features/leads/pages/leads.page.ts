@@ -30,6 +30,7 @@ import { AppToastService } from '../../../../core/app-toast.service';
 import { CrmEventsService } from '../../../../core/realtime/crm-events.service';
 import { computeLeadScore, LeadDataWeight, LeadScoreInputs, LeadScoreResult, QualificationFactorConfig } from './lead-scoring.util';
 import { MailComposeService } from '../../../../core/email/mail-compose.service';
+import { LeadImportWizardComponent } from '../components/lead-import-wizard/lead-import-wizard.component';
 
 interface StatusOption {
   label: string;
@@ -99,7 +100,8 @@ const CQVS_FACTOR_GROUPS: Array<{ code: CqvsCode; title: string; factorMatchers:
     KnobModule,
     BreadcrumbsComponent,
     BulkActionsBarComponent,
-    RouterLink
+    RouterLink,
+    LeadImportWizardComponent
   ],
   templateUrl: './leads.page.html',
   styleUrl: './leads.page.scss'
@@ -560,6 +562,12 @@ export class LeadsPage {
       this.router.navigate(['/app/leads']);
     }
     this.stopImportPolling();
+  }
+
+  protected onImportWizardComplete(event: { total: number; imported: number; skipped: number }) {
+    this.closeImport();
+    this.raiseToast('success', `${event.imported} leads imported successfully.`);
+    this.load();
   }
 
   protected onImportFileSelected(event: { files?: File[] } | Event) {

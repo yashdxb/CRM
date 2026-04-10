@@ -2165,6 +2165,10 @@ public class DatabaseInitializer : IDatabaseInitializer
 
     private async Task SeedSampleDataAsync(CancellationToken cancellationToken)
     {
+        // Sample data seeding disabled — database was intentionally wiped.
+        // Re-enable by removing this early return when sample data is needed again.
+        return;
+
         if (await _dbContext.Accounts.AnyAsync(cancellationToken))
         {
             return;

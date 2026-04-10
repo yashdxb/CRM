@@ -1,0 +1,462 @@
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- Lead Import Wizard — PrimeNG Stepper                       -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="wizard-container">
+
+  <!-- ── Header ─────────────────────────────────────────────── -->
+  <header class="wizard-header">
+    <div class="wizard-header__title">
+      <div class="wizard-header__icon"><i class="pi pi-file-import"></i></div>
+      <div>
+        <h2><span class="title-gradient">Import</span> <span class="title-light">Leads</span></h2>
+        <p class="wizard-header__subtitle">Intelligent CSV import with duplicate detection</p>
+      </div>
+    </div>
+    <button type="button" class="wizard-close" (click)="close()" title="Close">
+      <i class="pi pi-times"></i>
+    </button>
+  </header>
+
+  <!-- ── Stepper ────────────────────────────────────────────── -->
+  <p-stepper [value]="activeStep()" [linear]="true">
+
+    <p-step-list>
+      <p-step [value]="1">
+        <ng-template pTemplate="content" let-activateCallback="activateCallback" let-active="active">
+          <button type="button" class="wiz-step-btn" [class.wiz-step-btn--active]="active"
+                  [class.wiz-step-btn--done]="activeStep() > 1" (click)="goToStep(1, activateCallback)">
+            <span class="wiz-step-num" [class.wiz-step-num--done]="activeStep() > 1">
+              <i *ngIf="activeStep() > 1" class="pi pi-check"></i>
+              <span *ngIf="activeStep() <= 1">1</span>
+            </span>
+            <span class="wiz-step-label">Upload</span>
+          </button>
+        </ng-template>
+      </p-step>
+      <p-step [value]="2">
+        <ng-template pTemplate="content" let-activateCallback="activateCallback" let-active="active">
+          <button type="button" class="wiz-step-btn" [class.wiz-step-btn--active]="active"
+                  [class.wiz-step-btn--done]="activeStep() > 2" (click)="goToStep(2, activateCallback)"
+                  [disabled]="!file()">
+            <span class="wiz-step-num" [class.wiz-step-num--done]="activeStep() > 2">
+              <i *ngIf="activeStep() > 2" class="pi pi-check"></i>
+              <span *ngIf="activeStep() <= 2">2</span>
+            </span>
+            <span class="wiz-step-label">Map Columns</span>
+          </button>
+        </ng-template>
+      </p-step>
+      <p-step [value]="3">
+        <ng-template pTemplate="content" let-activateCallback="activateCallback" let-active="active">
+          <button type="button" class="wiz-step-btn" [class.wiz-step-btn--active]="active"
+                  [class.wiz-step-btn--done]="activeStep() > 3" (click)="goToStep(3, activateCallback)"
+                  [disabled]="!hasNameMapping()">
+            <span class="wiz-step-num" [class.wiz-step-num--done]="activeStep() > 3">
+              <i *ngIf="activeStep() > 3" class="pi pi-check"></i>
+              <span *ngIf="activeStep() <= 3">3</span>
+            </span>
+            <span class="wiz-step-label">Preview &amp; Select</span>
+          </button>
+        </ng-template>
+      </p-step>
+      <p-step [value]="4">
+        <ng-template pTemplate="content" let-activateCallback="activateCallback" let-active="active">
+          <button type="button" class="wiz-step-btn" [class.wiz-step-btn--active]="active"
+                  [class.wiz-step-btn--done]="activeStep() > 4" (click)="goToStep(4, activateCallback)"
+                  [disabled]="selectedCount() === 0">
+            <span class="wiz-step-num" [class.wiz-step-num--done]="activeStep() > 4">
+              <i *ngIf="activeStep() > 4" class="pi pi-check"></i>
+              <span *ngIf="activeStep() <= 4">4</span>
+            </span>
+            <span class="wiz-step-label">Duplicates</span>
+          </button>
+        </ng-template>
+      </p-step>
+      <p-step [value]="5">
+        <ng-template pTemplate="content" let-activateCallback="activateCallback" let-active="active">
+          <button type="button" class="wiz-step-btn" [class.wiz-step-btn--active]="active"
+                  [disabled]="importReadyCount() === 0">
+            <span class="wiz-step-num"><span>5</span></span>
+            <span class="wiz-step-label">Import</span>
+          </button>
+        </ng-template>
+      </p-step>
+    </p-step-list>
+
+    <p-step-panels>
+
+      <!-- ════════════════════════════════════════════════════ -->
+      <!--  STEP 1: Upload CSV                                  -->
+      <!-- ════════════════════════════════════════════════════ -->
+      <p-step-panel [value]="1">
+        <ng-template pTemplate="content" let-activateCallback="activateCallback">
+          <div class="wiz-panel">
+            <div class="upload-zone" [class.upload-zone--drag]="dragOver()" [class.upload-zone--has-file]="!!file()"
+                 (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
+
+              <div *ngIf="!file()" class="upload-zone__empty">
+                <div class="upload-zone__icon"><i class="pi pi-cloud-upload"></i></div>
+                <p class="upload-zone__title">Drag &amp; drop your CSV file here</p>
+                <p class="upload-zone__sub">or click to browse</p>
+                <input type="file" accept=".csv" (change)="onFileSelected($event)" class="upload-zone__input" />
+              </div>
+
+              <div *ngIf="file()" class="upload-zone__file">
+                <div class="file-card">
+                  <div class="file-card__icon"><i class="pi pi-file"></i></div>
+                  <div class="file-card__info">
+                    <strong>{{ file()!.name }}</strong>
+                    <span>{{ (file()!.size / 1024) | number:'1.0-1' }} KB · {{ rows().length }} rows detected</span>
+                  </div>
+                  <button type="button" class="file-card__remove" (click)="removeFile()" title="Remove file">
+                    <i class="pi pi-times"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="upload-hints">
+              <div class="hint-card hint-card--template" (click)="downloadTemplate()">
+                <i class="pi pi-download"></i>
+                <span><strong>Download CSV Template</strong> — pre-formatted with all supported columns &amp; a sample row</span>
+                <i class="pi pi-arrow-down hint-card__arrow"></i>
+              </div>
+              <div class="hint-card">
+                <i class="pi pi-info-circle"></i>
+                <span>Required column: <strong>Name</strong> or <strong>FirstName</strong></span>
+              </div>
+              <div class="hint-card">
+                <i class="pi pi-table"></i>
+                <span>Supported: Email, Phone, Company, JobTitle, Status, Source, Territory, Score</span>
+              </div>
+              <div class="hint-card">
+                <i class="pi pi-shield"></i>
+                <span>Duplicate detection runs automatically in Step 4</span>
+              </div>
+            </div>
+
+            <p class="parse-error" *ngIf="parseError()">
+              <i class="pi pi-exclamation-triangle"></i> {{ parseError() }}
+            </p>
+
+            <div class="wiz-actions">
+              <button type="button" class="action-btn action-btn--back" (click)="close()">
+                <span class="action-btn__icon"><i class="pi pi-times"></i></span>
+                <span>Cancel</span>
+              </button>
+              <button type="button" class="action-btn action-btn--add" [disabled]="!file()"
+                      (click)="goToStep(2, activateCallback)">
+                <span class="action-btn__icon"><i class="pi pi-arrow-right"></i></span>
+                <span>Map Columns</span>
+              </button>
+            </div>
+          </div>
+        </ng-template>
+      </p-step-panel>
+
+      <!-- ════════════════════════════════════════════════════ -->
+      <!--  STEP 2: Column Mapping                              -->
+      <!-- ════════════════════════════════════════════════════ -->
+      <p-step-panel [value]="2">
+        <ng-template pTemplate="content" let-activateCallback="activateCallback">
+          <div class="wiz-panel">
+            <div class="mapping-intro">
+              <p><i class="pi pi-sparkle"></i> Columns were <strong>auto-mapped</strong> where possible. Adjust as needed.</p>
+            </div>
+
+            <div class="mapping-grid">
+              <div class="mapping-row mapping-row--header">
+                <span class="mapping-col">CSV Column</span>
+                <span class="mapping-col">→</span>
+                <span class="mapping-col">Lead Field</span>
+                <span class="mapping-col">Sample Data</span>
+              </div>
+              <div class="mapping-row" *ngFor="let col of columnMappings(); let i = index"
+                   [class.mapping-row--mapped]="col.mappedTo"
+                   [class.mapping-row--required]="col.mappedTo === 'firstName' || col.mappedTo === 'name'">
+                <span class="mapping-csv-header">
+                  <i class="pi pi-table"></i> {{ col.csvHeader }}
+                </span>
+                <span class="mapping-arrow"><i class="pi pi-arrow-right"></i></span>
+                <p-select [options]="fieldOptions" optionLabel="label" optionValue="value"
+                          [(ngModel)]="col.mappedTo" (ngModelChange)="onMappingChanged()"
+                          placeholder="Skip column" [style]="{ width: '100%' }" appendTo="body">
+                </p-select>
+                <span class="mapping-samples">
+                  <span *ngFor="let s of col.sampleValues" class="sample-pill">{{ s || '—' }}</span>
+                </span>
+              </div>
+            </div>
+
+            <div class="mapping-warning" *ngIf="!hasNameMapping()">
+              <i class="pi pi-exclamation-triangle"></i>
+              Map at least <strong>Name</strong> or <strong>First Name</strong> to proceed.
+            </div>
+
+            <div class="wiz-actions">
+              <button type="button" class="action-btn action-btn--back" (click)="goToStep(1, activateCallback)">
+                <span class="action-btn__icon"><i class="pi pi-arrow-left"></i></span>
+                <span>Back</span>
+              </button>
+              <button type="button" class="action-btn action-btn--add" [disabled]="!hasNameMapping()"
+                      (click)="goToStep(3, activateCallback)">
+                <span class="action-btn__icon"><i class="pi pi-arrow-right"></i></span>
+                <span>Preview Leads</span>
+              </button>
+            </div>
+          </div>
+        </ng-template>
+      </p-step-panel>
+
+      <!-- ════════════════════════════════════════════════════ -->
+      <!--  STEP 3: Preview & Select                            -->
+      <!-- ════════════════════════════════════════════════════ -->
+      <p-step-panel [value]="3">
+        <ng-template pTemplate="content" let-activateCallback="activateCallback">
+          <div class="wiz-panel">
+            <div class="preview-toolbar">
+              <div class="preview-toolbar__left">
+                <button type="button" class="select-all-btn" (click)="toggleSelectAll()">
+                  <i class="pi" [ngClass]="allSelected() ? 'pi-check-square' : 'pi-stop'"></i>
+                  {{ allSelected() ? 'Deselect All' : 'Select All' }}
+                </button>
+                <span class="preview-count">
+                  <strong>{{ selectedCount() }}</strong> of {{ rows().length }} selected
+                  <span class="preview-valid" *ngIf="validSelectedCount() < selectedCount()">
+                    ({{ validSelectedCount() }} valid)
+                  </span>
+                </span>
+              </div>
+            </div>
+
+            <div class="preview-table-wrap">
+              <p-table [value]="rows()" [scrollable]="true" scrollHeight="400px" styleClass="p-datatable-sm">
+                <ng-template pTemplate="header">
+                  <tr>
+                    <th style="width: 50px">
+                      <p-checkbox [binary]="true" [ngModel]="allSelected()" (ngModelChange)="toggleSelectAll()"></p-checkbox>
+                    </th>
+                    <th style="width: 50px">#</th>
+                    <th *ngFor="let col of getMappedColumns()">{{ getMappedFieldLabel(col) }}</th>
+                    <th style="width: 100px">Status</th>
+                  </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row>
+                  <tr [class.row-error]="row.errors.length > 0" [class.row-deselected]="!row.selected">
+                    <td>
+                      <p-checkbox [binary]="true" [ngModel]="row.selected" (ngModelChange)="toggleRow(row.rowIndex)"></p-checkbox>
+                    </td>
+                    <td class="row-num">{{ row.rowIndex }}</td>
+                    <td *ngFor="let col of getMappedColumns()">{{ row.mapped[col] || '—' }}</td>
+                    <td>
+                      <span class="row-status row-status--valid" *ngIf="row.errors.length === 0">
+                        <i class="pi pi-check-circle"></i> Valid
+                      </span>
+                      <span class="row-status row-status--error" *ngIf="row.errors.length > 0"
+                            [pTooltip]="row.errors.join(', ')">
+                        <i class="pi pi-exclamation-circle"></i> {{ row.errors[0] }}
+                      </span>
+                    </td>
+                  </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                  <tr><td [attr.colspan]="getMappedColumns().length + 3" class="empty-msg">No rows to display</td></tr>
+                </ng-template>
+              </p-table>
+            </div>
+
+            <div class="wiz-actions">
+              <button type="button" class="action-btn action-btn--back" (click)="goToStep(2, activateCallback)">
+                <span class="action-btn__icon"><i class="pi pi-arrow-left"></i></span>
+                <span>Back</span>
+              </button>
+              <button type="button" class="action-btn action-btn--add" [disabled]="selectedCount() === 0"
+                      (click)="goToStep(4, activateCallback)">
+                <span class="action-btn__icon"><i class="pi pi-shield"></i></span>
+                <span>Check Duplicates</span>
+              </button>
+            </div>
+          </div>
+        </ng-template>
+      </p-step-panel>
+
+      <!-- ════════════════════════════════════════════════════ -->
+      <!--  STEP 4: Duplicate Detection                         -->
+      <!-- ════════════════════════════════════════════════════ -->
+      <p-step-panel [value]="4">
+        <ng-template pTemplate="content" let-activateCallback="activateCallback">
+          <div class="wiz-panel">
+
+            <!-- Scanning progress -->
+            <div class="dup-progress" *ngIf="duplicateChecking()">
+              <div class="dup-progress__header">
+                <i class="pi pi-spin pi-spinner"></i>
+                <span>Scanning for duplicates...</span>
+              </div>
+              <p-progressBar [value]="duplicateProgress()" [showValue]="true"></p-progressBar>
+            </div>
+
+            <!-- No duplicates -->
+            <div class="dup-empty" *ngIf="!duplicateChecking() && duplicateGroups().length === 0">
+              <div class="dup-empty__icon"><i class="pi pi-verified"></i></div>
+              <h3>No Duplicates Found</h3>
+              <p>All {{ validSelectedCount() }} selected leads appear to be unique. You're good to import!</p>
+            </div>
+
+            <!-- Duplicate groups -->
+            <div class="dup-list" *ngIf="!duplicateChecking() && duplicateGroups().length > 0">
+              <div class="dup-summary">
+                <div class="dup-summary__badge dup-summary__badge--warn">
+                  <i class="pi pi-exclamation-triangle"></i>
+                  <span>{{ duplicateGroups().length }} potential {{ duplicateGroups().length === 1 ? 'duplicate' : 'duplicates' }} found</span>
+                </div>
+              </div>
+
+              <div class="dup-group" *ngFor="let group of duplicateGroups(); let gi = index">
+                <div class="dup-group__import-row">
+                  <div class="dup-group__label">
+                    <i class="pi pi-file-import"></i> Importing Row #{{ group.importRow.rowIndex }}
+                  </div>
+                  <div class="dup-group__detail">
+                    <strong>{{ group.importRow.mapped['name'] || (group.importRow.mapped['firstName'] || '') + ' ' + (group.importRow.mapped['lastName'] || '') }}</strong>
+                    <span *ngIf="group.importRow.mapped['email']">· {{ group.importRow.mapped['email'] }}</span>
+                    <span *ngIf="group.importRow.mapped['company']">· {{ group.importRow.mapped['company'] }}</span>
+                  </div>
+                </div>
+
+                <div class="dup-matches">
+                  <div class="dup-match" *ngFor="let match of group.existingMatches"
+                       [ngClass]="matchLevelClass(match.matchLevel)">
+                    <div class="dup-match__head">
+                      <i [class]="matchLevelIcon(match.matchLevel)"></i>
+                      <strong>{{ match.name }}</strong>
+                      <span class="dup-match__score">{{ match.matchScore }}% match</span>
+                    </div>
+                    <div class="dup-match__detail">
+                      <span *ngIf="match.email"><i class="pi pi-envelope"></i> {{ match.email }}</span>
+                      <span *ngIf="match.companyName"><i class="pi pi-building"></i> {{ match.companyName }}</span>
+                      <span *ngIf="match.phone"><i class="pi pi-phone"></i> {{ match.phone }}</span>
+                    </div>
+                    <div class="dup-match__signals">
+                      <span class="signal-chip" *ngFor="let sig of match.matchedSignals">{{ sig }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="dup-actions">
+                  <button type="button" class="dup-action-btn" [class.dup-action-btn--active]="group.action === 'import'"
+                          (click)="setDuplicateAction(gi, 'import')">
+                    <i class="pi pi-plus-circle"></i> Import Anyway
+                  </button>
+                  <button type="button" class="dup-action-btn" [class.dup-action-btn--active]="group.action === 'skip'"
+                          (click)="setDuplicateAction(gi, 'skip')">
+                    <i class="pi pi-minus-circle"></i> Skip
+                  </button>
+                  <button type="button" class="dup-action-btn" [class.dup-action-btn--active]="group.action === 'merge'"
+                          (click)="setDuplicateAction(gi, 'merge', group.existingMatches[0]?.leadId)">
+                    <i class="pi pi-arrows-h"></i> Merge
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="wiz-actions">
+              <button type="button" class="action-btn action-btn--back" (click)="goToStep(3, activateCallback)">
+                <span class="action-btn__icon"><i class="pi pi-arrow-left"></i></span>
+                <span>Back</span>
+              </button>
+              <button type="button" class="action-btn action-btn--refresh" (click)="runDuplicateCheck()"
+                      [disabled]="duplicateChecking()">
+                <span class="action-btn__icon"><i class="pi pi-refresh"></i></span>
+                <span>Re-scan</span>
+              </button>
+              <button type="button" class="action-btn action-btn--add"
+                      [disabled]="duplicateChecking() || importReadyCount() === 0"
+                      (click)="goToStep(5, activateCallback)">
+                <span class="action-btn__icon"><i class="pi pi-arrow-right"></i></span>
+                <span>Review &amp; Import</span>
+              </button>
+            </div>
+          </div>
+        </ng-template>
+      </p-step-panel>
+
+      <!-- ════════════════════════════════════════════════════ -->
+      <!--  STEP 5: Review & Import                             -->
+      <!-- ════════════════════════════════════════════════════ -->
+      <p-step-panel [value]="5">
+        <ng-template pTemplate="content" let-activateCallback="activateCallback">
+          <div class="wiz-panel">
+
+            <div class="review-section" *ngIf="!importResult()">
+              <h3 class="review-title"><i class="pi pi-list-check"></i> Import Summary</h3>
+
+              <div class="review-cards">
+                <div class="review-card review-card--primary">
+                  <div class="review-card__icon"><i class="pi pi-users"></i></div>
+                  <div class="review-card__value">{{ importReadyCount() }}</div>
+                  <div class="review-card__label">Leads to Import</div>
+                </div>
+                <div class="review-card review-card--warning" *ngIf="skipCount > 0">
+                  <div class="review-card__icon"><i class="pi pi-minus-circle"></i></div>
+                  <div class="review-card__value">{{ skipCount }}</div>
+                  <div class="review-card__label">Skipped (Duplicates)</div>
+                </div>
+                <div class="review-card review-card--cyan" *ngIf="mergeCount > 0">
+                  <div class="review-card__icon"><i class="pi pi-arrows-h"></i></div>
+                  <div class="review-card__value">{{ mergeCount }}</div>
+                  <div class="review-card__label">Merge Suggestions</div>
+                </div>
+                <div class="review-card review-card--muted">
+                  <div class="review-card__icon"><i class="pi pi-ban"></i></div>
+                  <div class="review-card__value">{{ rows().length - selectedCount() }}</div>
+                  <div class="review-card__label">Deselected</div>
+                </div>
+              </div>
+
+              <div class="review-file">
+                <i class="pi pi-file"></i>
+                <span>{{ file()?.name }}</span>
+              </div>
+            </div>
+
+            <!-- Import result -->
+            <div class="import-done" *ngIf="importResult() as result">
+              <div class="import-done__icon" [class.import-done__icon--success]="result.errors.length === 0"
+                   [class.import-done__icon--error]="result.errors.length > 0">
+                <i class="pi" [ngClass]="result.errors.length === 0 ? 'pi-check-circle' : 'pi-exclamation-circle'"></i>
+              </div>
+              <h3 *ngIf="result.errors.length === 0">Import Complete!</h3>
+              <h3 *ngIf="result.errors.length > 0">Import Failed</h3>
+              <div class="import-done__metrics" *ngIf="result.errors.length === 0">
+                <span><strong>{{ result.imported }}</strong> imported</span>
+                <span *ngIf="result.skipped > 0"><strong>{{ result.skipped }}</strong> skipped</span>
+              </div>
+              <div class="import-done__errors" *ngIf="result.errors.length > 0">
+                <p *ngFor="let err of result.errors">{{ err }}</p>
+              </div>
+            </div>
+
+            <div class="wiz-actions">
+              <button type="button" class="action-btn action-btn--back" *ngIf="!importResult()"
+                      (click)="goToStep(4, activateCallback)">
+                <span class="action-btn__icon"><i class="pi pi-arrow-left"></i></span>
+                <span>Back</span>
+              </button>
+              <button type="button" class="action-btn action-btn--add" *ngIf="!importResult()"
+                      [disabled]="importing() || importReadyCount() === 0" (click)="startImport()">
+                <span class="action-btn__icon"><i class="pi pi-upload"></i></span>
+                <span>{{ importing() ? 'Importing...' : 'Start Import' }}</span>
+              </button>
+              <button type="button" class="action-btn action-btn--add" *ngIf="importResult()" (click)="close()">
+                <span class="action-btn__icon"><i class="pi pi-check"></i></span>
+                <span>Done</span>
+              </button>
+            </div>
+          </div>
+        </ng-template>
+      </p-step-panel>
+
+    </p-step-panels>
+  </p-stepper>
+</div>

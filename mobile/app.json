@@ -30,6 +30,9 @@
     },
     "extra": {
       "appDisplayName": "North Edge CRM"
-    }
+    },
+    "plugins": [
+      "expo-secure-store"
+    ]
   }
 }

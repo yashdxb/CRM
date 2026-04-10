@@ -673,6 +673,17 @@ export class DashboardPage implements OnInit {
     return Math.round((weighted / raw) * 100);
   });
 
+  /** True when there is meaningful confidence forecast data to display. */
+  protected readonly hasConfidenceForecastData = computed(() => {
+    const s = this.summary();
+    if (!s) return false;
+    return (s.confidenceWeightedPipelineValue ?? 0) > 0
+      || (s.pipelineValueTotal ?? 0) > 0
+      || (s.costOfNotKnowingValue ?? 0) > 0
+      || (s.costOfNotKnowingDeals ?? 0) > 0
+      || (s.confidenceCalibrationScore ?? 0) > 0;
+  });
+
   /** Calibration quality label derived from calibration score. */
   protected readonly calibrationLevel = computed<'excellent' | 'good' | 'fair' | 'poor'>(() => {
     const score = this.summary()?.confidenceCalibrationScore ?? 0;
@@ -1739,7 +1750,7 @@ export class DashboardPage implements OnInit {
     handle: 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'
   ): void {
     const cardId = element.dataset['cardId'] ?? null;
-    if (cardId !== 'my-tasks') {
+    if (!cardId) {
       return;
     }
     event.preventDefault();
@@ -1751,8 +1762,8 @@ export class DashboardPage implements OnInit {
     const contentConstraints = this.getCardContentConstraints(element);
     const minWidth = Math.max(baseMinWidth, contentConstraints.minWidth);
     const minHeight = Math.max(baseMinHeight, contentConstraints.minHeight);
-    // Cap growth to 50% above content height and the available grid width.
-    const grid = element.closest('.dashboard-card-grid') as HTMLElement | null;
+    // Cap growth to the available grid / metrics-grid width.
+    const grid = (element.closest('.dashboard-card-grid') ?? element.closest('.metrics-grid')) as HTMLElement | null;
     const gridRect = grid?.getBoundingClientRect();
     const maxWidth = Math.max(minWidth, Math.floor(gridRect?.width ?? window.innerWidth));
     const maxHeight = Math.max(minHeight, Math.floor(gridRect?.height ?? window.innerHeight));
@@ -1800,6 +1811,9 @@ export class DashboardPage implements OnInit {
 
     element.style.width = `${nextWidth}px`;
     element.style.height = `${nextHeight}px`;
+    if (element.closest('.metrics-grid')) {
+      element.style.flex = 'none';
+    }
   }
 
   private stopResize(): void {
@@ -1912,13 +1926,14 @@ export class DashboardPage implements OnInit {
     return `size-${this.layoutSizes[chartId] ?? this.defaultChartSizes[chartId] ?? 'md'}`;
   }
 
-  protected getCardDimensions(cardId: string): { width?: string; height?: string } | null {
+  protected getCardDimensions(cardId: string): Record<string, string> | null {
     const dimensions = this.layoutDimensions[cardId];
     if (!dimensions) return null;
-    if (cardId === 'my-tasks') {
-      return { height: `${dimensions.height}px` };
+    const style: Record<string, string> = { width: `${dimensions.width}px`, height: `${dimensions.height}px` };
+    if (cardId.startsWith('kpi-')) {
+      style['flex'] = 'none';
     }
-    return null;
+    return style;
   }
 
   protected toggleCardSize(cardId: string): void {
@@ -2042,18 +2057,7 @@ export class DashboardPage implements OnInit {
           { label: 'W5', value: 32 },
           { label: 'W6', value: 38 }
         ];
-    const costTrendSeries = summary.costOfNotKnowingTrend.length
-      ? summary.costOfNotKnowingTrend
-      : [
-          { label: 'W1', value: 52000 },
-          { label: 'W2', value: 48000 },
-          { label: 'W3', value: 45000 },
-          { label: 'W4', value: 42000 },
-          { label: 'W5', value: 39000 },
-          { label: 'W6', value: 41000 },
-          { label: 'W7', value: 37000 },
-          { label: 'W8', value: 35000 }
-        ];
+    const costTrendSeries = summary.costOfNotKnowingTrend ?? [];
     const pipelineSeries = summary.pipelineValue.length
       ? summary.pipelineValue
       : [
@@ -2744,9 +2748,7 @@ export class DashboardPage implements OnInit {
   }
 
   private buildLayoutDimensionsPayload(): Record<string, { width: number; height: number }> {
-    const dimensions = this.layoutDimensions ?? {};
-    if (!dimensions['my-tasks']) return {};
-    return { 'my-tasks': dimensions['my-tasks'] };
+    return { ...(this.layoutDimensions ?? {}) };
   }
 
   private applyRoleDefaultCharts(): void {

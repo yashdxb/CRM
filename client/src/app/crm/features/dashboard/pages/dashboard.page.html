@@ -103,7 +103,12 @@
         (cdkDropListDropped)="onKpiDrop($event)"
         cdkDropListOrientation="horizontal"
       >
-        <article class="metric-card featured" *ngIf="summary()">
+        <article class="metric-card featured card-resizable" *ngIf="summary()"
+          #kpiFeaturedCard
+          [attr.data-card-id]="'kpi-featured'"
+          [ngStyle]="getCardDimensions('kpi-featured')"
+          data-min-width="180"
+          data-min-height="140">
           <div class="metric-glow primary"></div>
           <div class="metric-icon-large primary">
             <i class="pi pi-chart-line"></i>
@@ -116,9 +121,16 @@
               <span>Raw pipeline {{ totalPipelineValue() | currency:resolveCurrencyCode():'symbol':'1.0-0' }}</span>
             </div>
           </div>
+          <div class="resize-handle handle-e" (mousedown)="startResize($event, kpiFeaturedCard, 'e')"></div>
+          <div class="resize-handle handle-se" (mousedown)="startResize($event, kpiFeaturedCard, 'se')"></div>
         </article>
 
-        <article class="metric-card" *ngFor="let metric of secondaryKpis(); let i = index" cdkDrag>
+        <article class="metric-card card-resizable" *ngFor="let metric of secondaryKpis(); let i = index" cdkDrag
+          #kpiCard
+          [attr.data-card-id]="'kpi-' + metric.id"
+          [ngStyle]="getCardDimensions('kpi-' + metric.id)"
+          data-min-width="160"
+          data-min-height="140">
           <div class="metric-header">
             <button type="button" class="kpi-drag-handle" cdkDragHandle aria-label="Reorder KPI">
               <i class="pi pi-bars"></i>
@@ -142,6 +154,8 @@
           <div class="metric-bar">
             <div class="metric-bar-fill" [class]="metric.color" [style.width.%]="metric.percentage"></div>
           </div>
+          <div class="resize-handle handle-e" (mousedown)="startResize($event, kpiCard, 'e')"></div>
+          <div class="resize-handle handle-se" (mousedown)="startResize($event, kpiCard, 'se')"></div>
         </article>
       </div>
     </section>
@@ -650,6 +664,7 @@
             </div>
           </div>
           <div class="card-body">
+            <ng-container *ngIf="hasConfidenceForecastData(); else noConfidenceData">
             <!-- Hero zone: weighted value + retention ring -->
             <div class="cf-hero">
               <div class="cf-hero__main">
@@ -760,6 +775,14 @@
                 <p-chart type="line" [data]="costTrendChartData" [options]="costTrendChartOptions" height="140px"></p-chart>
               </div>
             </div>
+            </ng-container>
+            <ng-template #noConfidenceData>
+              <div class="empty-state">
+                <div class="empty-icon"><i class="pi pi-chart-line"></i></div>
+                <h4>No forecast data yet</h4>
+                <p>Confidence forecast will appear once opportunities with confidence scores are in your pipeline.</p>
+              </div>
+            </ng-template>
           </div>
         </ng-container>
 
@@ -1247,10 +1270,6 @@
               </div>
             </div>
           </div>
-          <div
-            class="resize-handle handle-s"
-            (mousedown)="startResize($event, dashboardCard, 's')"
-          ></div>
         </ng-container>
 
         <!-- Activity Timeline -->
@@ -1357,7 +1376,10 @@
             </div>
           </div>
         </ng-container>
-        <!-- Resizing disabled: keep cards at consistent sizes, allow only drag ordering. -->
+        <!-- Resize handles for all cards -->
+        <div class="resize-handle handle-s" (mousedown)="startResize($event, dashboardCard, 's')"></div>
+        <div class="resize-handle handle-e" (mousedown)="startResize($event, dashboardCard, 'e')"></div>
+        <div class="resize-handle handle-se" (mousedown)="startResize($event, dashboardCard, 'se')"></div>
       </article>
     </section>
 
@@ -1421,6 +1443,10 @@
               </div>
             </ng-container>
           </ng-container>
+          <!-- Resize handles for chart cards -->
+          <div class="resize-handle handle-s" (mousedown)="startResize($event, chartCard, 's')"></div>
+          <div class="resize-handle handle-e" (mousedown)="startResize($event, chartCard, 'e')"></div>
+          <div class="resize-handle handle-se" (mousedown)="startResize($event, chartCard, 'se')"></div>
         </article>
       </ng-container>
     </section>

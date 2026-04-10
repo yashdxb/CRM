@@ -451,8 +451,8 @@ $liquid-glass-shadow: 0 24px 60px rgba(15, 23, 42, 0.18), inset 0 1px 0 rgba(255
   &--import .action-btn__icon   { background: $cyan-gradient; }
   &--import:hover               { border-color: rgba($cyan, 0.3); color: color.adjust($cyan, $lightness: -10%); box-shadow: 0 4px 14px rgba($cyan, 0.15); }
 
-  &--export .action-btn__icon   { background: $success-gradient; }
-  &--export:hover               { border-color: rgba($success, 0.3); color: color.adjust($success, $lightness: -10%); box-shadow: 0 4px 14px rgba($success, 0.15); }
+  &--export .action-btn__icon   { background: $cyan-gradient; }
+  &--export:hover               { border-color: rgba($cyan, 0.3); color: color.adjust($cyan, $lightness: -10%); box-shadow: 0 4px 14px rgba($cyan, 0.15); }
 
   &--columns .action-btn__icon  { background: $purple-gradient; }
   &--columns:hover              { border-color: rgba($purple, 0.3); color: color.adjust($purple, $lightness: -10%); box-shadow: 0 4px 14px rgba($purple, 0.15); }
@@ -524,9 +524,9 @@ $liquid-glass-shadow: 0 24px 60px rgba(15, 23, 42, 0.18), inset 0 1px 0 rgba(255
   }
 
   &--complete {
-    background: $success-gradient;
-    box-shadow: 0 2px 8px rgba($success, 0.25);
-    &:hover { transform: translateY(-2px) scale(1.1); box-shadow: 0 6px 16px rgba($success, 0.35); }
+    background: $blue-gradient;
+    box-shadow: 0 2px 8px rgba($info, 0.25);
+    &:hover { transform: translateY(-2px) scale(1.1); box-shadow: 0 6px 16px rgba($info, 0.35); }
   }
 
   &--convert {
@@ -637,7 +637,7 @@ $liquid-glass-shadow: 0 24px 60px rgba(15, 23, 42, 0.18), inset 0 1px 0 rgba(255
   &--edit     { background: $blue-gradient; &:hover { transform: scale(1.15); box-shadow: 0 3px 10px rgba($info, 0.3); } }
   &--delete   { background: linear-gradient(135deg, #f87171 0%, $danger 100%); &:hover { transform: scale(1.15); box-shadow: 0 3px 10px rgba($danger, 0.3); } }
   &--activity { background: $cyan-gradient; &:hover { transform: scale(1.15); box-shadow: 0 3px 10px rgba($cyan, 0.3); } }
-  &--convert  { background: $success-gradient; &:hover { transform: scale(1.15); box-shadow: 0 3px 10px rgba($success, 0.3); } }
+  &--convert  { background: $purple-gradient; &:hover { transform: scale(1.15); box-shadow: 0 3px 10px rgba($purple, 0.3); } }
   &--coach    { background: $orange-gradient; &:hover { transform: scale(1.15); box-shadow: 0 3px 10px rgba($orange, 0.3); } }
   &--view     { background: $purple-gradient; &:hover { transform: scale(1.15); box-shadow: 0 3px 10px rgba($purple, 0.3); } }
 }

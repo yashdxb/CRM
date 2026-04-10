@@ -733,58 +733,11 @@
   </ng-template>
 </p-dialog>
 
-<p-dialog
-  header="Import leads"
-  [(visible)]="importDialogVisible"
-  [modal]="true"
-  [dismissableMask]="true"
-  [style]="{ width: '480px' }"
-  (onHide)="closeImport()"
->
-  <div class="import-dialog">
-    <p class="import-note">
-      Upload a CSV with headers. Required column: <strong>Name</strong> or <strong>FirstName</strong>.
-    </p>
-    <label class="import-upload">
-      <p-fileUpload
-        mode="basic"
-        name="file"
-        [auto]="false"
-        [customUpload]="true"
-        [showUploadButton]="false"
-        [showCancelButton]="false"
-        [chooseLabel]="importFile?.name || 'Choose CSV file'"
-        accept=".csv"
-        (onSelect)="onImportFileSelected($event)"
-      ></p-fileUpload>
-    </label>
-    <div class="import-actions">
-      <button pButton type="button" class="btn-ghost" (click)="closeImport()">Cancel</button>
-      <button pButton type="button" class="btn-primary" [disabled]="!importFile || importing() || !canManage()" (click)="onImport()">
-        {{ importing() ? 'Importing...' : 'Import' }}
-      </button>
-    </div>
-    <div class="import-error" *ngIf="importError()">{{ importError() }}</div>
-    <div class="import-status" *ngIf="importJob() as job">
-      <span>Status: {{ importStatus()?.status || job.status }}</span>
-    </div>
-    <div class="import-result" *ngIf="importStatus() as result">
-      <div class="import-metrics">
-        <span>Rows: {{ result.total }}</span>
-        <span>Imported: {{ result.imported }}</span>
-        <span>Skipped: {{ result.skipped }}</span>
-      </div>
-      <div class="import-errors" *ngIf="result.errors.length">
-        <p>Errors (first 5):</p>
-        <ul>
-          <li *ngFor="let err of result.errors.slice(0, 5)">
-            Row {{ err.rowNumber }}: {{ err.message }}
-          </li>
-        </ul>
-      </div>
-    </div>
-  </div>
-</p-dialog>
+<app-lead-import-wizard
+  *ngIf="importDialogVisible"
+  (closed)="closeImport()"
+  (imported)="onImportWizardComplete($event)"
+></app-lead-import-wizard>
 
 <p-drawer
   [visible]="coachVisible()"

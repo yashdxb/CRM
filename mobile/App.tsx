@@ -1,228 +1,34 @@
 import { StatusBar } from 'expo-status-bar';
-import { useMemo, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { PaperProvider, Searchbar, Chip } from 'react-native-paper';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { CrmTheme } from './src/theme';
+import { AuthProvider, useAuth } from './src/auth/AuthContext';
+import LoginScreen from './src/screens/LoginScreen';
+import { useApi } from './src/hooks/useApi';
+import {
+  fetchLeads,
+  fetchContacts,
+  fetchOpportunities,
+  fetchActivities,
+} from './src/services/data';
+import { LoadingState, EmptyState, ErrorState } from './src/components/StateViews';
+import type {
+  LeadListItem,
+  ContactListItem,
+  OpportunityListItem,
+  ActivityListItem,
+} from './src/models';
 
 type TabKey = 'home' | 'leads' | 'contacts' | 'deals' | 'activities';
 type AccentTone = 'blue' | 'amber' | 'purple' | 'green' | 'navy';
-
-type Lead = {
-  id: string;
-  name: string;
-  company: string;
-  status: string;
-  score: number;
-  nextAction: string;
-  owner: string;
-  source: string;
-  summary: string;
-  qualification: string[];
-};
-
-type Contact = {
-  id: string;
-  name: string;
-  account: string;
-  role: string;
-  lastTouch: string;
-  email: string;
-  phone: string;
-  summary: string;
-};
-
-type Deal = {
-  id: string;
-  name: string;
-  account: string;
-  stage: string;
-  value: string;
-  health: number;
-  closeDate: string;
-  owner: string;
-  summary: string;
-};
-
-type Activity = {
-  id: string;
-  title: string;
-  owner: string;
-  due: string;
-  relatedTo: string;
-  type: string;
-  status: string;
-  summary: string;
-};
-
-const leads: Lead[] = [
-  {
-    id: 'L-1004',
-    name: 'Tarek Faris',
-    company: 'Westport Industrial Realty',
-    status: 'Qualified',
-    score: 72,
-    nextAction: 'Log discovery follow-up',
-    owner: 'Anastasiia Zaher',
-    source: 'Inbound Call',
-    summary:
-      'Buyer profile is viable, but budget confirmation and evidence depth still need follow-up before conversion.',
-    qualification: [
-      'Budget availability remains the weakest signal',
-      'Economic buyer not yet fully engaged',
-      'Qualification note is present and current',
-    ],
-  },
-  {
-    id: 'L-1007',
-    name: 'Sofia Bennett',
-    company: 'Harborline Capital',
-    status: 'Contacted',
-    score: 58,
-    nextAction: 'Confirm budget range',
-    owner: 'Leo Martin',
-    source: 'Website form',
-    summary:
-      'Strong early interest, but qualification is still assumption-heavy and needs better evidence capture.',
-    qualification: [
-      'Urgency looks positive from outreach response',
-      'Financing readiness still unknown',
-      'No manager review needed yet',
-    ],
-  },
-  {
-    id: 'L-1011',
-    name: 'Amelia Foster',
-    company: 'Meridian Lane Advisory',
-    status: 'New',
-    score: 34,
-    nextAction: 'Place first call',
-    owner: 'Anastasiia Zaher',
-    source: 'Referral',
-    summary:
-      'Fresh lead with limited data. Focus should stay on first-touch execution and profile completion.',
-    qualification: [
-      'No qualification note captured yet',
-      'Buying timeline unknown',
-      'Contact profile still incomplete',
-    ],
-  },
-];
-
-const contacts: Contact[] = [
-  {
-    id: 'C-202',
-    name: 'Helena Cross',
-    account: 'Sterling Harbor Group',
-    role: 'Economic buyer',
-    lastTouch: 'Mar 18, 4:20 PM',
-    email: 'helena.cross@sterlingharbor.com',
-    phone: '+1 (416) 555-0148',
-    summary:
-      'Key decision-maker with budget authority. Best used for pricing alignment and final commercial confirmation.',
-  },
-  {
-    id: 'C-214',
-    name: 'Victor Almeida',
-    account: 'North Shore Holdings',
-    role: 'Operations lead',
-    lastTouch: 'Mar 19, 9:15 AM',
-    email: 'victor.almeida@northshoreholdings.com',
-    phone: '+1 (647) 555-0107',
-    summary:
-      'Strong operational champion. Useful for rollout planning, daily coordination, and delivery risk visibility.',
-  },
-  {
-    id: 'C-233',
-    name: 'Nadia Petrenko',
-    account: 'Crescent Ridge Partners',
-    role: 'Champion',
-    lastTouch: 'Mar 17, 1:05 PM',
-    email: 'nadia.petrenko@crescentridge.com',
-    phone: '+1 (437) 555-0185',
-    summary:
-      'High-engagement contact driving internal momentum. Ideal for maintaining sequence and surfacing blockers early.',
-  },
-];
-
-const deals: Deal[] = [
-  {
-    id: 'D-305',
-    name: 'Westport Portfolio Expansion',
-    account: 'Westport Industrial Realty',
-    stage: 'Proposal',
-    value: '$148,000',
-    health: 81,
-    closeDate: 'Apr 11, 2026',
-    owner: 'Anastasiia Zaher',
-    summary:
-      'Commercial scope is well understood. Remaining work is proposal acceptance and buyer-side final confirmation.',
-  },
-  {
-    id: 'D-311',
-    name: 'Meridian Reporting Rollout',
-    account: 'Meridian Lane Advisory',
-    stage: 'Qualification',
-    value: '$62,000',
-    health: 63,
-    closeDate: 'Apr 28, 2026',
-    owner: 'Leo Martin',
-    summary:
-      'Opportunity is progressing, but discovery depth still needs improvement before the deal should move forward.',
-  },
-  {
-    id: 'D-318',
-    name: 'Sterling Renewal Uplift',
-    account: 'Sterling Harbor Group',
-    stage: 'Negotiation',
-    value: '$214,000',
-    health: 88,
-    closeDate: 'Mar 31, 2026',
-    owner: 'Anastasiia Zaher',
-    summary:
-      'Healthy late-stage deal with active commercial alignment. Primary focus is speed and legal turnaround.',
-  },
-];
-
-const activities: Activity[] = [
-  {
-    id: 'A-401',
-    title: 'Discovery follow-up with Tarek Faris',
-    owner: 'Anastasiia Zaher',
-    due: 'Today · 4:30 PM',
-    relatedTo: 'Lead · Westport Industrial Realty',
-    type: 'Call',
-    status: 'Upcoming',
-    summary:
-      'Confirm budget range, urgency, and whether the economic buyer can join the next conversation.',
-  },
-  {
-    id: 'A-409',
-    title: 'Proposal review for Sterling Renewal Uplift',
-    owner: 'Leo Martin',
-    due: 'Tomorrow · 10:00 AM',
-    relatedTo: 'Deal · Sterling Harbor Group',
-    type: 'Meeting',
-    status: 'Upcoming',
-    summary:
-      'Walk through proposal shape, commercials, and final approval checkpoints before signature routing.',
-  },
-  {
-    id: 'A-418',
-    title: 'Call Helena Cross about budget confirmation',
-    owner: 'Anastasiia Zaher',
-    due: 'Tomorrow · 1:15 PM',
-    relatedTo: 'Contact · Sterling Harbor Group',
-    type: 'Task',
-    status: 'Planned',
-    summary:
-      'Use this conversation to validate approval path, buying authority, and open commercial concerns.',
-  },
-];
 
 const tabs: { key: TabKey; label: string; icon: string; accent: AccentTone }[] = [
   { key: 'home', label: 'Home', icon: '✨', accent: 'purple' },
@@ -256,29 +62,40 @@ function getTabToneStyle(accent: AccentTone) {
   return accentMap[accent];
 }
 
-export default function App() {
-  const [activeTab, setActiveTab] = useState<TabKey>('home');
-  const [selectedLeadId, setSelectedLeadId] = useState(leads[0].id);
-  const [selectedContactId, setSelectedContactId] = useState(contacts[0].id);
-  const [selectedDealId, setSelectedDealId] = useState(deals[0].id);
-  const [selectedActivityId, setSelectedActivityId] = useState(activities[0].id);
+// ─── Root ───────────────────────────────────────
 
-  const selectedLead = useMemo(
-    () => leads.find((item) => item.id === selectedLeadId) ?? leads[0],
-    [selectedLeadId]
+export default function App() {
+  return (
+    <SafeAreaProvider>
+      <PaperProvider theme={CrmTheme}>
+        <AuthProvider>
+          <AppGate />
+        </AuthProvider>
+      </PaperProvider>
+    </SafeAreaProvider>
   );
-  const selectedContact = useMemo(
-    () => contacts.find((item) => item.id === selectedContactId) ?? contacts[0],
-    [selectedContactId]
-  );
-  const selectedDeal = useMemo(
-    () => deals.find((item) => item.id === selectedDealId) ?? deals[0],
-    [selectedDealId]
-  );
-  const selectedActivity = useMemo(
-    () => activities.find((item) => item.id === selectedActivityId) ?? activities[0],
-    [selectedActivityId]
-  );
+}
+
+function AppGate() {
+  const { session, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <View style={styles.backgroundGlowTop} />
+        <View style={styles.backgroundGlowBottom} />
+        <LoadingState label="Restoring session…" />
+      </SafeAreaView>
+    );
+  }
+
+  if (!session) return <LoginScreen />;
+  return <AppShell />;
+}
+
+function AppShell() {
+  const { session, logout } = useAuth();
+  const [activeTab, setActiveTab] = useState<TabKey>('home');
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -290,11 +107,11 @@ export default function App() {
         <View style={styles.header}>
           <View>
             <Text style={styles.brand}>North Edge CRM</Text>
-            <Text style={styles.headerMeta}>Field workspace for sales execution</Text>
+            <Text style={styles.headerMeta}>{session?.fullName ?? 'Sales workspace'}</Text>
           </View>
-          <View style={styles.headerBadge}>
-            <Text style={styles.headerBadgeText}>Preview</Text>
-          </View>
+          <Pressable onPress={logout} style={styles.headerBadge}>
+            <Text style={styles.headerBadgeText}>Sign out</Text>
+          </Pressable>
         </View>
 
         <ScrollView
@@ -303,42 +120,10 @@ export default function App() {
           showsVerticalScrollIndicator={false}
         >
           {activeTab === 'home' ? <HomeScreen /> : null}
-          {activeTab === 'leads' ? (
-            <>
-              <LeadsScreen
-                selectedLeadId={selectedLeadId}
-                onSelectLead={setSelectedLeadId}
-              />
-              <LeadDetailCard lead={selectedLead} />
-            </>
-          ) : null}
-          {activeTab === 'contacts' ? (
-            <>
-              <ContactsScreen
-                selectedContactId={selectedContactId}
-                onSelectContact={setSelectedContactId}
-              />
-              <ContactDetailCard contact={selectedContact} />
-            </>
-          ) : null}
-          {activeTab === 'deals' ? (
-            <>
-              <DealsScreen
-                selectedDealId={selectedDealId}
-                onSelectDeal={setSelectedDealId}
-              />
-              <DealDetailCard deal={selectedDeal} />
-            </>
-          ) : null}
-          {activeTab === 'activities' ? (
-            <>
-              <ActivitiesScreen
-                selectedActivityId={selectedActivityId}
-                onSelectActivity={setSelectedActivityId}
-              />
-              <ActivityDetailCard activity={selectedActivity} />
-            </>
-          ) : null}
+          {activeTab === 'leads' ? <LeadsTab /> : null}
+          {activeTab === 'contacts' ? <ContactsTab /> : null}
+          {activeTab === 'deals' ? <DealsTab /> : null}
+          {activeTab === 'activities' ? <ActivitiesTab /> : null}
         </ScrollView>
 
         <View style={styles.tabBarShell}>
@@ -379,91 +164,104 @@ export default function App() {
   );
 }
 
+// ─── Home ───────────────────────────────────────
+
 function HomeScreen() {
+  const { session } = useAuth();
+  const { data: leadData } = useApi(() => fetchLeads(undefined, 1, 1), []);
+  const { data: dealData } = useApi(() => fetchOpportunities(undefined, 1, 1), []);
+  const { data: activityData } = useApi(() => fetchActivities(undefined, 1, 1), []);
+
   return (
     <View style={styles.sectionStack}>
       <View style={styles.heroCard}>
         <Text style={styles.heroEyebrow}>Mobile Command View</Text>
-        <Text style={styles.heroTitle}>Lead, deal, and activity intelligence in motion</Text>
+        <Text style={styles.heroTitle}>
+          Welcome back, {session?.fullName?.split(' ')[0] ?? 'there'}
+        </Text>
         <Text style={styles.heroSubtitle}>
-          Designed as a glass-first mobile CRM surface for fast rep decisions,
-          not a compressed copy of the desktop app.
+          Your sales workspace with lead, deal, and activity intelligence.
         </Text>
 
         <View style={styles.heroRibbon}>
-          <Text style={styles.heroRibbonLabel}>Today’s focus</Text>
-          <Text style={styles.heroRibbonValue}>3 high-priority follow-ups</Text>
+          <Text style={styles.heroRibbonLabel}>Today's focus</Text>
+          <Text style={styles.heroRibbonValue}>Review your pipeline and open actions</Text>
         </View>
       </View>
 
       <View style={styles.metricRow}>
-        <MetricCard label="Open leads" value="24" tone="blue" icon="🎯" />
-        <MetricCard label="Deals at risk" value="3" tone="amber" icon="💼" />
+        <MetricCard
+          label="Open leads"
+          value={String(leadData?.total ?? '–')}
+          tone="blue"
+          icon="🎯"
+        />
+        <MetricCard
+          label="Deals"
+          value={String(dealData?.total ?? '–')}
+          tone="amber"
+          icon="💼"
+        />
       </View>
 
       <View style={styles.metricRow}>
-        <MetricCard label="Activities today" value="11" tone="navy" icon="⚡" />
-        <MetricCard label="Approvals pending" value="2" tone="green" icon="✅" />
+        <MetricCard
+          label="Activities"
+          value={String(activityData?.total ?? '–')}
+          tone="navy"
+          icon="⚡"
+        />
+        <MetricCard label="Connected" value="✓" tone="green" icon="✅" />
       </View>
 
       <SectionCard
-        title="Priority inbox"
-        subtitle="Immediate items that should drive the rep’s next move"
+        title="Getting started"
+        subtitle="Your mobile CRM is now connected to live data"
       >
         <GlassListRow
-          title="Discovery follow-up"
-          detail="Tarek Faris needs budget confirmation before conversion review."
-          accent="blue"
-          icon="📞"
-        />
-        <GlassListRow
-          title="Proposal checkpoint"
-          detail="Sterling Renewal Uplift is waiting on commercial alignment."
-          accent="amber"
-          icon="📝"
-        />
-        <GlassListRow
-          title="Contact re-engagement"
-          detail="Nadia Petrenko has gone two days without a rep response."
-          accent="purple"
-          icon="💬"
-        />
-      </SectionCard>
-
-      <SectionCard
-        title="Phase 1 build track"
-        subtitle="The mobile product direction now established in this workspace"
-      >
-        <GlassListRow
-          title="Lead detail screen"
-          detail="Signals, readiness, owner context, and action planning."
-          accent="blue"
-          icon="🧭"
-        />
-        <GlassListRow
-          title="Activity create flow"
-          detail="Fast task, call, and meeting capture for field execution."
+          title="Live data active"
+          detail="All screens now fetch from your CRM backend."
           accent="green"
-          icon="⚙️"
+          icon="🔗"
         />
         <GlassListRow
-          title="Live data integration"
-          detail="Replace preview data with typed backend payloads and real empty states."
-          accent="navy"
-          icon="🔗"
+          title="Search enabled"
+          detail="Use the search bar on the Leads tab to find records."
+          accent="blue"
+          icon="🔎"
+        />
+        <GlassListRow
+          title="Secure session"
+          detail="Your credentials are stored securely on-device."
+          accent="purple"
+          icon="🔒"
         />
       </SectionCard>
     </View>
   );
 }
 
-function LeadsScreen({
-  selectedLeadId,
-  onSelectLead,
-}: {
-  selectedLeadId: string;
-  onSelectLead: (id: string) => void;
-}) {
+// ─── Leads ──────────────────────────────────────
+
+function LeadsTab() {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  useEffect(() => {
+    timerRef.current = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 400);
+    return () => clearTimeout(timerRef.current);
+  }, [searchQuery]);
+
+  const { data, isLoading, error, refresh } = useApi(
+    () => fetchLeads(debouncedSearch || undefined),
+    [debouncedSearch],
+  );
+
+  const items = data?.items ?? [];
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = items.find((i) => i.id === selectedId) ?? items[0] ?? null;
+
   return (
     <View style={styles.sectionStack}>
       <SectionHeading
@@ -471,45 +269,65 @@ function LeadsScreen({
         subtitle="Rep-owned lead list with quick selection"
         icon="🎯"
       />
-      <View style={styles.searchShell}>
-        <Text style={styles.searchText}>Search leads, companies, or status</Text>
-      </View>
-      {leads.map((lead) => {
-        const active = lead.id === selectedLeadId;
-        return (
-          <Pressable
-            key={lead.id}
-            onPress={() => onSelectLead(lead.id)}
-            style={[styles.recordCard, active ? styles.recordCardActive : null]}
-          >
-            <View style={styles.recordHeader}>
-              <View style={styles.recordIdentity}>
-                <View style={[styles.recordIconBubble, styles.accentBlue]}>
-                  <Text style={styles.recordIcon}>🎯</Text>
+      <Searchbar
+        placeholder="Search leads, companies, or status"
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        style={styles.searchBar}
+        inputStyle={styles.searchBarInput}
+        placeholderTextColor="#adc0df"
+        iconColor="#adc0df"
+      />
+      {isLoading ? <LoadingState label="Loading leads…" /> : null}
+      {!isLoading && error ? <ErrorState message={error} onRetry={refresh} /> : null}
+      {!isLoading && !error && items.length === 0 ? (
+        <EmptyState
+          icon="🎯"
+          title="No leads found"
+          subtitle={searchQuery ? 'Try a different search' : 'Leads will appear here once created'}
+        />
+      ) : null}
+      {!isLoading &&
+        items.map((lead) => {
+          const active = lead.id === selected?.id;
+          return (
+            <Pressable
+              key={lead.id}
+              onPress={() => setSelectedId(lead.id)}
+              style={[styles.recordCard, active ? styles.recordCardActive : null]}
+            >
+              <View style={styles.recordHeader}>
+                <View style={styles.recordIdentity}>
+                  <View style={[styles.recordIconBubble, styles.accentBlue]}>
+                    <Text style={styles.recordIcon}>🎯</Text>
+                  </View>
+                  <Text style={styles.recordTitle}>{lead.name}</Text>
                 </View>
-                <Text style={styles.recordTitle}>{lead.name}</Text>
+                <Text style={styles.scorePill}>{lead.score}/100</Text>
               </View>
-              <Text style={styles.scorePill}>{lead.score}/100</Text>
-            </View>
-            <Text style={styles.recordSubtitle}>{lead.company}</Text>
-            <View style={styles.recordFooter}>
-              <Text style={styles.statusPill}>{lead.status}</Text>
-              <Text style={styles.recordMeta}>{lead.nextAction}</Text>
-            </View>
-          </Pressable>
-        );
-      })}
+              <Text style={styles.recordSubtitle}>{lead.company}</Text>
+              <View style={styles.recordFooter}>
+                <Chip mode="flat" compact textStyle={styles.chipText} style={styles.chipStatus}>
+                  {lead.status}
+                </Chip>
+                <Text style={styles.recordMeta}>{lead.source ?? ''}</Text>
+              </View>
+            </Pressable>
+          );
+        })}
+      {selected ? <LeadDetailCard lead={selected} /> : null}
     </View>
   );
 }
 
-function ContactsScreen({
-  selectedContactId,
-  onSelectContact,
-}: {
-  selectedContactId: string;
-  onSelectContact: (id: string) => void;
-}) {
+// ─── Contacts ───────────────────────────────────
+
+function ContactsTab() {
+  const { data, isLoading, error, refresh } = useApi(() => fetchContacts(), []);
+  const items = data?.items ?? [];
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = items.find((i) => i.id === selectedId) ?? items[0] ?? null;
+
   return (
     <View style={styles.sectionStack}>
       <SectionHeading
@@ -517,39 +335,49 @@ function ContactsScreen({
         subtitle="Relationship lookup and conversation prep"
         icon="👥"
       />
-      {contacts.map((contact) => {
-        const active = contact.id === selectedContactId;
-        return (
-          <Pressable
-            key={contact.id}
-            onPress={() => onSelectContact(contact.id)}
-            style={[styles.recordCard, active ? styles.recordCardActive : null]}
-          >
-            <View style={styles.recordIdentity}>
-              <View style={[styles.recordIconBubble, styles.accentGreen]}>
-                <Text style={styles.recordIcon}>👤</Text>
+      {isLoading ? <LoadingState label="Loading contacts…" /> : null}
+      {!isLoading && error ? <ErrorState message={error} onRetry={refresh} /> : null}
+      {!isLoading && !error && items.length === 0 ? (
+        <EmptyState icon="👥" title="No contacts yet" subtitle="Contacts will appear once created" />
+      ) : null}
+      {!isLoading &&
+        items.map((contact) => {
+          const active = contact.id === selected?.id;
+          return (
+            <Pressable
+              key={contact.id}
+              onPress={() => setSelectedId(contact.id)}
+              style={[styles.recordCard, active ? styles.recordCardActive : null]}
+            >
+              <View style={styles.recordIdentity}>
+                <View style={[styles.recordIconBubble, styles.accentGreen]}>
+                  <Text style={styles.recordIcon}>👤</Text>
+                </View>
+                <Text style={styles.recordTitle}>{contact.name}</Text>
               </View>
-              <Text style={styles.recordTitle}>{contact.name}</Text>
-            </View>
-            <Text style={styles.recordSubtitle}>{contact.account}</Text>
-            <View style={styles.recordFooter}>
-              <Text style={styles.statusPillMuted}>{contact.role}</Text>
-              <Text style={styles.recordMeta}>{contact.lastTouch}</Text>
-            </View>
-          </Pressable>
-        );
-      })}
+              <Text style={styles.recordSubtitle}>{contact.accountName ?? ''}</Text>
+              <View style={styles.recordFooter}>
+                <Text style={styles.statusPillMuted}>
+                  {contact.buyingRole ?? contact.jobTitle ?? ''}
+                </Text>
+                <Text style={styles.recordMeta}>{contact.email ?? ''}</Text>
+              </View>
+            </Pressable>
+          );
+        })}
+      {selected ? <ContactDetailCard contact={selected} /> : null}
     </View>
   );
 }
 
-function DealsScreen({
-  selectedDealId,
-  onSelectDeal,
-}: {
-  selectedDealId: string;
-  onSelectDeal: (id: string) => void;
-}) {
+// ─── Deals ──────────────────────────────────────
+
+function DealsTab() {
+  const { data, isLoading, error, refresh } = useApi(() => fetchOpportunities(), []);
+  const items = data?.items ?? [];
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = items.find((i) => i.id === selectedId) ?? items[0] ?? null;
+
   return (
     <View style={styles.sectionStack}>
       <SectionHeading
@@ -557,42 +385,52 @@ function DealsScreen({
         subtitle="Stage visibility, commercial value, and health"
         icon="💼"
       />
-      {deals.map((deal) => {
-        const active = deal.id === selectedDealId;
-        return (
-          <Pressable
-            key={deal.id}
-            onPress={() => onSelectDeal(deal.id)}
-            style={[styles.recordCard, active ? styles.recordCardActive : null]}
-          >
-            <View style={styles.recordHeader}>
-              <View style={styles.recordIdentity}>
-                <View style={[styles.recordIconBubble, styles.accentAmber]}>
-                  <Text style={styles.recordIcon}>💼</Text>
+      {isLoading ? <LoadingState label="Loading deals…" /> : null}
+      {!isLoading && error ? <ErrorState message={error} onRetry={refresh} /> : null}
+      {!isLoading && !error && items.length === 0 ? (
+        <EmptyState icon="💼" title="No deals yet" subtitle="Opportunities will appear here" />
+      ) : null}
+      {!isLoading &&
+        items.map((deal) => {
+          const active = deal.id === selected?.id;
+          return (
+            <Pressable
+              key={deal.id}
+              onPress={() => setSelectedId(deal.id)}
+              style={[styles.recordCard, active ? styles.recordCardActive : null]}
+            >
+              <View style={styles.recordHeader}>
+                <View style={styles.recordIdentity}>
+                  <View style={[styles.recordIconBubble, styles.accentAmber]}>
+                    <Text style={styles.recordIcon}>💼</Text>
+                  </View>
+                  <Text style={styles.recordTitle}>{deal.name}</Text>
                 </View>
-                <Text style={styles.recordTitle}>{deal.name}</Text>
+                <Text style={styles.scorePill}>{deal.probability}%</Text>
               </View>
-              <Text style={styles.scorePill}>{deal.health}/100</Text>
-            </View>
-            <Text style={styles.recordSubtitle}>{deal.account}</Text>
-            <View style={styles.recordFooter}>
-              <Text style={styles.statusPill}>{deal.stage}</Text>
-              <Text style={styles.recordMeta}>{deal.value}</Text>
-            </View>
-          </Pressable>
-        );
-      })}
+              <Text style={styles.recordSubtitle}>{deal.account}</Text>
+              <View style={styles.recordFooter}>
+                <Text style={styles.statusPill}>{deal.stage}</Text>
+                <Text style={styles.recordMeta}>
+                  {deal.currency} {deal.amount.toLocaleString()}
+                </Text>
+              </View>
+            </Pressable>
+          );
+        })}
+      {selected ? <DealDetailCard deal={selected} /> : null}
     </View>
   );
 }
 
-function ActivitiesScreen({
-  selectedActivityId,
-  onSelectActivity,
-}: {
-  selectedActivityId: string;
-  onSelectActivity: (id: string) => void;
-}) {
+// ─── Activities ─────────────────────────────────
+
+function ActivitiesTab() {
+  const { data, isLoading, error, refresh } = useApi(() => fetchActivities(), []);
+  const items = data?.items ?? [];
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = items.find((i) => i.id === selectedId) ?? items[0] ?? null;
+
   return (
     <View style={styles.sectionStack}>
       <SectionHeading
@@ -600,119 +438,125 @@ function ActivitiesScreen({
         subtitle="Execution layer for calls, tasks, and meetings"
         icon="⚡"
       />
-      {activities.map((activity) => {
-        const active = activity.id === selectedActivityId;
-        return (
-          <Pressable
-            key={activity.id}
-            onPress={() => onSelectActivity(activity.id)}
-            style={[styles.recordCard, active ? styles.recordCardActive : null]}
-          >
-            <View style={styles.recordIdentity}>
-              <View style={[styles.recordIconBubble, styles.accentPurple]}>
-                <Text style={styles.recordIcon}>⚡</Text>
+      {isLoading ? <LoadingState label="Loading activities…" /> : null}
+      {!isLoading && error ? <ErrorState message={error} onRetry={refresh} /> : null}
+      {!isLoading && !error && items.length === 0 ? (
+        <EmptyState
+          icon="⚡"
+          title="No activities yet"
+          subtitle="Activities will appear once created"
+        />
+      ) : null}
+      {!isLoading &&
+        items.map((activity) => {
+          const active = activity.id === selected?.id;
+          return (
+            <Pressable
+              key={activity.id}
+              onPress={() => setSelectedId(activity.id)}
+              style={[styles.recordCard, active ? styles.recordCardActive : null]}
+            >
+              <View style={styles.recordIdentity}>
+                <View style={[styles.recordIconBubble, styles.accentPurple]}>
+                  <Text style={styles.recordIcon}>⚡</Text>
+                </View>
+                <Text style={styles.recordTitle}>{activity.subject}</Text>
               </View>
-              <Text style={styles.recordTitle}>{activity.title}</Text>
-            </View>
-            <Text style={styles.recordSubtitle}>{activity.relatedTo}</Text>
-            <View style={styles.recordFooter}>
-              <Text style={styles.statusPillMuted}>{activity.type}</Text>
-              <Text style={styles.recordMeta}>{activity.due}</Text>
-            </View>
-          </Pressable>
-        );
-      })}
+              <Text style={styles.recordSubtitle}>{activity.relatedEntityName ?? ''}</Text>
+              <View style={styles.recordFooter}>
+                <Text style={styles.statusPillMuted}>{activity.type}</Text>
+                <Text style={styles.recordMeta}>
+                  {activity.dueDateUtc
+                    ? new Date(activity.dueDateUtc).toLocaleDateString()
+                    : ''}
+                </Text>
+              </View>
+            </Pressable>
+          );
+        })}
+      {selected ? <ActivityDetailCard activity={selected} /> : null}
     </View>
   );
 }
 
-function LeadDetailCard({ lead }: { lead: Lead }) {
+// ─── Detail Cards ───────────────────────────────
+
+function LeadDetailCard({ lead }: { lead: LeadListItem }) {
   return (
-    <SectionCard
-      title="Lead detail"
-      subtitle="Signals, readiness, and the next recommended move"
-    >
+    <SectionCard title="Lead detail" subtitle="Signals, readiness, and the next recommended move">
       <View style={styles.detailGrid}>
         <DetailPill label="Status" value={lead.status} />
         <DetailPill label="Overall score" value={`${lead.score}/100`} />
         <DetailPill label="Owner" value={lead.owner} />
-        <DetailPill label="Source" value={lead.source} />
+        <DetailPill label="Source" value={lead.source ?? '—'} />
       </View>
-      <View style={styles.nextActionCard}>
-        <Text style={styles.nextActionLabel}>Lead summary</Text>
-        <Text style={styles.nextActionText}>{lead.summary}</Text>
-      </View>
-      <View style={styles.bulletCard}>
-        <Text style={styles.bulletCardTitle}>Qualification notes</Text>
-        {lead.qualification.map((item) => (
-          <Text key={item} style={styles.bulletItem}>
-            • {item}
-          </Text>
-        ))}
-      </View>
+      {lead.leadSummary ? (
+        <View style={styles.nextActionCard}>
+          <Text style={styles.nextActionLabel}>Lead summary</Text>
+          <Text style={styles.nextActionText}>{lead.leadSummary}</Text>
+        </View>
+      ) : null}
     </SectionCard>
   );
 }
 
-function ContactDetailCard({ contact }: { contact: Contact }) {
+function ContactDetailCard({ contact }: { contact: ContactListItem }) {
   return (
     <SectionCard
       title="Contact detail"
       subtitle="Relationship context for the next conversation"
     >
       <View style={styles.detailGrid}>
-        <DetailPill label="Role" value={contact.role} />
-        <DetailPill label="Last touch" value={contact.lastTouch} />
-        <DetailPill label="Email" value={contact.email} />
-        <DetailPill label="Phone" value={contact.phone} />
-      </View>
-      <View style={styles.nextActionCard}>
-        <Text style={styles.nextActionLabel}>Contact summary</Text>
-        <Text style={styles.nextActionText}>{contact.summary}</Text>
+        <DetailPill label="Role" value={contact.buyingRole ?? contact.jobTitle ?? '—'} />
+        <DetailPill label="Account" value={contact.accountName ?? '—'} />
+        <DetailPill label="Email" value={contact.email ?? '—'} />
+        <DetailPill label="Phone" value={contact.phone ?? '—'} />
       </View>
     </SectionCard>
   );
 }
 
-function DealDetailCard({ deal }: { deal: Deal }) {
+function DealDetailCard({ deal }: { deal: OpportunityListItem }) {
   return (
-    <SectionCard
-      title="Deal detail"
-      subtitle="Commercial state and execution focus"
-    >
+    <SectionCard title="Deal detail" subtitle="Commercial state and execution focus">
       <View style={styles.detailGrid}>
         <DetailPill label="Stage" value={deal.stage} />
-        <DetailPill label="Health" value={`${deal.health}/100`} />
+        <DetailPill label="Probability" value={`${deal.probability}%`} />
         <DetailPill label="Owner" value={deal.owner} />
-        <DetailPill label="Close date" value={deal.closeDate} />
-      </View>
-      <View style={styles.nextActionCard}>
-        <Text style={styles.nextActionLabel}>Deal summary</Text>
-        <Text style={styles.nextActionText}>{deal.summary}</Text>
+        <DetailPill
+          label="Close date"
+          value={deal.closeDate ? new Date(deal.closeDate).toLocaleDateString() : '—'}
+        />
       </View>
     </SectionCard>
   );
 }
 
-function ActivityDetailCard({ activity }: { activity: Activity }) {
+function ActivityDetailCard({ activity }: { activity: ActivityListItem }) {
   return (
-    <SectionCard
-      title="Activity detail"
-      subtitle="Execution context and current expectation"
-    >
+    <SectionCard title="Activity detail" subtitle="Execution context and current expectation">
       <View style={styles.detailGrid}>
         <DetailPill label="Type" value={activity.type} />
         <DetailPill label="Status" value={activity.status} />
-        <DetailPill label="Owner" value={activity.owner} />
-        <DetailPill label="Due" value={activity.due} />
+        <DetailPill label="Owner" value={activity.ownerName ?? '—'} />
+        <DetailPill
+          label="Due"
+          value={
+            activity.dueDateUtc ? new Date(activity.dueDateUtc).toLocaleDateString() : '—'
+          }
+        />
       </View>
-      <View style={styles.nextActionCard}>
-        <Text style={styles.nextActionLabel}>Activity brief</Text>
-        <Text style={styles.nextActionText}>{activity.summary}</Text>
-      </View>
+      {activity.description ? (
+        <View style={styles.nextActionCard}>
+          <Text style={styles.nextActionLabel}>Activity brief</Text>
+          <Text style={styles.nextActionText}>{activity.description}</Text>
+        </View>
+      ) : null}
     </SectionCard>
   );
 }
+
+// ─── Shared Components ──────────────────────────
 
 function SectionHeading({
   title,
@@ -823,6 +667,8 @@ function DetailPill({ label, value }: { label: string; value: string }) {
     </View>
   );
 }
+
+// ─── Styles ─────────────────────────────────────
 
 const styles = StyleSheet.create({
   screen: {
@@ -1373,5 +1219,27 @@ const styles = StyleSheet.create({
   },
   tabLabelActive: {
     color: '#f5f9ff',
+  },
+  searchBar: {
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.14)',
+    elevation: 0,
+  },
+  searchBarInput: {
+    color: '#f4f8ff',
+    fontSize: 14,
+  },
+  chipStatus: {
+    backgroundColor: 'rgba(107, 142, 255, 0.22)',
+    borderRadius: 999,
+    height: 28,
+  },
+  chipText: {
+    color: '#dbe6ff',
+    fontSize: 12,
+    fontWeight: '700',
+    marginVertical: 0,
   },
 });

@@ -1,0 +1,1062 @@
+@use '../../../../../../styles/design-tokens' as *;
+@use 'sass:color';
+
+// ═══════════════════════════════════════════════════════════
+//  Lead Import Wizard — Styles
+// ═══════════════════════════════════════════════════════════
+
+.wizard-container {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e9f2 50%, #d8dde8 100%);
+  overflow: hidden;
+  animation: wizard-enter 0.35s ease-out;
+}
+
+@keyframes wizard-enter {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+// ── Header ─────────────────────────────────────────────────
+.wizard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $space-3 $space-6;
+  background: $glass-bg;
+  backdrop-filter: blur($glass-blur);
+  border-bottom: 1px solid $glass-border;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  flex-shrink: 0;
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: $space-3;
+
+    h2 {
+      margin: 0;
+      font-size: $font-size-2xl;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+  }
+
+  &__icon {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: $primary-gradient;
+    color: #fff;
+    border-radius: $radius-lg;
+    font-size: $font-size-xl;
+  }
+
+  &__subtitle {
+    margin: 2px 0 0;
+    font-size: $font-size-sm;
+    color: $gray-500;
+  }
+}
+
+.title-gradient {
+  background: $primary-gradient;
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.title-light {
+  -webkit-text-fill-color: $gray-700;
+  margin-left: $space-1;
+}
+
+.wizard-close {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: $radius-md;
+  cursor: pointer;
+  color: $gray-600;
+  transition: all 200ms;
+
+  &:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+  }
+}
+
+// ── Stepper chrome ─────────────────────────────────────────
+:host ::ng-deep {
+  .p-stepper {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .p-step-list {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    padding: $space-3 $space-6;
+    background: $glass-bg;
+    backdrop-filter: blur($glass-blur);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    flex-shrink: 0;
+  }
+
+  .p-step {
+    flex: 0 0 auto;
+    position: relative;
+
+    &:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      right: -40px;
+      width: 40px;
+      height: 2px;
+      background: $gray-200;
+      transform: translateY(-50%);
+    }
+
+    + .p-step { margin-left: 40px; }
+  }
+
+  .p-step-panels {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: $space-5 $space-6;
+  }
+
+  .p-step-panel {
+    animation: fade-in-up 0.35s ease-out;
+  }
+
+  // Hide default stepper separators
+  .p-stepperseparator { display: none; }
+}
+
+// ── Step buttons ───────────────────────────────────────────
+.wiz-step-btn {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-2 $space-3;
+  border: none;
+  background: transparent;
+  border-radius: $radius-xl;
+  cursor: pointer;
+  transition: all 250ms;
+  white-space: nowrap;
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  &--active {
+    background: rgba(102, 126, 234, 0.1);
+
+    .wiz-step-num {
+      background: $primary-gradient;
+      color: white;
+      box-shadow: 0 4px 14px rgba(102, 126, 234, 0.4);
+    }
+
+    .wiz-step-label {
+      color: $gray-800;
+      font-weight: 600;
+    }
+  }
+
+  &--done .wiz-step-num {
+    background: $success-gradient;
+    color: white;
+  }
+}
+
+.wiz-step-num {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: $gray-200;
+  color: $gray-600;
+  font-size: $font-size-sm;
+  font-weight: 700;
+  transition: all 300ms;
+
+  &--done {
+    background: $success-gradient;
+    color: white;
+  }
+}
+
+.wiz-step-label {
+  font-size: $font-size-sm;
+  font-weight: 500;
+  color: $gray-500;
+  transition: color 200ms;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+}
+
+// ── Panel base ─────────────────────────────────────────────
+.wiz-panel {
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: $space-5;
+}
+
+// ── Actions bar ────────────────────────────────────────────
+.wiz-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $space-3;
+  padding-top: $space-4;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+// ════════════════════════════════════════════════════════════
+//  STEP 1 — Upload
+// ════════════════════════════════════════════════════════════
+.upload-zone {
+  position: relative;
+  border: 2px dashed rgba(102, 126, 234, 0.3);
+  border-radius: $radius-2xl;
+  background: $glass-bg-subtle;
+  backdrop-filter: blur($glass-blur);
+  padding: $space-8;
+  text-align: center;
+  transition: all 300ms;
+  cursor: pointer;
+
+  &--drag {
+    border-color: #667eea;
+    background: rgba(102, 126, 234, 0.06);
+    transform: scale(1.01);
+    box-shadow: 0 0 40px rgba(102, 126, 234, 0.15);
+  }
+
+  &--has-file {
+    border-style: solid;
+    border-color: rgba(34, 197, 94, 0.4);
+    background: rgba(34, 197, 94, 0.04);
+    cursor: default;
+    padding: $space-5;
+  }
+
+  &__empty {
+    position: relative;
+  }
+
+  &__icon {
+    font-size: 3rem;
+    color: #667eea;
+    margin-bottom: $space-3;
+    animation: float 3s ease-in-out infinite;
+  }
+
+  &__title {
+    font-size: $font-size-lg;
+    font-weight: 600;
+    color: $gray-800;
+    margin: 0 0 $space-1;
+  }
+
+  &__sub {
+    font-size: $font-size-sm;
+    color: $gray-500;
+    margin: 0;
+  }
+
+  &__input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.file-card {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  padding: $space-3 $space-4;
+  background: $glass-bg;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: $radius-lg;
+  box-shadow: $glass-shadow;
+
+  &__icon {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: $success-gradient;
+    color: white;
+    border-radius: $radius-md;
+    font-size: $font-size-xl;
+  }
+
+  &__info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+
+    strong {
+      font-size: $font-size-base;
+      color: $gray-800;
+    }
+
+    span {
+      font-size: $font-size-sm;
+      color: $gray-500;
+    }
+  }
+
+  &__remove {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: rgba(239, 68, 68, 0.08);
+    border-radius: $radius-md;
+    cursor: pointer;
+    color: #ef4444;
+    transition: all 200ms;
+
+    &:hover {
+      background: rgba(239, 68, 68, 0.15);
+      transform: scale(1.1);
+    }
+  }
+}
+
+.upload-hints {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+}
+
+.hint-card {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-2 $space-3;
+  background: $glass-bg;
+  border: 1px solid $glass-border;
+  border-radius: $radius-md;
+  font-size: $font-size-sm;
+  color: $gray-600;
+
+  i {
+    color: #667eea;
+    font-size: $font-size-base;
+  }
+
+  &--template {
+    cursor: pointer;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+    border: 1px solid rgba(102, 126, 234, 0.25);
+    transition: all 250ms;
+
+    &:hover {
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.14) 0%, rgba(118, 75, 162, 0.14) 100%);
+      border-color: rgba(102, 126, 234, 0.4);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+    }
+
+    strong { color: #667eea; }
+  }
+
+  &__arrow {
+    margin-left: auto;
+    font-size: $font-size-sm !important;
+    animation: bounce-down 1.5s ease-in-out infinite;
+  }
+}
+
+@keyframes bounce-down {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(3px); }
+}
+
+.parse-error {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-3;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: $radius-md;
+  color: #ef4444;
+  font-size: $font-size-sm;
+  font-weight: 500;
+}
+
+// ════════════════════════════════════════════════════════════
+//  STEP 2 — Column Mapping
+// ════════════════════════════════════════════════════════════
+.mapping-intro {
+  padding: $space-3 $space-4;
+  background: rgba(102, 126, 234, 0.06);
+  border: 1px solid rgba(102, 126, 234, 0.15);
+  border-radius: $radius-lg;
+  font-size: $font-size-sm;
+  color: $gray-700;
+
+  i { color: #667eea; font-size: $font-size-base; margin-right: $space-1; }
+}
+
+.mapping-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid $glass-border;
+  border-radius: $radius-lg;
+  overflow: hidden;
+  background: $glass-bg;
+}
+
+.mapping-row {
+  display: grid;
+  grid-template-columns: 1fr 32px 1fr 1fr;
+  gap: $space-3;
+  padding: $space-3 $space-4;
+  align-items: center;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  transition: background 150ms;
+
+  &:last-child { border-bottom: none; }
+
+  &--header {
+    background: linear-gradient(180deg, #f0f7ff 0%, #e6f0fa 100%);
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #3b82f6;
+    padding: $space-2 $space-4;
+  }
+
+  &--mapped {
+    background: rgba(34, 197, 94, 0.03);
+  }
+
+  &:hover:not(.mapping-row--header) {
+    background: rgba(102, 126, 234, 0.03);
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: $space-1;
+  }
+}
+
+.mapping-csv-header {
+  font-weight: 600;
+  font-size: $font-size-sm;
+  color: $gray-800;
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+
+  i { color: #667eea; }
+}
+
+.mapping-arrow {
+  text-align: center;
+  color: $gray-400;
+  font-size: $font-size-sm;
+
+  @media (max-width: 768px) { display: none; }
+}
+
+.mapping-samples {
+  display: flex;
+  gap: $space-1;
+  flex-wrap: wrap;
+}
+
+.sample-pill {
+  padding: 2px 8px;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: $radius-full;
+  font-size: 0.75rem;
+  color: $gray-500;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mapping-warning {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-3;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: $radius-md;
+  color: #b45309;
+  font-size: $font-size-sm;
+  font-weight: 500;
+
+  i { color: #f59e0b; }
+}
+
+// ════════════════════════════════════════════════════════════
+//  STEP 3 — Preview & Select
+// ════════════════════════════════════════════════════════════
+.preview-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: $space-3;
+
+  &__left {
+    display: flex;
+    align-items: center;
+    gap: $space-3;
+  }
+}
+
+.select-all-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-2 $space-3;
+  border: 1px solid $glass-border;
+  background: $glass-bg;
+  border-radius: $radius-md;
+  cursor: pointer;
+  font-size: $font-size-sm;
+  font-weight: 600;
+  color: $gray-700;
+  transition: all 200ms;
+
+  &:hover {
+    border-color: rgba(102, 126, 234, 0.3);
+    background: rgba(102, 126, 234, 0.05);
+    color: #667eea;
+  }
+
+  i { font-size: $font-size-base; }
+}
+
+.preview-count {
+  font-size: $font-size-sm;
+  color: $gray-600;
+
+  strong { color: $gray-800; }
+}
+
+.preview-valid {
+  color: #f59e0b;
+}
+
+.preview-table-wrap {
+  border: 1px solid $glass-border;
+  border-radius: $radius-lg;
+  overflow: hidden;
+  background: $glass-bg;
+  backdrop-filter: blur($glass-blur);
+
+  :host ::ng-deep {
+    .p-datatable-thead > tr > th {
+      background: linear-gradient(180deg, #f0f7ff 0%, #e6f0fa 100%);
+      border: none;
+      border-bottom: 2px solid rgba(59, 130, 246, 0.2);
+      padding: $space-2 $space-3;
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #3b82f6;
+    }
+
+    .p-datatable-tbody > tr > td {
+      padding: $space-2 $space-3;
+      font-size: $font-size-sm;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+    }
+  }
+}
+
+.row-error {
+  background: rgba(239, 68, 68, 0.03) !important;
+}
+
+.row-deselected {
+  opacity: 0.5;
+}
+
+.row-num {
+  font-size: $font-size-xs;
+  color: $gray-400;
+  font-weight: 600;
+}
+
+.row-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: $font-size-xs;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: $radius-full;
+
+  &--valid {
+    color: #16a34a;
+    background: rgba(34, 197, 94, 0.1);
+  }
+
+  &--error {
+    color: #dc2626;
+    background: rgba(239, 68, 68, 0.1);
+  }
+}
+
+.empty-msg {
+  text-align: center;
+  color: $gray-400;
+  padding: $space-6 !important;
+}
+
+// ════════════════════════════════════════════════════════════
+//  STEP 4 — Duplicate Detection
+// ════════════════════════════════════════════════════════════
+.dup-progress {
+  padding: $space-5;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: $space-2;
+    font-size: $font-size-base;
+    font-weight: 600;
+    color: $gray-700;
+
+    i { color: #667eea; font-size: $font-size-xl; }
+  }
+}
+
+.dup-empty {
+  padding: $space-8;
+  text-align: center;
+
+  &__icon {
+    font-size: 3.5rem;
+    color: #22c55e;
+    margin-bottom: $space-3;
+  }
+
+  h3 {
+    margin: 0 0 $space-2;
+    font-size: $font-size-lg;
+    color: $gray-800;
+  }
+
+  p {
+    margin: 0;
+    font-size: $font-size-sm;
+    color: $gray-500;
+  }
+}
+
+.dup-summary {
+  display: flex;
+  justify-content: center;
+
+  &__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: $space-2;
+    padding: $space-2 $space-4;
+    border-radius: $radius-full;
+    font-size: $font-size-sm;
+    font-weight: 600;
+
+    &--warn {
+      background: rgba(245, 158, 11, 0.1);
+      color: #b45309;
+      border: 1px solid rgba(245, 158, 11, 0.2);
+    }
+  }
+}
+
+.dup-list {
+  display: flex;
+  flex-direction: column;
+  gap: $space-4;
+}
+
+.dup-group {
+  background: $glass-bg;
+  border: 1px solid $glass-border;
+  border-radius: $radius-xl;
+  box-shadow: $glass-shadow;
+  overflow: hidden;
+  transition: all 250ms;
+
+  &:hover {
+    box-shadow: $glass-shadow-hover;
+    transform: translateY(-1px);
+  }
+
+  &__import-row {
+    padding: $space-3 $space-4;
+    background: rgba(102, 126, 234, 0.04);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
+  &__label {
+    font-size: $font-size-xs;
+    font-weight: 600;
+    color: #667eea;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+
+    i { margin-right: $space-1; }
+  }
+
+  &__detail {
+    font-size: $font-size-sm;
+    color: $gray-700;
+
+    strong { color: $gray-800; }
+    span { color: $gray-500; margin-left: $space-1; }
+  }
+}
+
+.dup-matches {
+  padding: $space-3 $space-4;
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+}
+
+.dup-match {
+  padding: $space-3;
+  border-radius: $radius-md;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  transition: all 200ms;
+
+  &.match-block {
+    border-color: rgba(239, 68, 68, 0.2);
+    background: rgba(239, 68, 68, 0.03);
+  }
+
+  &.match-warning {
+    border-color: rgba(245, 158, 11, 0.2);
+    background: rgba(245, 158, 11, 0.03);
+  }
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    margin-bottom: 4px;
+
+    strong {
+      font-size: $font-size-sm;
+      color: $gray-800;
+    }
+  }
+
+  &__score {
+    margin-left: auto;
+    font-size: $font-size-xs;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: $radius-full;
+    background: rgba(102, 126, 234, 0.1);
+    color: #667eea;
+  }
+
+  &__detail {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space-3;
+    font-size: $font-size-xs;
+    color: $gray-500;
+
+    span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+  }
+
+  &__signals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space-1;
+    margin-top: $space-2;
+  }
+}
+
+.signal-chip {
+  padding: 2px 8px;
+  background: rgba(102, 126, 234, 0.08);
+  border-radius: $radius-full;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #667eea;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.dup-actions {
+  display: flex;
+  gap: $space-2;
+  padding: $space-3 $space-4;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  background: rgba(0, 0, 0, 0.01);
+}
+
+.dup-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-1;
+  padding: $space-1 $space-3;
+  border: 1px solid $glass-border;
+  border-radius: $radius-md;
+  background: $glass-bg;
+  font-size: $font-size-xs;
+  font-weight: 600;
+  color: $gray-600;
+  cursor: pointer;
+  transition: all 200ms;
+
+  &:hover {
+    border-color: rgba(102, 126, 234, 0.3);
+    color: #667eea;
+  }
+
+  &--active {
+    background: $primary-gradient;
+    color: white !important;
+    border-color: transparent;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+//  STEP 5 — Review & Import
+// ════════════════════════════════════════════════════════════
+.review-section {
+  display: flex;
+  flex-direction: column;
+  gap: $space-4;
+}
+
+.review-title {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  font-size: $font-size-lg;
+  font-weight: 700;
+  color: $gray-800;
+  margin: 0;
+
+  i {
+    color: #667eea;
+    font-size: $font-size-xl;
+  }
+}
+
+.review-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: $space-3;
+}
+
+.review-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-4;
+  background: $glass-bg;
+  border: 1px solid $glass-border;
+  border-radius: $radius-xl;
+  box-shadow: $glass-shadow;
+  text-align: center;
+  transition: all 250ms;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: $glass-shadow-hover;
+  }
+
+  &__icon {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: $radius-lg;
+    font-size: $font-size-xl;
+    color: white;
+  }
+
+  &--primary &__icon { background: $primary-gradient; }
+  &--warning &__icon { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+  &--cyan &__icon { background: $cyan-gradient; }
+  &--muted &__icon { background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%); }
+
+  &__value {
+    font-size: $font-size-4xl;
+    font-weight: 800;
+    color: $gray-800;
+    line-height: 1;
+  }
+
+  &__label {
+    font-size: $font-size-xs;
+    font-weight: 600;
+    color: $gray-500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+}
+
+.review-file {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-3 $space-4;
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: $radius-md;
+  font-size: $font-size-sm;
+  color: $gray-600;
+
+  i { color: #667eea; }
+}
+
+// ── Import result ──────────────────────────────────────────
+.import-done {
+  padding: $space-8;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-3;
+
+  &__icon {
+    width: 72px;
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 2rem;
+
+    &--success {
+      background: rgba(34, 197, 94, 0.1);
+      color: #22c55e;
+    }
+
+    &--error {
+      background: rgba(239, 68, 68, 0.1);
+      color: #ef4444;
+    }
+  }
+
+  h3 {
+    margin: 0;
+    font-size: $font-size-2xl;
+    font-weight: 700;
+    color: $gray-800;
+  }
+
+  &__metrics {
+    display: flex;
+    gap: $space-4;
+    font-size: $font-size-sm;
+    color: $gray-600;
+
+    strong { color: $gray-800; }
+  }
+
+  &__errors {
+    max-width: 500px;
+
+    p {
+      margin: $space-1 0;
+      padding: $space-2 $space-3;
+      background: rgba(239, 68, 68, 0.06);
+      border-radius: $radius-md;
+      font-size: $font-size-sm;
+      color: #dc2626;
+    }
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+//  Responsive
+// ════════════════════════════════════════════════════════════
+@media (max-width: 768px) {
+  .wizard-header {
+    padding: $space-2 $space-3;
+  }
+
+  :host ::ng-deep .p-step-panels {
+    padding: $space-3;
+  }
+
+  .mapping-grid,
+  .preview-table-wrap {
+    font-size: $font-size-xs;
+  }
+
+  .review-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .dup-actions {
+    flex-wrap: wrap;
+  }
+}
