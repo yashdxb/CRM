@@ -1,110 +1,116 @@
-import { MD3DarkTheme } from 'react-native-paper';
+import { MD3LightTheme } from 'react-native-paper';
 import type { MD3Theme } from 'react-native-paper';
+import { Colors } from './theme/tokens';
 
 /**
- * CRM Glass Theme — Maps the existing dark-glass aesthetic to Paper MD3 tokens.
+ * CRM Liquid Glass Theme — Light, frosted-glass aesthetic aligned with Apple UI + web CRM.
  *
  * Color families:
- *   blue   (#7fa1ff)  — primary / leads
- *   amber  (#fdb35a)  — secondary / deals
- *   purple (#a87dff)  — tertiary / activities
- *   green  (#5bcd97)  — success / contacts
- *   navy   (#0c1730)  — background base
+ *   primary  (#667eea)  — primary / home
+ *   cyan     (#06b6d4)  — leads
+ *   orange   (#f97316)  — deals
+ *   purple   (#a855f7)  — activities
+ *   green    (#22c55e)  — contacts / success
  */
 export const CrmTheme: MD3Theme = {
-  ...MD3DarkTheme,
-  dark: true,
+  ...MD3LightTheme,
+  dark: false,
   roundness: 4,
   colors: {
-    ...MD3DarkTheme.colors,
+    ...MD3LightTheme.colors,
 
-    // Primary — blue accent family
-    primary: '#7fa1ff',
-    primaryContainer: 'rgba(105, 154, 255, 0.18)',
+    // Primary — purple-blue accent
+    primary: Colors.primary,
+    primaryContainer: 'rgba(102, 126, 234, 0.12)',
     onPrimary: '#ffffff',
-    onPrimaryContainer: '#dbe6ff',
+    onPrimaryContainer: '#3b4fa0',
 
-    // Secondary — amber accent family
-    secondary: '#fdb35a',
-    secondaryContainer: 'rgba(255, 179, 107, 0.18)',
+    // Secondary — cyan accent
+    secondary: Colors.cyan,
+    secondaryContainer: 'rgba(6, 182, 212, 0.12)',
     onSecondary: '#ffffff',
-    onSecondaryContainer: '#ffe0c0',
+    onSecondaryContainer: '#065f73',
 
-    // Tertiary — purple accent family
-    tertiary: '#a87dff',
-    tertiaryContainer: 'rgba(168, 125, 255, 0.18)',
+    // Tertiary — purple accent
+    tertiary: Colors.purple,
+    tertiaryContainer: 'rgba(168, 85, 247, 0.12)',
     onTertiary: '#ffffff',
-    onTertiaryContainer: '#e0d0ff',
+    onTertiaryContainer: '#6b21a8',
 
-    // Surface & background
-    surface: 'rgba(255, 255, 255, 0.12)',
-    surfaceVariant: 'rgba(255, 255, 255, 0.08)',
-    onSurface: '#f4f8ff',
-    onSurfaceVariant: '#b7c8e6',
-    background: '#0c1730',
-    onBackground: '#f4f8ff',
+    // Surface & background — light glass
+    surface: Colors.glass,
+    surfaceVariant: Colors.glassSubtle,
+    onSurface: Colors.textPrimary,
+    onSurfaceVariant: Colors.textSecondary,
+    background: Colors.background,
+    onBackground: Colors.textPrimary,
 
     // Error
-    error: '#ff6b6b',
-    errorContainer: 'rgba(255, 107, 107, 0.18)',
+    error: Colors.error,
+    errorContainer: 'rgba(239, 68, 68, 0.12)',
     onError: '#ffffff',
-    onErrorContainer: '#ffd0d0',
+    onErrorContainer: '#991b1b',
 
-    // Outline
-    outline: 'rgba(255, 255, 255, 0.18)',
-    outlineVariant: 'rgba(255, 255, 255, 0.14)',
+    // Outline — glass borders
+    outline: 'rgba(0, 0, 0, 0.12)',
+    outlineVariant: 'rgba(0, 0, 0, 0.06)',
 
     // Inverse
-    inverseSurface: '#f4f8ff',
-    inverseOnSurface: '#0c1730',
-    inversePrimary: '#3366cc',
+    inverseSurface: Colors.gray800,
+    inverseOnSurface: '#f8fafc',
+    inversePrimary: '#a5b4fc',
 
-    // Elevation — glass opacity scale
+    // Elevation — subtle white layers
     elevation: {
       level0: 'transparent',
-      level1: 'rgba(255, 255, 255, 0.06)',
-      level2: 'rgba(255, 255, 255, 0.10)',
-      level3: 'rgba(255, 255, 255, 0.12)',
-      level4: 'rgba(255, 255, 255, 0.14)',
-      level5: 'rgba(255, 255, 255, 0.16)',
+      level1: 'rgba(255, 255, 255, 0.45)',
+      level2: 'rgba(255, 255, 255, 0.55)',
+      level3: 'rgba(255, 255, 255, 0.65)',
+      level4: 'rgba(255, 255, 255, 0.72)',
+      level5: 'rgba(255, 255, 255, 0.82)',
     },
 
     // Disabled
-    surfaceDisabled: 'rgba(255, 255, 255, 0.06)',
-    onSurfaceDisabled: 'rgba(255, 255, 255, 0.38)',
+    surfaceDisabled: 'rgba(0, 0, 0, 0.04)',
+    onSurfaceDisabled: Colors.textDisabled,
 
     // Backdrop & shadow
-    backdrop: 'rgba(12, 23, 48, 0.8)',
-    shadow: '#040b18',
-    scrim: 'rgba(12, 23, 48, 0.6)',
+    backdrop: 'rgba(15, 23, 42, 0.4)',
+    shadow: '#000000',
+    scrim: 'rgba(15, 23, 42, 0.3)',
   },
 };
 
-/** Accent color families for custom glass components. */
+/** Accent color families for entity-themed components. */
 export const AccentColors = {
-  blue: {
-    bg: 'rgba(105, 154, 255, 0.18)',
-    border: 'rgba(147, 188, 255, 0.28)',
-    text: '#dbe6ff',
+  primary: {
+    bg: 'rgba(102, 126, 234, 0.12)',
+    border: 'rgba(102, 126, 234, 0.25)',
+    text: '#4338ca',
   },
-  amber: {
-    bg: 'rgba(255, 179, 107, 0.18)',
-    border: 'rgba(255, 201, 143, 0.3)',
-    text: '#ffe0c0',
-  },
-  purple: {
-    bg: 'rgba(168, 125, 255, 0.18)',
-    border: 'rgba(190, 160, 255, 0.28)',
-    text: '#e0d0ff',
+  cyan: {
+    bg: 'rgba(6, 182, 212, 0.12)',
+    border: 'rgba(6, 182, 212, 0.25)',
+    text: '#0e7490',
   },
   green: {
-    bg: 'rgba(91, 205, 151, 0.16)',
-    border: 'rgba(135, 223, 179, 0.26)',
-    text: '#c0f0d8',
+    bg: 'rgba(34, 197, 94, 0.12)',
+    border: 'rgba(34, 197, 94, 0.25)',
+    text: '#15803d',
   },
-  navy: {
-    bg: 'rgba(20, 39, 77, 0.86)',
-    border: 'rgba(145, 175, 229, 0.12)',
-    text: '#d3def2',
+  orange: {
+    bg: 'rgba(249, 115, 22, 0.12)',
+    border: 'rgba(249, 115, 22, 0.25)',
+    text: '#c2410c',
+  },
+  purple: {
+    bg: 'rgba(168, 85, 247, 0.12)',
+    border: 'rgba(168, 85, 247, 0.25)',
+    text: '#7c3aed',
+  },
+  red: {
+    bg: 'rgba(239, 68, 68, 0.12)',
+    border: 'rgba(239, 68, 68, 0.25)',
+    text: '#dc2626',
   },
 } as const;

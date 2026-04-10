@@ -1,17 +1,20 @@
 import React from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Colors, Spacing, Radius } from '../theme/tokens';
+import Icon from './Icon';
+import GradientButton from './GradientButton';
 
 export function LoadingState({ label = 'Loading…' }: { label?: string }) {
   return (
     <View style={s.container}>
-      <ActivityIndicator size="large" color="#7fa1ff" />
+      <ActivityIndicator size="large" color={Colors.primary} />
       <Text style={s.label}>{label}</Text>
     </View>
   );
 }
 
 export function EmptyState({
-  icon = '📭',
+  icon = 'search',
   title = 'Nothing here yet',
   subtitle,
 }: {
@@ -21,7 +24,9 @@ export function EmptyState({
 }) {
   return (
     <View style={s.container}>
-      <Text style={s.emptyIcon}>{icon}</Text>
+      <View style={s.emptyIconWrap}>
+        <Icon name={icon} size={32} color={Colors.textMuted} />
+      </View>
       <Text style={s.emptyTitle}>{title}</Text>
       {subtitle ? <Text style={s.emptySubtitle}>{subtitle}</Text> : null}
     </View>
@@ -38,14 +43,12 @@ export function ErrorState({
   return (
     <View style={s.container}>
       <View style={s.errorIconBubble}>
-        <Text style={s.errorIcon}>⚠️</Text>
+        <Icon name="alert" size={28} color={Colors.red} />
       </View>
       <Text style={s.errorTitle}>Connection issue</Text>
       <Text style={s.errorMessage}>{message}</Text>
       {onRetry ? (
-        <Text style={s.retryBtn} onPress={onRetry}>
-          Tap to retry
-        </Text>
+        <GradientButton label="Tap to retry" variant="primary" compact onPress={onRetry} />
       ) : null}
     </View>
   );
@@ -62,19 +65,25 @@ const s = StyleSheet.create({
   label: {
     marginTop: 8,
     fontSize: 14,
-    color: '#b7c8e6',
+    color: Colors.textMuted,
   },
-  emptyIcon: {
-    fontSize: 40,
+  emptyIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(148, 163, 184, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
   },
   emptyTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#f4f8ff',
+    color: Colors.textPrimary,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#b7c8e6',
+    color: Colors.textMuted,
     textAlign: 'center',
     maxWidth: 260,
   },
@@ -82,33 +91,19 @@ const s = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: 'rgba(239, 68, 68, 0.18)',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  errorIcon: {
-    fontSize: 28,
   },
   errorTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#fca5a5',
+    color: Colors.red,
   },
   errorMessage: {
     fontSize: 13,
-    color: '#d3def2',
+    color: Colors.textSecondary,
     textAlign: 'center',
     maxWidth: 280,
-  },
-  retryBtn: {
-    marginTop: 4,
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#7fa1ff',
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    overflow: 'hidden',
-    backgroundColor: 'rgba(127, 161, 255, 0.12)',
   },
 });

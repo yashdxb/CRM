@@ -2,15 +2,19 @@ import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { TextInput, ActivityIndicator } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { useAuth } from '../auth/AuthContext';
-import { CrmTheme } from '../theme';
+import { Colors, Spacing, Radius, Typography, Shadows } from '../theme/tokens';
+import { primaryGradient, backgroundGradient } from '../theme/gradients';
+import GradientButton from '../components/GradientButton';
+import Icon from '../components/Icon';
 
 export default function LoginScreen() {
   const { login, isLoading, error } = useAuth();
@@ -36,130 +40,160 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={s.screen}>
-      <View style={s.glowTop} />
-      <View style={s.glowBottom} />
+    <LinearGradient
+      colors={[...backgroundGradient.colors]}
+      start={backgroundGradient.start}
+      end={backgroundGradient.end}
+      style={s.screen}
+    >
+      <SafeAreaView style={s.flex}>
+        {/* Decorative orbs */}
+        <View style={s.orbPrimary} />
+        <View style={s.orbCyan} />
+        <View style={s.orbPurple} />
 
-      <KeyboardAvoidingView
-        style={s.keyboardView}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <View style={s.container}>
-          {/* Brand */}
-          <View style={s.brandBlock}>
-            <Text style={s.brandName}>North Edge</Text>
-            <Text style={s.brandProduct}>CRM</Text>
-            <Text style={s.brandTagline}>
-              Sales execution intelligence, in motion
-            </Text>
-          </View>
-
-          {/* Glass card */}
-          <View style={s.card}>
-            <Text style={s.cardTitle}>Sign in</Text>
-            <Text style={s.cardSubtitle}>
-              Use your workspace credentials
-            </Text>
-
-            <TextInput
-              label="Email"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-              mode="outlined"
-              style={s.input}
-              textColor="#f4f8ff"
-              theme={{
-                colors: {
-                  primary: '#7fa1ff',
-                  onSurfaceVariant: '#adc0df',
-                  outline: 'rgba(255,255,255,0.18)',
-                  surfaceVariant: 'rgba(255,255,255,0.06)',
-                },
-              }}
-              left={<TextInput.Icon icon="email-outline" color="#7fa1ff" />}
-            />
-
-            <TextInput
-              label="Password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              autoCapitalize="none"
-              autoComplete="password"
-              mode="outlined"
-              style={s.input}
-              textColor="#f4f8ff"
-              theme={{
-                colors: {
-                  primary: '#7fa1ff',
-                  onSurfaceVariant: '#adc0df',
-                  outline: 'rgba(255,255,255,0.18)',
-                  surfaceVariant: 'rgba(255,255,255,0.06)',
-                },
-              }}
-              left={<TextInput.Icon icon="lock-outline" color="#7fa1ff" />}
-              right={
-                <TextInput.Icon
-                  icon={showPassword ? 'eye-off' : 'eye'}
-                  color="#adc0df"
-                  onPress={() => setShowPassword((v) => !v)}
-                />
-              }
-            />
-
-            {displayError ? (
-              <View style={s.errorBox}>
-                <Text style={s.errorText}>{displayError}</Text>
+        <KeyboardAvoidingView
+          style={s.keyboardView}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={s.container}>
+            {/* Brand */}
+            <View style={s.brandBlock}>
+              <View style={s.brandIconWrap}>
+                <LinearGradient
+                  colors={[...primaryGradient.colors]}
+                  start={primaryGradient.start}
+                  end={primaryGradient.end}
+                  style={s.brandIconGradient}
+                >
+                  <Icon name="briefcase" size={28} color={Colors.textInverse} />
+                </LinearGradient>
               </View>
-            ) : null}
+              <Text style={s.brandName}>North Edge</Text>
+              <Text style={s.brandProduct}>CRM</Text>
+              <Text style={s.brandTagline}>
+                Sales execution intelligence, in motion
+              </Text>
+            </View>
 
-            <Pressable
-              style={[s.loginBtn, isLoading && s.loginBtnDisabled]}
-              onPress={handleLogin}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="#fff" size={20} />
-              ) : (
-                <Text style={s.loginBtnText}>Sign in</Text>
-              )}
-            </Pressable>
+            {/* Glass card */}
+            <BlurView intensity={40} tint="systemChromeMaterialLight" style={s.cardBlur}>
+              <View style={s.card}>
+                <Text style={s.cardTitle}>Sign in</Text>
+                <Text style={s.cardSubtitle}>
+                  Use your workspace credentials
+                </Text>
+
+                <TextInput
+                  label="Email"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  mode="outlined"
+                  style={s.input}
+                  textColor={Colors.textPrimary}
+                  theme={{
+                    colors: {
+                      primary: Colors.primary,
+                      onSurfaceVariant: Colors.textSecondary,
+                      outline: Colors.glassBorderSubtle,
+                      surfaceVariant: 'rgba(255,255,255,0.5)',
+                    },
+                  }}
+                  left={<TextInput.Icon icon="email-outline" color={Colors.primary} />}
+                />
+
+                <TextInput
+                  label="Password"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoComplete="password"
+                  mode="outlined"
+                  style={s.input}
+                  textColor={Colors.textPrimary}
+                  theme={{
+                    colors: {
+                      primary: Colors.primary,
+                      onSurfaceVariant: Colors.textSecondary,
+                      outline: Colors.glassBorderSubtle,
+                      surfaceVariant: 'rgba(255,255,255,0.5)',
+                    },
+                  }}
+                  left={<TextInput.Icon icon="lock-outline" color={Colors.primary} />}
+                  right={
+                    <TextInput.Icon
+                      icon={showPassword ? 'eye-off' : 'eye'}
+                      color={Colors.textMuted}
+                      onPress={() => setShowPassword((v) => !v)}
+                    />
+                  }
+                />
+
+                {displayError ? (
+                  <View style={s.errorBox}>
+                    <Icon name="alert" size={16} color={Colors.red} />
+                    <Text style={s.errorText}>{displayError}</Text>
+                  </View>
+                ) : null}
+
+                <GradientButton
+                  label="Sign in"
+                  variant="primary"
+                  loading={isLoading}
+                  onPress={handleLogin}
+                  icon="lock"
+                />
+              </View>
+            </BlurView>
+
+            <Text style={s.footer}>
+              Powered by North Edge Systems
+            </Text>
           </View>
-
-          <Text style={s.footer}>
-            Powered by North Edge Systems
-          </Text>
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const s = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#0c1730',
   },
-  glowTop: {
+  flex: {
+    flex: 1,
+  },
+  orbPrimary: {
     position: 'absolute',
-    top: -120,
-    left: -80,
+    top: -100,
+    right: -60,
     width: 280,
     height: 280,
     borderRadius: 999,
-    backgroundColor: 'rgba(77, 123, 255, 0.35)',
+    backgroundColor: 'rgba(102, 126, 234, 0.25)',
+    // blur simulated via large radius
   },
-  glowBottom: {
+  orbCyan: {
     position: 'absolute',
-    bottom: -140,
-    right: -90,
-    width: 320,
-    height: 320,
+    bottom: 80,
+    left: -80,
+    width: 220,
+    height: 220,
     borderRadius: 999,
-    backgroundColor: 'rgba(253, 141, 90, 0.22)',
+    backgroundColor: 'rgba(6, 182, 212, 0.2)',
+  },
+  orbPurple: {
+    position: 'absolute',
+    top: '40%' as unknown as number,
+    left: '60%' as unknown as number,
+    width: 160,
+    height: 160,
+    borderRadius: 999,
+    backgroundColor: 'rgba(168, 85, 247, 0.15)',
   },
   keyboardView: {
     flex: 1,
@@ -167,92 +201,88 @@ const s = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
-    paddingHorizontal: 28,
-    gap: 32,
+    paddingHorizontal: Spacing.xl,
+    gap: Spacing['2xl'],
   },
   brandBlock: {
     alignItems: 'center',
-    gap: 4,
+    gap: Spacing.xs,
+  },
+  brandIconWrap: {
+    marginBottom: Spacing.sm,
+  },
+  brandIconGradient: {
+    width: 60,
+    height: 60,
+    borderRadius: Radius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Shadows.button,
   },
   brandName: {
-    fontSize: 34,
-    fontWeight: '800',
-    color: '#f4f8ff',
+    fontSize: Typography.hero.fontSize,
+    fontWeight: Typography.hero.fontWeight,
+    color: Colors.textPrimary,
     letterSpacing: -0.5,
   },
   brandProduct: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#7fa1ff',
+    fontSize: Typography.label.fontSize,
+    fontWeight: Typography.label.fontWeight,
+    color: Colors.primary,
     letterSpacing: 4,
     textTransform: 'uppercase',
   },
   brandTagline: {
-    marginTop: 8,
-    fontSize: 14,
-    color: '#b7c8e6',
+    marginTop: Spacing.sm,
+    fontSize: Typography.body.fontSize,
+    color: Colors.textSecondary,
     textAlign: 'center',
   },
-  card: {
-    borderRadius: 28,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+  cardBlur: {
+    borderRadius: Radius['2xl'],
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.16)',
-    paddingHorizontal: 24,
-    paddingVertical: 28,
-    gap: 16,
+    borderColor: Colors.glassBorder,
+    ...Shadows.card,
+  },
+  card: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.xl,
+    gap: Spacing.md,
   },
   cardTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#f5f9ff',
+    fontSize: Typography.title.fontSize,
+    fontWeight: Typography.title.fontWeight,
+    color: Colors.textPrimary,
   },
   cardSubtitle: {
-    fontSize: 14,
-    color: '#c1d3ef',
-    marginBottom: 4,
+    fontSize: Typography.body.fontSize,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.xs,
   },
   input: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
   },
   errorBox: {
-    borderRadius: 12,
-    backgroundColor: 'rgba(239, 68, 68, 0.18)',
+    borderRadius: Radius.sm,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    borderColor: 'rgba(239, 68, 68, 0.2)',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
   },
   errorText: {
-    fontSize: 13,
+    fontSize: Typography.caption.fontSize,
     fontWeight: '600',
-    color: '#fca5a5',
-  },
-  loginBtn: {
-    marginTop: 4,
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#5b7eff',
-    shadowColor: '#3b5eff',
-    shadowOpacity: 0.45,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 8,
-  },
-  loginBtnDisabled: {
-    opacity: 0.6,
-  },
-  loginBtnText: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#ffffff',
-    letterSpacing: 0.5,
+    color: Colors.red,
+    flex: 1,
   },
   footer: {
     textAlign: 'center',
-    fontSize: 12,
-    color: '#8ea4c8',
+    fontSize: Typography.caption.fontSize,
+    color: Colors.textMuted,
   },
 });
