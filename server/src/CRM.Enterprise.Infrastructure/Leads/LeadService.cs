@@ -1,5 +1,6 @@
 using CRM.Enterprise.Application.Activities;
 using CRM.Enterprise.Application.Audit;
+using CRM.Enterprise.Application.Common;
 using CRM.Enterprise.Application.Qualifications;
 using CRM.Enterprise.Application.Leads;
 using CRM.Enterprise.Application.Tenants;
@@ -81,6 +82,7 @@ public sealed class LeadService : ILeadService
     private readonly IAuditEventService _auditEvents;
     private readonly IMediator _mediator;
     private readonly IActivityService _activityService;
+    private readonly IVisibilityResolver _visibilityResolver;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     public LeadService(
@@ -91,7 +93,8 @@ public sealed class LeadService : ILeadService
         IRecordNumberAllocator recordNumberAllocator,
         IAuditEventService auditEvents,
         IMediator mediator,
-        IActivityService activityService)
+        IActivityService activityService,
+        IVisibilityResolver visibilityResolver)
     {
         _dbContext = dbContext;
         _tenantProvider = tenantProvider;
@@ -101,6 +104,7 @@ public sealed class LeadService : ILeadService
         _auditEvents = auditEvents;
         _mediator = mediator;
         _activityService = activityService;
+        _visibilityResolver = visibilityResolver;
     }
 
     public async Task<LeadSearchResultDto> SearchAsync(LeadSearchRequest request, CancellationToken cancellationToken = default)
@@ -112,6 +116,13 @@ public sealed class LeadService : ILeadService
             .Include(l => l.Status)
             .AsNoTracking()
             .Where(l => !l.IsDeleted);
+
+        // Visibility filtering: restrict results based on user's role hierarchy
+        var visibility = await _visibilityResolver.ResolveAsync(request.CurrentUserId, cancellationToken);
+        if (visibility.VisibleUserIds is not null)
+        {
+            query = query.Where(l => visibility.VisibleUserIds.Contains(l.OwnerId));
+        }
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {

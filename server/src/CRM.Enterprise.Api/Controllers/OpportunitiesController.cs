@@ -61,8 +61,9 @@ public class OpportunitiesController : ControllerBase
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
+        var userId = Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var uid) ? uid : (Guid?)null;
         var result = await _opportunityService.SearchAsync(
-            new OpportunitySearchRequest(search, stage, accountId, missingNextStep, page, pageSize),
+            new OpportunitySearchRequest(search, stage, accountId, missingNextStep, page, pageSize, userId),
             cancellationToken);
         var items = result.Items.Select(ToApiItem);
         return Ok(new OpportunitySearchResponse(items, result.Total));

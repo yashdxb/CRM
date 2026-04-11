@@ -6,7 +6,8 @@ public sealed record LeadSearchRequest(
     string? ConversationView,
     string? SortBy,
     int Page,
-    int PageSize);
+    int PageSize,
+    Guid? CurrentUserId = null);
 
 public sealed record LeadUpsertRequest(
     string FirstName,

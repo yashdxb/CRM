@@ -10,7 +10,8 @@ public sealed record ActivitySearchRequest(
     ActivityRelationType? RelatedEntityType,
     Guid? RelatedEntityId,
     int Page,
-    int PageSize);
+    int PageSize,
+    Guid? CurrentUserId = null);
 
 public sealed record ActivityUpsertRequest(
     string Subject,

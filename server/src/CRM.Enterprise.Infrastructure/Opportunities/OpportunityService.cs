@@ -119,6 +119,7 @@ public sealed class OpportunityService : IOpportunityService
     private readonly IActivityService _activityService;
     private readonly ICrmRealtimePublisher _realtimePublisher;
     private readonly ICampaignAttributionService _campaignAttributionService;
+    private readonly IVisibilityResolver _visibilityResolver;
 
     private sealed class NoOpCampaignAttributionService : ICampaignAttributionService
     {
@@ -136,7 +137,8 @@ public sealed class OpportunityService : IOpportunityService
         IMediator mediator,
         IOpportunityApprovalService approvalService,
         IActivityService activityService,
-        ICrmRealtimePublisher realtimePublisher)
+        ICrmRealtimePublisher realtimePublisher,
+        IVisibilityResolver visibilityResolver)
         : this(
             dbContext,
             tenantProvider,
@@ -145,7 +147,8 @@ public sealed class OpportunityService : IOpportunityService
             approvalService,
             activityService,
             realtimePublisher,
-            new NoOpCampaignAttributionService())
+            new NoOpCampaignAttributionService(),
+            visibilityResolver)
     {
     }
 
@@ -157,7 +160,8 @@ public sealed class OpportunityService : IOpportunityService
         IOpportunityApprovalService approvalService,
         IActivityService activityService,
         ICrmRealtimePublisher realtimePublisher,
-        ICampaignAttributionService campaignAttributionService)
+        ICampaignAttributionService campaignAttributionService,
+        IVisibilityResolver visibilityResolver)
     {
         _dbContext = dbContext;
         _tenantProvider = tenantProvider;
@@ -167,6 +171,7 @@ public sealed class OpportunityService : IOpportunityService
         _activityService = activityService;
         _realtimePublisher = realtimePublisher;
         _campaignAttributionService = campaignAttributionService;
+        _visibilityResolver = visibilityResolver;
     }
 
     public async Task<OpportunitySearchResultDto> SearchAsync(OpportunitySearchRequest request, CancellationToken cancellationToken = default)
@@ -179,6 +184,13 @@ public sealed class OpportunityService : IOpportunityService
             .Include(o => o.Stage)
             .AsNoTracking()
             .Where(o => !o.IsDeleted);
+
+        // Visibility filtering: restrict results based on user's role hierarchy
+        var visibility = await _visibilityResolver.ResolveAsync(request.CurrentUserId, cancellationToken);
+        if (visibility.VisibleUserIds is not null)
+        {
+            query = query.Where(o => visibility.VisibleUserIds.Contains(o.OwnerId));
+        }
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {

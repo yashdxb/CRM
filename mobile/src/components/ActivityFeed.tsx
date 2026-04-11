@@ -53,7 +53,7 @@ const s = StyleSheet.create({
   },
   rowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.06)',
+    borderBottomColor: 'rgba(0, 0, 0, 0.10)',
   },
   iconCircle: {
     width: 30,

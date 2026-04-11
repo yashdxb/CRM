@@ -81,7 +81,7 @@ const s = StyleSheet.create({
     gap: Spacing.md,
     paddingVertical: Spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.06)',
+    borderBottomColor: 'rgba(0, 0, 0, 0.10)',
   },
   checkbox: {
     width: 28,
@@ -92,7 +92,7 @@ const s = StyleSheet.create({
     height: 22,
     borderRadius: 11,
     borderWidth: 2,
-    borderColor: 'rgba(148,163,184,0.4)',
+    borderColor: '#94a3b8',
   },
   content: {
     flex: 1,

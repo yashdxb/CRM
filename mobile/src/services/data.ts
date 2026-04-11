@@ -4,6 +4,7 @@ import type {
   OpportunityListItem,
   ActivityListItem,
   PagedResult,
+  DashboardSummary,
 } from '../models';
 import { apiFetch } from './api';
 
@@ -57,4 +58,9 @@ export function fetchActivities(
   params.set('page', String(page));
   params.set('pageSize', String(pageSize));
   return apiFetch(`/api/activities?${params}`);
+}
+
+// ── Dashboard Summary ───────────────────────────
+export function fetchDashboardSummary(): Promise<DashboardSummary> {
+  return apiFetch('/api/dashboard/summary');
 }

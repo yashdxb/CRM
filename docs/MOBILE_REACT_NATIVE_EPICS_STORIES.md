@@ -14,16 +14,19 @@ Purpose:
 - prioritize high-frequency mobile CRM workflows before authentication and deep parity
 
 Status:
-- PARTIAL
+- 11/12 stories DONE (only Story 11 — Activity creation — remains)
 
 Scope:
-- mobile shell
-- leads
-- contacts
-- deals
-- activities
-- iOS build reliability for local development
-- premium mobile visual system
+- mobile shell (DONE)
+- leads (DONE)
+- contacts (DONE)
+- deals (DONE)
+- activities — read (DONE), create/update (Story 11 — NOT STARTED)
+- iOS build reliability for local development (DONE)
+- premium mobile visual system (DONE)
+- authentication and session management (DONE)
+- live API integration for all screens (DONE)
+- dashboard with KPIs, pipeline, tasks, activity feed (DONE)
 
 ## Stories
 
@@ -81,18 +84,24 @@ Scope:
   - icons and visual grouping improve scan speed across leads, contacts, deals, and activities
 
 ### 9. Authentication and session management
-- Status: NOT STARTED
+- Status: DONE
 - Acceptance criteria:
-  - user can sign in
-  - token/session is stored safely
-  - logout and session restore work
+  - user can sign in (LoginScreen → AuthContext → auth.ts → POST /api/auth/login)
+  - token/session is stored safely (expo-secure-store, Bearer token injection via apiFetch)
+  - logout and session restore work (clearSession deletes SecureStore, restoreSession checks expiry)
 
 ### 10. Live API integration for leads, contacts, deals, and activities
-- Status: NOT STARTED
+- Status: DONE
 - Acceptance criteria:
-  - static seed data is replaced with API-backed data
-  - loading, empty, and error states exist
-  - mobile screens handle real backend payloads
+  - static seed data is replaced with API-backed data (list screens wired via useApi + fetchLeads/fetchContacts/fetchOpportunities/fetchActivities; HomeScreen uses single fetchDashboardSummary() call for all KPI, pipeline, tasks, and activities)
+  - loading, empty, and error states exist (useApi hook handles all three states)
+  - mobile screens handle real backend payloads (PagedResult<T> model matches API contract; DashboardSummary type matches /api/dashboard/summary response)
+  - HomeScreen KPI cards show real Leads, Deals, Contacts, and Revenue from dashboard API
+  - Sales Pipeline shows real pipeline stages with color mapping
+  - Today's Tasks shows real MyTasks from dashboard API with priority badges
+  - Recent Activities shows real activities from dashboard API with type-based icons/colors
+  - Revenue card displays formatted pipelineValueTotal (e.g., $128K) with winRate as ring indicator
+  - All mock data constants (MOCK_PIPELINE, MOCK_TASKS, MOCK_ACTIVITIES) removed from HomeScreen
 
 ### 11. Activity creation and quick update flow
 - Status: NOT STARTED

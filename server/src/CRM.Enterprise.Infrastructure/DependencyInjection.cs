@@ -10,6 +10,7 @@ using CRM.Enterprise.Infrastructure.Pricing;
 using CRM.Enterprise.Infrastructure.Sourcing;
 using CRM.Enterprise.Application.Auth;
 using CRM.Enterprise.Application.Audit;
+using CRM.Enterprise.Application.Common;
 using CRM.Enterprise.Application.Dashboard;
 using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Application.Suppliers;
@@ -239,6 +240,7 @@ public static class DependencyInjection
         });
         services.AddScoped<IAssistantChatService, AssistantChatService>();
         services.AddScoped<IRiskIntelligenceReadService, RiskIntelligenceReadService>();
+        services.AddScoped<IVisibilityResolver, Common.VisibilityResolver>();
         services.AddScoped<ILeadService, LeadService>();
         services.AddScoped<IFormDraftService, FormDraftService>();
         services.AddScoped<ILeadImportService, LeadImportService>();

@@ -18,17 +18,20 @@ public sealed class ActivityService : IActivityService
     private readonly IAuditEventService _auditEvents;
     private readonly IMediator _mediator;
     private readonly ILeadConversationScoreService _leadConversationScoreService;
+    private readonly IVisibilityResolver _visibilityResolver;
 
     public ActivityService(
         CrmDbContext dbContext,
         IAuditEventService auditEvents,
         IMediator mediator,
-        ILeadConversationScoreService leadConversationScoreService)
+        ILeadConversationScoreService leadConversationScoreService,
+        IVisibilityResolver visibilityResolver)
     {
         _dbContext = dbContext;
         _auditEvents = auditEvents;
         _mediator = mediator;
         _leadConversationScoreService = leadConversationScoreService;
+        _visibilityResolver = visibilityResolver;
     }
 
     public async Task<ActivitySearchResultDto> SearchAsync(ActivitySearchRequest request, CancellationToken cancellationToken = default)
@@ -37,6 +40,13 @@ public sealed class ActivityService : IActivityService
         var pageSize = Math.Clamp(request.PageSize, 1, 100);
 
         var query = _dbContext.Activities.AsNoTracking().Where(a => !a.IsDeleted);
+
+        // Visibility filtering: restrict results based on user's role hierarchy
+        var visibility = await _visibilityResolver.ResolveAsync(request.CurrentUserId, cancellationToken);
+        if (visibility.VisibleUserIds is not null)
+        {
+            query = query.Where(a => visibility.VisibleUserIds.Contains(a.OwnerId));
+        }
 
         if (!string.IsNullOrWhiteSpace(request.Status))
         {

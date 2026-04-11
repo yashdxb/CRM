@@ -56,7 +56,8 @@ public class LeadsController : ControllerBase
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var result = await _leadService.SearchAsync(new LeadSearchRequest(search, status, conversationView, sortBy, page, pageSize), cancellationToken);
+        var userId = Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var uid) ? uid : (Guid?)null;
+        var result = await _leadService.SearchAsync(new LeadSearchRequest(search, status, conversationView, sortBy, page, pageSize, userId), cancellationToken);
         var items = result.Items.Select(ToApiItem);
         return Ok(new LeadSearchResponse(items, result.Total));
     }

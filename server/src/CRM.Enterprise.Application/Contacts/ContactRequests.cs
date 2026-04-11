@@ -5,7 +5,8 @@ public sealed record ContactSearchRequest(
     Guid? AccountId,
     string? Tag,
     int Page,
-    int PageSize);
+    int PageSize,
+    Guid? CurrentUserId = null);
 
 public sealed record ContactUpsertRequest(
     string FirstName,

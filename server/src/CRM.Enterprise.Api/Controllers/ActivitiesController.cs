@@ -44,8 +44,9 @@ public class ActivitiesController : ControllerBase
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
+        var userId = Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var uid) ? uid : (Guid?)null;
         var result = await _activityService.SearchAsync(
-            new ActivitySearchRequest(status, search, ownerId, type, relatedEntityType, relatedEntityId, page, pageSize),
+            new ActivitySearchRequest(status, search, ownerId, type, relatedEntityType, relatedEntityId, page, pageSize, userId),
             cancellationToken);
         var items = result.Items.Select(ToApiItem);
         return Ok(new ActivitySearchResponse(items, result.Total));

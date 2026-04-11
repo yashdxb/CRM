@@ -22,9 +22,9 @@ export const Colors = {
 
   // Text (dark-on-light)
   textPrimary: '#1e293b',
-  textSecondary: 'rgba(71, 85, 105, 0.9)',
-  textMuted: 'rgba(100, 116, 139, 0.6)',
-  textDisabled: 'rgba(100, 116, 139, 0.35)',
+  textSecondary: '#475569',
+  textMuted: '#94a3b8',
+  textDisabled: 'rgba(100, 116, 139, 0.5)',
   textInverse: '#ffffff',
 
   // Primary palette (web CRM aligned)

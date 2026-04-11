@@ -6,7 +6,8 @@ public sealed record OpportunitySearchRequest(
     Guid? AccountId,
     bool? MissingNextStep,
     int Page,
-    int PageSize);
+    int PageSize,
+    Guid? CurrentUserId = null);
 
 public sealed record OpportunityUpsertRequest(
     string Name,

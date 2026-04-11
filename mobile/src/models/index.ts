@@ -136,3 +136,26 @@ export interface DashboardActivity {
   color: string;
   icon: string;
 }
+
+// ── Dashboard Summary (API response) ────────────
+export interface PipelineStageSummary {
+  stage: string;
+  count: number;
+  value: number;
+}
+
+export interface DashboardSummary {
+  totalCustomers: number;
+  leads: number;
+  openOpportunities: number;
+  pipelineValueTotal: number;
+  monthlyRecurringRevenue: number;
+  tasksDueToday: number;
+  upcomingActivities: number;
+  overdueActivities: number;
+  winRate: number;
+  avgDealSize: number;
+  pipelineValue: PipelineStageSummary[];
+  myTasks: ActivityListItem[];
+  activitiesNextWeek: ActivityListItem[];
+}

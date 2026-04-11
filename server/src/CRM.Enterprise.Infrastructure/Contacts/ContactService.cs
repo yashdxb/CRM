@@ -18,10 +18,12 @@ public sealed class ContactService : IContactService
         "Technical Evaluator"
     };
     private readonly CrmDbContext _dbContext;
+    private readonly IVisibilityResolver _visibilityResolver;
 
-    public ContactService(CrmDbContext dbContext)
+    public ContactService(CrmDbContext dbContext, IVisibilityResolver visibilityResolver)
     {
         _dbContext = dbContext;
+        _visibilityResolver = visibilityResolver;
     }
 
     public async Task<ContactSearchResultDto> SearchAsync(ContactSearchRequest request, CancellationToken cancellationToken = default)
@@ -34,6 +36,13 @@ public sealed class ContactService : IContactService
             .Include(c => c.Tags.Where(t => !t.IsDeleted))
             .AsNoTracking()
             .Where(c => !c.IsDeleted);
+
+        // Visibility filtering: restrict results based on user's role hierarchy
+        var visibility = await _visibilityResolver.ResolveAsync(request.CurrentUserId, cancellationToken);
+        if (visibility.VisibleUserIds is not null)
+        {
+            query = query.Where(c => visibility.VisibleUserIds.Contains(c.OwnerId));
+        }
 
         if (request.AccountId.HasValue && request.AccountId.Value != Guid.Empty)
         {

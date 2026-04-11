@@ -12,15 +12,13 @@ Legend:
 
 ## Current Direction
 
-- Stack: React Native + Expo + TypeScript
-- Authentication: deferred to a later phase
-- Current implementation focus:
-  - mobile shell
-  - navigation foundation
-  - lead workspace
-  - contact workspace
-  - deal workspace
-  - activity workspace
+- Stack: React Native 0.81.5 + Expo SDK 54 + TypeScript 5.9.2
+- Progress: 11 of 12 stories DONE (Stories 1–10, 12)
+- Remaining: Story 11 (Activity creation and quick update flow)
+- Authentication: DONE (Story 9)
+- Live API integration: DONE (Story 10 — dashboard, leads, contacts, deals all wired)
+- Dashboard: DONE (Story 12 — KPIs, pipeline, tasks, activity feed)
+- Premium visual system: DONE (Story 8)
 
 ## Current Local Status
 
@@ -43,7 +41,7 @@ Legend:
 - Status: DONE
 
 7. Authentication and live API integration
-- Status: NOT STARTED
+- Status: DONE (auth complete, all screens wired to real API, dashboard uses /api/dashboard/summary)
 
 8. Offline sync and device-native workflows
 - Status: NOT STARTED

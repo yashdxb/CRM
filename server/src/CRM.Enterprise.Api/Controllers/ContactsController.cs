@@ -44,7 +44,8 @@ public class ContactsController : ControllerBase
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var result = await _contactService.SearchAsync(new ContactSearchRequest(search, accountId, tag, page, pageSize), cancellationToken);
+        var userId = Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var uid) ? uid : (Guid?)null;
+        var result = await _contactService.SearchAsync(new ContactSearchRequest(search, accountId, tag, page, pageSize, userId), cancellationToken);
         var items = result.Items.Select(ToApiItem);
         return Ok(new ContactSearchResponse(items, result.Total));
     }
