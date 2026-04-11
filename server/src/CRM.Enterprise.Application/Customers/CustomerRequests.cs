@@ -13,7 +13,8 @@ public sealed record CustomerSearchRequest(
     DateTime? CreatedFrom = null,
     DateTime? CreatedTo = null,
     decimal? MinRevenue = null,
-    decimal? MaxRevenue = null);
+    decimal? MaxRevenue = null,
+    Guid? CurrentUserId = null);
 
 public sealed record AddAccountContactRoleRequest(
     Guid ContactId,

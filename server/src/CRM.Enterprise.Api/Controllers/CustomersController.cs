@@ -54,9 +54,10 @@ public class CustomersController : ControllerBase
         [FromQuery] decimal? maxRevenue = null,
         CancellationToken cancellationToken = default)
     {
+        var userId = Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var uid) ? uid : (Guid?)null;
         var result = await _customerService.SearchAsync(
             new CustomerSearchRequest(search, status, page, pageSize, sortBy, sortDirection,
-                industry, territory, ownerId, createdFrom, createdTo, minRevenue, maxRevenue),
+                industry, territory, ownerId, createdFrom, createdTo, minRevenue, maxRevenue, userId),
             cancellationToken);
         var items = result.Items.Select(ToApiItem);
         return Ok(new CustomerSearchResponse(items, result.Total));

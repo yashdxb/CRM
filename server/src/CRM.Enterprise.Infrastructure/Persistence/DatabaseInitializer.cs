@@ -1799,6 +1799,14 @@ public class DatabaseInitializer : IDatabaseInitializer
         {
             var role = await EnsureRoleAsync(name, description, cancellationToken);
             await SyncRolePermissionsAsync(role, permissions, cancellationToken);
+
+            // Backfill VisibilityScope for roles that were created before the scope was seeded
+            var expectedScope = ResolveDefaultVisibilityScope(name);
+            if (role.VisibilityScope != expectedScope)
+            {
+                role.VisibilityScope = expectedScope;
+                await _dbContext.SaveChangesAsync(cancellationToken);
+            }
         }
     }
 
@@ -3077,10 +3085,31 @@ public class DatabaseInitializer : IDatabaseInitializer
             Name = name,
             Description = description,
             CreatedAtUtc = DateTime.UtcNow,
-            SecurityLevelId = defaultSecurity?.Id
+            SecurityLevelId = defaultSecurity?.Id,
+            VisibilityScope = ResolveDefaultVisibilityScope(name)
         };
         _dbContext.Roles.Add(role);
         await _dbContext.SaveChangesAsync(cancellationToken);
         return role;
+    }
+
+    private static RoleVisibilityScope ResolveDefaultVisibilityScope(string roleName)
+    {
+        // Admin roles see everything
+        if (string.Equals(roleName, Permissions.RoleNames.SuperAdmin, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(roleName, Permissions.RoleNames.Admin, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(roleName, Permissions.RoleNames.InternalAdmin, StringComparison.OrdinalIgnoreCase))
+        {
+            return RoleVisibilityScope.All;
+        }
+
+        // Manager roles see their team
+        if (string.Equals(roleName, Permissions.RoleNames.SalesManager, StringComparison.OrdinalIgnoreCase))
+        {
+            return RoleVisibilityScope.Team;
+        }
+
+        // Individual contributor roles see only own records
+        return RoleVisibilityScope.Self;
     }
 }

@@ -9,10 +9,12 @@ namespace CRM.Enterprise.Infrastructure.Customers;
 public sealed class CustomerService : ICustomerService
 {
     private readonly CrmDbContext _dbContext;
+    private readonly IVisibilityResolver _visibilityResolver;
 
-    public CustomerService(CrmDbContext dbContext)
+    public CustomerService(CrmDbContext dbContext, IVisibilityResolver visibilityResolver)
     {
         _dbContext = dbContext;
+        _visibilityResolver = visibilityResolver;
     }
 
     public async Task<CustomerSearchResultDto> SearchAsync(CustomerSearchRequest request, CancellationToken cancellationToken = default)
@@ -25,6 +27,13 @@ public sealed class CustomerService : ICustomerService
             .Include(a => a.ParentAccount)
             .AsNoTracking()
             .Where(a => !a.IsDeleted);
+
+        // Visibility filtering: restrict results based on user's role hierarchy
+        var visibility = await _visibilityResolver.ResolveAsync(request.CurrentUserId, cancellationToken);
+        if (visibility.VisibleUserIds is not null)
+        {
+            query = query.Where(a => visibility.VisibleUserIds.Contains(a.OwnerId));
+        }
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {

@@ -79,19 +79,8 @@ public sealed class VisibilityResolver : IVisibilityResolver
 
         if (rolePaths.Count == 0)
         {
-            // No hierarchy paths → flat tenant; fall back to all active tenant users
-            var tenantUserIds = await _dbContext.Users
-                .AsNoTracking()
-                .Where(u => u.TenantId == userInfo.TenantId && !u.IsDeleted && u.IsActive)
-                .Select(u => u.Id)
-                .ToListAsync(cancellationToken);
-
-            if (!tenantUserIds.Contains(userId.Value))
-            {
-                tenantUserIds.Add(userId.Value);
-            }
-
-            return new VisibilityContext(RoleVisibilityScope.Team, tenantUserIds);
+            // No hierarchy paths configured → cannot determine team; restrict to own records only
+            return new VisibilityContext(RoleVisibilityScope.Self, new[] { userId.Value });
         }
 
         var descendantRoleIds = new HashSet<Guid>();
@@ -125,16 +114,6 @@ public sealed class VisibilityResolver : IVisibilityResolver
             .Select(ur => ur.UserId)
             .Distinct()
             .ToListAsync(cancellationToken);
-
-        if (teamUserIds.Count <= 1)
-        {
-            // Only self or empty → fall back to all active tenant users
-            teamUserIds = await _dbContext.Users
-                .AsNoTracking()
-                .Where(u => u.TenantId == userInfo.TenantId && !u.IsDeleted && u.IsActive)
-                .Select(u => u.Id)
-                .ToListAsync(cancellationToken);
-        }
 
         if (!teamUserIds.Contains(userId.Value))
         {
