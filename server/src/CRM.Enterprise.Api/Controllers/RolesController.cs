@@ -40,6 +40,12 @@ public class RolesController : ControllerBase
             .OrderBy(r => r.Name)
             .ToListAsync(cancellationToken);
 
+        // Hide Super Admin role from non-SuperAdmin callers
+        if (!CallerIsSuperAdmin())
+        {
+            roles = roles.Where(r => !IsSuperAdminRole(r.Name)).ToList();
+        }
+
         var defaultSecurity = await ResolveDefaultSecurityLevelAsync(cancellationToken);
         var responses = new List<RoleResponse>();
         foreach (var role in roles)
@@ -57,6 +63,12 @@ public class RolesController : ControllerBase
 
         var role = await FindRoleAsync(id, cancellationToken);
         if (role is null)
+        {
+            return NotFound();
+        }
+
+        // Non-SuperAdmin callers cannot view the Super Admin role
+        if (IsSuperAdminRole(role.Name) && !CallerIsSuperAdmin())
         {
             return NotFound();
         }
@@ -205,6 +217,12 @@ public class RolesController : ControllerBase
             return NotFound();
         }
 
+        // Non-SuperAdmin callers cannot modify the Super Admin role
+        if (IsSuperAdminRole(role.Name) && !CallerIsSuperAdmin())
+        {
+            return NotFound();
+        }
+
         var normalizedName = request.Name.Trim();
         var normalizedLower = normalizedName.ToLowerInvariant();
 
@@ -284,6 +302,12 @@ public class RolesController : ControllerBase
     {
         var role = await _dbContext.Roles.FirstOrDefaultAsync(r => r.Id == id && !r.IsDeleted, cancellationToken);
         if (role is null)
+        {
+            return NotFound();
+        }
+
+        // Non-SuperAdmin callers cannot interact with the Super Admin role
+        if (IsSuperAdminRole(role.Name) && !CallerIsSuperAdmin())
         {
             return NotFound();
         }
@@ -371,6 +395,12 @@ public class RolesController : ControllerBase
 
     private static bool IsSystemRole(string name)
         => Permissions.SystemRoleNames.Any(system => NameComparer.Equals(system, name));
+
+    private static bool IsSuperAdminRole(string name)
+        => NameComparer.Equals(name, Permissions.RoleNames.SuperAdmin);
+
+    private bool CallerIsSuperAdmin()
+        => User.IsInRole(Permissions.RoleNames.SuperAdmin);
 
     private async Task SyncRolePermissionsAsync(Guid roleId, IReadOnlyCollection<string> permissions, CancellationToken cancellationToken)
     {

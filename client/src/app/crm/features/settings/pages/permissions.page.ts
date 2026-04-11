@@ -8,7 +8,7 @@ import { SelectModule } from 'primeng/select';
 import { TabsModule } from 'primeng/tabs';
 
 import { AppToastService } from '../../../../core/app-toast.service';
-import { PermissionDefinition, PermissionPackPreset, RoleIntentPack, RoleSummary, UpsertRoleRequest } from '../models/user-admin.model';
+import { PermissionDefinition, RoleSummary, UpsertRoleRequest } from '../models/user-admin.model';
 import { UserAdminDataService } from '../services/user-admin-data.service';
 
 type PermissionActionTab = 'create-manage' | 'view-analyze' | 'governance';
@@ -38,8 +38,6 @@ export class PermissionsPage {
 
   protected readonly roles = signal<RoleSummary[]>([]);
   protected readonly permissionCatalog = signal<PermissionDefinition[]>([]);
-  protected readonly intentPacks = signal<RoleIntentPack[]>([]);
-  protected readonly permissionPackPresets = signal<PermissionPackPreset[]>([]);
   protected readonly selectedRole = signal<RoleSummary | null>(null);
   protected readonly selectedRoleId = signal<string | null>(null);
   protected readonly selectedPermissions = signal<Set<string>>(new Set());
@@ -111,8 +109,6 @@ export class PermissionsPage {
   constructor() {
     this.loadPermissions();
     this.loadRoles();
-    this.loadIntentPacks();
-    this.loadPermissionPackPresets();
     const roleId = this.route.snapshot.queryParamMap.get('roleId');
     if (roleId) {
       this.selectedRoleId.set(roleId);
@@ -159,20 +155,6 @@ export class PermissionsPage {
       next.add(permissionKey);
     }
     this.selectedPermissions.set(next);
-  }
-
-  protected applyIntentPack(pack: RoleIntentPack) {
-    if (!pack?.permissions?.length) {
-      return;
-    }
-    this.selectedPermissions.set(new Set(pack.permissions));
-  }
-
-  protected applyPermissionPack(pack: PermissionPackPreset) {
-    if (!pack?.permissions?.length) {
-      return;
-    }
-    this.selectedPermissions.set(new Set(pack.permissions));
   }
 
   protected resetToBase() {
@@ -285,20 +267,6 @@ export class PermissionsPage {
     this.basePermissions.set(role.basePermissions ?? []);
     this.inheritedPermissions.set(role.inheritedPermissions ?? []);
     this.driftNotes.set(role.driftNotes ?? '');
-  }
-
-  private loadIntentPacks() {
-    this.dataService.getRoleIntentPacks().subscribe({
-      next: (packs) => this.intentPacks.set(packs ?? []),
-      error: () => this.intentPacks.set([])
-    });
-  }
-
-  private loadPermissionPackPresets() {
-    this.dataService.getPermissionPackPresets().subscribe({
-      next: (packs) => this.permissionPackPresets.set(packs ?? []),
-      error: () => this.permissionPackPresets.set([])
-    });
   }
 
   private permissionBucket(permission: PermissionDefinition): PermissionActionTab {

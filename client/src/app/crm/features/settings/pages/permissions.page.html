@@ -69,29 +69,30 @@
 
     <aside class="permissions-side" *ngIf="selectedRole()">
       <div class="side-card">
-        <h4>Presets</h4>
-        <p>Apply a baseline permission set.</p>
-        <div class="side-list" *ngIf="intentPacks().length; else noIntentPacks">
-          <button pButton type="button" class="btn-glass tiny" *ngFor="let pack of intentPacks()" (click)="applyIntentPack(pack)">
-            {{ pack.label }}
-          </button>
+        <h4><i class="pi pi-sync"></i> Drift</h4>
+        <div class="drift-stats">
+          <div class="drift-stat drift-stat--added">
+            <span class="drift-stat__value">{{ driftSummary().added.length }}</span>
+            <span class="drift-stat__label">Added</span>
+          </div>
+          <div class="drift-stat drift-stat--removed">
+            <span class="drift-stat__value">{{ driftSummary().removed.length }}</span>
+            <span class="drift-stat__label">Removed</span>
+          </div>
         </div>
+        <button type="button" class="action-btn action-btn--refresh side-action" (click)="resetToBase()">
+          <span class="action-btn__icon"><i class="pi pi-replay"></i></span>
+          <span>Reset to Base</span>
+        </button>
       </div>
 
-      <div class="side-card">
-        <h4>Hierarchy Packs</h4>
-        <div class="side-list" *ngIf="permissionPackPresets().length; else noHierarchyPacks">
-          <button pButton type="button" class="btn-glass tiny" *ngFor="let pack of permissionPackPresets()" (click)="applyPermissionPack(pack)">
-            {{ pack.label }}
-          </button>
-        </div>
-      </div>
-
-      <div class="side-card">
-        <h4>Drift</h4>
-        <p class="drift-line">Added: {{ driftSummary().added.length }}</p>
-        <p class="drift-line">Removed: {{ driftSummary().removed.length }}</p>
-        <button pButton type="button" class="btn-glass tiny" (click)="resetToBase()">Reset to Base</button>
+      <div class="side-card side-card--info">
+        <h4><i class="pi pi-info-circle"></i> Quick Tips</h4>
+        <ul class="tips-list">
+          <li>Use the tabs above to browse permissions by action type.</li>
+          <li>Inherited permissions are locked by the parent role hierarchy.</li>
+          <li>Use <strong>Drift</strong> tracking to audit changes from the base pack.</li>
+        </ul>
       </div>
     </aside>
   </div>
@@ -126,12 +127,4 @@
 
 <ng-template #loadingState>
   <div class="permissions-empty">Loading permission workspace...</div>
-</ng-template>
-
-<ng-template #noIntentPacks>
-  <p class="muted-text">No intent packs available.</p>
-</ng-template>
-
-<ng-template #noHierarchyPacks>
-  <p class="muted-text">No hierarchy packs available.</p>
 </ng-template>

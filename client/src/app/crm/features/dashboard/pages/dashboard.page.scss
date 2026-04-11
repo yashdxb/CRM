@@ -3000,10 +3000,18 @@
   align-items: center;
   justify-content: space-between;
   gap: $space-4;
-  padding: $space-3 $space-4;
-  border-radius: $radius-lg;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.07) 0%, rgba(118, 75, 162, 0.05) 100%);
-  border: 1px solid rgba(102, 126, 234, 0.12);
+  padding: $space-4 $space-5;
+  border-radius: $radius-xl;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.10) 0%, rgba(118, 75, 162, 0.08) 50%, rgba(99, 102, 241, 0.06) 100%);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(102, 126, 234, 0.18);
+  box-shadow: 0 4px 24px rgba(102, 126, 234, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
+  transition: all 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+
+  &:hover {
+    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+    border-color: rgba(102, 126, 234, 0.25);
+  }
 }
 
 .cf-hero__main {
@@ -3022,7 +3030,7 @@
 }
 
 .cf-hero__value {
-  font-size: 1.625rem; // 26px — larger than standard $font-size-2xl
+  font-size: 1.75rem; // 28px — large hero value
   font-weight: 800;
   letter-spacing: -0.5px;
   background: $primary-gradient;
@@ -3032,6 +3040,7 @@
   background-clip: text;
   animation: gradient-shift 4s ease-in-out infinite;
   line-height: 1.15;
+  filter: drop-shadow(0 1px 2px rgba(102, 126, 234, 0.15));
 }
 
 .cf-hero__delta {
@@ -3060,21 +3069,27 @@
 // Retention ring
 .cf-hero__ring {
   position: relative;
-  width: 72px;
-  height: 72px;
+  width: 80px;
+  height: 80px;
   flex-shrink: 0;
+  transition: transform 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
 
   svg {
     width: 100%;
     height: 100%;
     transform: rotate(-90deg);
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.06));
+  }
+
+  .cf-hero:hover & {
+    transform: scale(1.06);
   }
 }
 
 .cf-ring-bg {
   fill: none;
-  stroke: rgba($gray-200, 0.7);
-  stroke-width: 5;
+  stroke: rgba($gray-200, 0.5);
+  stroke-width: 4.5;
 }
 
 .cf-ring-fill {
@@ -3083,10 +3098,10 @@
   stroke-linecap: round;
   transition: stroke-dasharray 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 
-  &.excellent { stroke: $success; }
-  &.good      { stroke: $info; }
-  &.fair      { stroke: $warning; }
-  &.poor      { stroke: $danger; }
+  &.excellent { stroke: $success;  filter: drop-shadow(0 0 6px rgba(34, 197, 94, 0.35)); }
+  &.good      { stroke: $info;     filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.30)); }
+  &.fair      { stroke: $warning;  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.30)); }
+  &.poor      { stroke: $danger;   filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.30)); }
 }
 
 .cf-ring-label {
@@ -3098,7 +3113,7 @@
   justify-content: center;
 
   strong {
-    font-size: $font-size-base;
+    font-size: 1.0625rem; // 17px
     font-weight: 800;
     color: $text-primary;
     line-height: 1;
@@ -3109,7 +3124,7 @@
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: $text-muted;
-    margin-top: 1px;
+    margin-top: 2px;
   }
 }
 
@@ -3122,6 +3137,7 @@
   padding: $space-2 $space-3;
   border-radius: $radius-md;
   background: $glass-bg-subtle;
+  border-left: 3px solid rgba(102, 126, 234, 0.3);
   font-size: $font-size-xs;
   color: $text-muted;
 }
@@ -3129,6 +3145,7 @@
 .cf-raw__value {
   font-weight: 700;
   color: $text-secondary;
+  font-size: $font-size-sm;
 }
 
 // Metric mini-tiles (2×2 grid)
@@ -3137,6 +3154,16 @@
   grid-template-columns: 1fr 1fr;
   gap: $space-2;
   margin-top: $space-3;
+
+  .cf-metric {
+    animation: fade-in-up 0.4s ease-out backwards;
+
+    @for $i from 1 through 4 {
+      &:nth-child(#{$i}) {
+        animation-delay: #{$i * 0.06}s;
+      }
+    }
+  }
 }
 
 .cf-metric {
@@ -3144,44 +3171,52 @@
   align-items: center;
   gap: $space-2;
   padding: $space-2 $space-3;
-  border-radius: $radius-md;
-  background: rgba($gray-100, 0.6);
+  border-radius: $radius-lg;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(8px);
   border: 1px solid transparent;
-  transition: all $transition-fast;
+  transition: all 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
 
   &:hover {
-    background: rgba($gray-100, 0.9);
-    transform: translateY(-1px);
+    background: rgba(255, 255, 255, 0.9);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+
+    .cf-metric__icon {
+      transform: scale(1.1) rotate(3deg);
+    }
   }
 }
 
 .cf-metric__icon {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: $radius-sm;
+  border-radius: $radius-md;
   font-size: $font-size-sm;
   color: white;
   flex-shrink: 0;
+  transition: transform 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.cf-metric--danger  .cf-metric__icon { background: linear-gradient(135deg, #f87171, #ef4444); }
-.cf-metric--warning .cf-metric__icon { background: linear-gradient(135deg, #fbbf24, #f59e0b); }
-.cf-metric--excellent .cf-metric__icon { background: linear-gradient(135deg, #4ade80, #22c55e); }
-.cf-metric--good    .cf-metric__icon { background: linear-gradient(135deg, #60a5fa, #3b82f6); }
-.cf-metric--fair    .cf-metric__icon { background: linear-gradient(135deg, #fbbf24, #f59e0b); }
-.cf-metric--poor    .cf-metric__icon { background: linear-gradient(135deg, #f87171, #ef4444); }
-.cf-metric--info    .cf-metric__icon { background: linear-gradient(135deg, #818cf8, #667eea); }
+.cf-metric--danger  .cf-metric__icon { background: linear-gradient(135deg, #f87171, #ef4444); box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25); }
+.cf-metric--warning .cf-metric__icon { background: linear-gradient(135deg, #fbbf24, #f59e0b); box-shadow: 0 2px 8px rgba(245, 158, 11, 0.25); }
+.cf-metric--excellent .cf-metric__icon { background: linear-gradient(135deg, #4ade80, #22c55e); box-shadow: 0 2px 8px rgba(34, 197, 94, 0.25); }
+.cf-metric--good    .cf-metric__icon { background: linear-gradient(135deg, #60a5fa, #3b82f6); box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25); }
+.cf-metric--fair    .cf-metric__icon { background: linear-gradient(135deg, #fbbf24, #f59e0b); box-shadow: 0 2px 8px rgba(245, 158, 11, 0.25); }
+.cf-metric--poor    .cf-metric__icon { background: linear-gradient(135deg, #f87171, #ef4444); box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25); }
+.cf-metric--info    .cf-metric__icon { background: linear-gradient(135deg, #818cf8, #667eea); box-shadow: 0 2px 8px rgba(102, 126, 234, 0.25); }
 
-.cf-metric--danger  { border-color: rgba($danger,  0.12); }
-.cf-metric--warning { border-color: rgba($warning, 0.12); }
-.cf-metric--excellent { border-color: rgba($success, 0.12); }
-.cf-metric--good    { border-color: rgba($info,    0.12); }
-.cf-metric--fair    { border-color: rgba($warning, 0.12); }
-.cf-metric--poor    { border-color: rgba($danger,  0.12); }
-.cf-metric--info    { border-color: rgba($primary, 0.12); }
+.cf-metric--danger  { border-color: rgba($danger,  0.15); background: rgba(239, 68, 68, 0.04); }
+.cf-metric--warning { border-color: rgba($warning, 0.15); background: rgba(245, 158, 11, 0.04); }
+.cf-metric--excellent { border-color: rgba($success, 0.15); background: rgba(34, 197, 94, 0.04); }
+.cf-metric--good    { border-color: rgba($info,    0.15); background: rgba(59, 130, 246, 0.04); }
+.cf-metric--fair    { border-color: rgba($warning, 0.15); background: rgba(245, 158, 11, 0.04); }
+.cf-metric--poor    { border-color: rgba($danger,  0.15); background: rgba(239, 68, 68, 0.04); }
+.cf-metric--info    { border-color: rgba($primary, 0.15); background: rgba(102, 126, 234, 0.04); }
 
 .cf-metric__body {
   display: flex;
@@ -3191,7 +3226,7 @@
 }
 
 .cf-metric__value {
-  font-size: $font-size-sm;
+  font-size: $font-size-base;
   font-weight: 700;
   color: $text-primary;
   line-height: 1.2;
@@ -3304,6 +3339,8 @@
 
 .cost-breakdown {
   margin-top: $space-4;
+  padding-top: $space-4;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
   display: flex;
   flex-direction: column;
   gap: $space-3;
@@ -3313,6 +3350,17 @@
     font-size: $font-size-sm;
     font-weight: 700;
     color: $text-primary;
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+
+    &::before {
+      content: '';
+      width: 3px;
+      height: 14px;
+      border-radius: 2px;
+      background: linear-gradient(180deg, #f87171, #ef4444);
+    }
   }
 }
 
@@ -3324,12 +3372,22 @@
 }
 
 .cost-deal {
-  padding: $space-2 $space-3;
-  border-radius: $radius-md;
-  background: rgba($primary, 0.06);
+  padding: $space-3;
+  border-radius: $radius-lg;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba($danger, 0.10);
   display: flex;
   flex-direction: column;
   gap: $space-2;
+  transition: all 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.85);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(239, 68, 68, 0.06);
+    border-color: rgba($danger, 0.18);
+  }
 }
 
 .cost-deal__header {
@@ -3354,6 +3412,11 @@
   font-size: $font-size-sm;
   font-weight: 700;
   color: $danger;
+  white-space: nowrap;
+  background: linear-gradient(135deg, #f87171, #ef4444);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .cost-deal__factors {
@@ -3365,13 +3428,24 @@
 .cost-factor {
   font-size: $font-size-xs;
   color: $text-muted;
-  padding: 2px 8px;
+  padding: 3px 10px;
   border-radius: $radius-full;
-  background: rgba($primary, 0.1);
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba($primary, 0.10);
+  font-weight: 500;
+  transition: all 200ms;
+
+  &:hover {
+    background: rgba($primary, 0.08);
+    border-color: rgba($primary, 0.20);
+    color: $text-secondary;
+  }
 }
 
 .cost-trend {
   margin-top: $space-4;
+  padding-top: $space-4;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
   display: flex;
   flex-direction: column;
   gap: $space-2;
@@ -3388,6 +3462,17 @@
     font-size: $font-size-sm;
     font-weight: 700;
     color: $text-primary;
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+
+    &::before {
+      content: '';
+      width: 3px;
+      height: 14px;
+      border-radius: 2px;
+      background: linear-gradient(180deg, #818cf8, #667eea);
+    }
   }
 }
 

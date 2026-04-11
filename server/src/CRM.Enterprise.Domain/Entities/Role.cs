@@ -12,7 +12,7 @@ public class Role : AuditableEntity
     public Guid? ParentRoleId { get; set; }
     public int? HierarchyLevel { get; set; }
     public string? HierarchyPath { get; set; }
-    public RoleVisibilityScope VisibilityScope { get; set; } = RoleVisibilityScope.Team;
+    public RoleVisibilityScope VisibilityScope { get; set; } = RoleVisibilityScope.Self;
     public Guid? SecurityLevelId { get; set; }
     public string? BasePermissionsJson { get; set; }
     public DateTime? BasePermissionsUpdatedAtUtc { get; set; }

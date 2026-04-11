@@ -611,8 +611,8 @@ public class CrmDbContext : DbContext
             .OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<Role>()
             .Property(r => r.VisibilityScope)
-            .HasDefaultValue(RoleVisibilityScope.Team)
-            .HasSentinel(RoleVisibilityScope.Team);
+            .HasDefaultValue(RoleVisibilityScope.Self)
+            .HasSentinel(RoleVisibilityScope.Self);
         modelBuilder.Entity<Role>()
             .HasOne(r => r.SecurityLevel)
             .WithMany()

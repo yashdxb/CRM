@@ -4,16 +4,19 @@ using CRM.Enterprise.Domain.Enums;
 using CRM.Enterprise.Infrastructure.Persistence;
 using CRM.Enterprise.Security;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace CRM.Enterprise.Infrastructure.Common;
 
 public sealed class VisibilityResolver : IVisibilityResolver
 {
     private readonly CrmDbContext _dbContext;
+    private readonly ILogger<VisibilityResolver> _logger;
 
-    public VisibilityResolver(CrmDbContext dbContext)
+    public VisibilityResolver(CrmDbContext dbContext, ILogger<VisibilityResolver> logger)
     {
         _dbContext = dbContext;
+        _logger = logger;
     }
 
     public async Task<VisibilityContext> ResolveAsync(Guid? userId, CancellationToken cancellationToken = default)
@@ -49,6 +52,7 @@ public sealed class VisibilityResolver : IVisibilityResolver
 
         if (roleRows.Count == 0)
         {
+            _logger.LogInformation("Visibility: user {UserId} has no roles — defaulting to Self", userId.Value);
             return new VisibilityContext(RoleVisibilityScope.Self, new[] { userId.Value });
         }
 
@@ -57,10 +61,18 @@ public sealed class VisibilityResolver : IVisibilityResolver
                               || string.Equals(r.Name, Permissions.RoleNames.Admin, StringComparison.OrdinalIgnoreCase)
                               || string.Equals(r.Name, Permissions.RoleNames.InternalAdmin, StringComparison.OrdinalIgnoreCase)))
         {
+            _logger.LogInformation("Visibility: user {UserId} has admin role — granting All scope", userId.Value);
             return new VisibilityContext(RoleVisibilityScope.All, null);
         }
 
         var effectiveScope = ResolveEffectiveScope(roleRows.Select(r => r.VisibilityScope));
+        _logger.LogInformation(
+            "Visibility: user {UserId} roles=[{Roles}] scopes=[{Scopes}] effective={EffectiveScope}",
+            userId.Value,
+            string.Join(", ", roleRows.Select(r => r.Name)),
+            string.Join(", ", roleRows.Select(r => r.VisibilityScope)),
+            effectiveScope);
+
         if (effectiveScope == RoleVisibilityScope.All)
         {
             return new VisibilityContext(RoleVisibilityScope.All, null);
@@ -81,6 +93,7 @@ public sealed class VisibilityResolver : IVisibilityResolver
         if (rolePaths.Count == 0)
         {
             // No hierarchy paths configured → cannot determine team; restrict to own records only
+            _logger.LogInformation("Visibility: user {UserId} Team scope but no hierarchy paths — falling back to Self", userId.Value);
             return new VisibilityContext(RoleVisibilityScope.Self, new[] { userId.Value });
         }
 
@@ -106,6 +119,7 @@ public sealed class VisibilityResolver : IVisibilityResolver
 
         if (descendantRoleIds.Count == 0)
         {
+            _logger.LogInformation("Visibility: user {UserId} Team scope but no descendant roles found — falling back to Self", userId.Value);
             return new VisibilityContext(RoleVisibilityScope.Self, new[] { userId.Value });
         }
 
@@ -120,6 +134,13 @@ public sealed class VisibilityResolver : IVisibilityResolver
         {
             teamUserIds.Add(userId.Value);
         }
+
+        _logger.LogInformation(
+            "Visibility: user {UserId} Team scope — paths=[{Paths}] descendantRoles={DescCount} visibleUsers={UserCount}",
+            userId.Value,
+            string.Join(", ", rolePaths),
+            descendantRoleIds.Count,
+            teamUserIds.Count);
 
         return new VisibilityContext(RoleVisibilityScope.Team, teamUserIds);
     }

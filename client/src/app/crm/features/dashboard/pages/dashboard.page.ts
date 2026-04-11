@@ -337,7 +337,17 @@ export class DashboardPage implements OnInit {
   });
 
   protected readonly topRiskFlags = computed(() => this.summary()?.topRiskFlags ?? []);
-  protected readonly riskIntelligenceItems = computed(() => this.summary()?.riskIntelligence?.slice(0, 5) ?? []);
+  private readonly riskSeverityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
+  private sortBySeverity(items: RiskIntelligenceItem[]): RiskIntelligenceItem[] {
+    return [...items].sort((a, b) => {
+      const aOrder = this.riskSeverityOrder[this.riskIntelligenceSeverityClass(a.severity)] ?? 99;
+      const bOrder = this.riskSeverityOrder[this.riskIntelligenceSeverityClass(b.severity)] ?? 99;
+      return aOrder - bOrder;
+    });
+  }
+  protected readonly riskIntelligenceItems = computed(() =>
+    this.sortBySeverity(this.summary()?.riskIntelligence ?? []).slice(0, 5)
+  );
   protected readonly riskIntelligenceSummary = computed(() => {
     const buckets = new Map<string, number>();
     for (const item of this.summary()?.riskIntelligence ?? []) {
@@ -355,7 +365,7 @@ export class DashboardPage implements OnInit {
   });
   protected readonly assistantDiagnosticItems = computed<AssistantDiagnosticItem[]>(() => {
     const actions = this.assistantActions();
-    return (this.summary()?.riskIntelligence ?? []).slice(0, 5).map((item) => ({
+    return this.sortBySeverity(this.summary()?.riskIntelligence ?? []).slice(0, 5).map((item) => ({
       key: item.label,
       label: item.label,
       severity: item.severity,

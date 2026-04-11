@@ -39,17 +39,26 @@
             Role Details
           </h3>
           <div class="details-kpis">
-            <div class="kpi-item">
-              <span class="kpi-label">Selected Permissions</span>
-              <strong class="kpi-value">{{ selectedPermissionCount() }}</strong>
+            <div class="kpi-item kpi-item--primary">
+              <div class="kpi-icon"><i class="pi pi-check-square"></i></div>
+              <div class="kpi-content">
+                <span class="kpi-label">Selected Permissions</span>
+                <strong class="kpi-value">{{ selectedPermissionCount() }}</strong>
+              </div>
             </div>
-            <div class="kpi-item">
-              <span class="kpi-label">Inherited Permissions</span>
-              <strong class="kpi-value">{{ inheritedPermissions().length }}</strong>
+            <div class="kpi-item kpi-item--cyan">
+              <div class="kpi-icon"><i class="pi pi-sitemap"></i></div>
+              <div class="kpi-content">
+                <span class="kpi-label">Inherited Permissions</span>
+                <strong class="kpi-value">{{ inheritedPermissions().length }}</strong>
+              </div>
             </div>
-            <div class="kpi-item">
-              <span class="kpi-label">Hierarchy Preview</span>
-              <strong class="kpi-value">{{ hierarchyPreviewLabel() }}</strong>
+            <div class="kpi-item kpi-item--purple">
+              <div class="kpi-icon"><i class="pi pi-server"></i></div>
+              <div class="kpi-content">
+                <span class="kpi-label">Hierarchy Preview</span>
+                <strong class="kpi-value">{{ hierarchyPreviewLabel() }}</strong>
+              </div>
             </div>
           </div>
           <div class="form-grid">
@@ -455,17 +464,17 @@
               </h3>
             </div>
             <p class="section-description">
-              Permission sets for existing roles are managed in the People &amp; Access &rsaquo; Permision page.
+              Permission sets for existing roles are managed in the People &amp; Access &rsaquo; Permission page.
             </p>
             <div class="drift-actions">
               <button
-                pButton
                 type="button"
-                class="btn-primary"
+                class="action-btn action-btn--add"
                 [routerLink]="['/app/settings/permissions']"
                 [queryParams]="{ roleId: currentRoleId() }"
               >
-                Open Permision Page
+                <span class="action-btn__icon"><i class="pi pi-lock"></i></span>
+                <span>Open Permission Page</span>
               </button>
             </div>
           </section>
@@ -493,8 +502,8 @@
           </div>
 
           <aside class="form-rail">
-            <section class="rail-card">
-              <h4>Role Snapshot</h4>
+            <section class="rail-card rail-card--snapshot">
+              <h4><i class="pi pi-chart-bar"></i> Role Snapshot</h4>
               <div class="rail-list">
                 <div class="rail-row">
                   <span>Mode</span>
@@ -506,17 +515,17 @@
                 </div>
                 <div class="rail-row">
                   <span>Permissions</span>
-                  <strong>{{ selectedPermissionCount() }}</strong>
+                  <strong class="rail-value--primary">{{ selectedPermissionCount() }}</strong>
                 </div>
                 <div class="rail-row">
                   <span>Inherited</span>
-                  <strong>{{ inheritedPermissions().length }}</strong>
+                  <strong class="rail-value--cyan">{{ inheritedPermissions().length }}</strong>
                 </div>
               </div>
             </section>
 
             <section class="rail-card">
-              <h4>Related Settings</h4>
+              <h4><i class="pi pi-cog"></i> Related Settings</h4>
               <div class="rail-links">
                 <a routerLink="/app/settings/permissions">
                   <i class="pi pi-lock"></i>
@@ -534,10 +543,10 @@
             </section>
 
             <section class="rail-card rail-card--notice" *ngIf="isEditMode()">
-              <h4>Editing Note</h4>
+              <h4><i class="pi pi-info-circle"></i> Editing Note</h4>
               <p>
                 Permission sets are managed from the dedicated
-                <strong>Permision</strong> page for existing roles.
+                <strong>Permission</strong> page for existing roles.
               </p>
             </section>
           </aside>
@@ -546,20 +555,21 @@
         <div class="form-actions">
           <button
             type="button"
-            pButton
-            label="Cancel"
+            class="action-btn action-btn--back"
             [disabled]="roleSaving()"
             routerLink="/app/settings/roles"
-            class="btn-ghost"
-          ></button>
+          >
+            <span class="action-btn__icon"><i class="pi pi-times"></i></span>
+            <span>Cancel</span>
+          </button>
           <button
             type="submit"
-            pButton
-            [label]="isEditMode() ? 'Update Role' : 'Create Role'"
-            [loading]="roleSaving()"
-            [disabled]="!canManageAdmin() || roleForm.invalid"
-            class="btn-primary"
-          ></button>
+            class="action-btn action-btn--add"
+            [disabled]="!canManageAdmin() || roleForm.invalid || roleSaving()"
+          >
+            <span class="action-btn__icon"><i class="pi pi-check"></i></span>
+            <span>{{ isEditMode() ? 'Update Role' : 'Create Role' }}</span>
+          </button>
         </div>
       </form>
   </div>

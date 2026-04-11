@@ -1707,6 +1707,48 @@ public class DatabaseInitializer : IDatabaseInitializer
         await _dbContext.Database.MigrateAsync(cancellationToken);
         await EnsureSchemaCompatibilityAsync(cancellationToken);
         await EnsureSuperAdminPermissionsAsync(cancellationToken);
+        await BackfillRoleVisibilityScopesAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Idempotent backfill: ensures well-known role names have the correct VisibilityScope.
+    /// The original migration defaulted every role to Team (1), but individual-contributor
+    /// roles (Sales Rep, Support, etc.) should be Self and admin roles should be All.
+    /// Safe to call repeatedly — only updates rows that diverge from the expected scope.
+    /// </summary>
+    private async Task BackfillRoleVisibilityScopesAsync(CancellationToken cancellationToken)
+    {
+        var knownRoleScopes = new Dictionary<string, RoleVisibilityScope>(StringComparer.OrdinalIgnoreCase)
+        {
+            [Permissions.RoleNames.SuperAdmin] = RoleVisibilityScope.All,
+            [Permissions.RoleNames.Admin] = RoleVisibilityScope.All,
+            [Permissions.RoleNames.InternalAdmin] = RoleVisibilityScope.All,
+            [Permissions.RoleNames.SalesManager] = RoleVisibilityScope.Team,
+            [Permissions.RoleNames.SalesRep] = RoleVisibilityScope.Self,
+            [Permissions.RoleNames.MarketingOps] = RoleVisibilityScope.Self,
+            [Permissions.RoleNames.CustomerSuccess] = RoleVisibilityScope.Self,
+            [Permissions.RoleNames.Support] = RoleVisibilityScope.Self,
+        };
+
+        var roles = await _dbContext.Roles
+            .IgnoreQueryFilters()
+            .Where(r => !r.IsDeleted)
+            .ToListAsync(cancellationToken);
+
+        var changed = false;
+        foreach (var role in roles)
+        {
+            if (knownRoleScopes.TryGetValue(role.Name, out var expectedScope) && role.VisibilityScope != expectedScope)
+            {
+                role.VisibilityScope = expectedScope;
+                changed = true;
+            }
+        }
+
+        if (changed)
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
     }
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
