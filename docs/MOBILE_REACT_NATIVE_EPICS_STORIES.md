@@ -100,3 +100,16 @@ Scope:
   - user can create an activity from mobile
   - user can complete or update a scheduled activity
   - lead/contact/deal linkage is preserved
+
+### 12. Dashboard redesign with KPI cards, pipeline, tasks, and activity feed
+- Status: DONE
+- Acceptance criteria:
+  - HomeScreen shows personalized welcome header with greeting, date, avatar, and online indicator
+  - four full-gradient KPI metric cards display Leads, Deals, Contacts, and Revenue counts
+  - Sales Pipeline collapsible section shows horizontal segmented progress bar with legend
+  - Today's Tasks collapsible section shows interactive checklist with badge priorities
+  - Recent Activities collapsible section shows chronological activity feed with colored icons
+  - App.tsx tab bar updated to 5-tab layout: Dashboard, Contacts, FAB (+), Deals, More
+  - center FAB button uses primary gradient with raised elevation
+  - all new components: CollapsibleSection, SalesPipeline, TaskList, ActivityFeed
+  - MetricCard redesigned with full gradient fills, Ionicons, and optional notification badges

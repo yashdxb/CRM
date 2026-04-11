@@ -39,8 +39,11 @@ Legend:
 5. Premium visual system for the mobile shell and preview workspaces
 - Status: DONE
 
-6. Authentication and live API integration
+6. Dashboard redesign with KPIs, pipeline, tasks, and activity feed
+- Status: DONE
+
+7. Authentication and live API integration
 - Status: NOT STARTED
 
-7. Offline sync and device-native workflows
+8. Offline sync and device-native workflows
 - Status: NOT STARTED

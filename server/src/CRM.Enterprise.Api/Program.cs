@@ -110,6 +110,8 @@ var allowedOrigins = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     "http://127.0.0.1:4201",
     "http://localhost:5173",
     "https://localhost:5173",
+    "http://localhost:8081",
+    "http://localhost:8082",
     "https://jolly-dune-0d9d1fe0f.2.azurestaticapps.net",
     "https://northedgesystem.com",
     "https://www.northedgesystem.com"

@@ -4,44 +4,38 @@ import { Platform } from 'react-native';
  * Resolve the API base URL.
  * iOS Simulator shares the host network so localhost works.
  * Android Emulator uses 10.0.2.2 to reach the host.
- * Physical devices (Expo Go) need the Mac's LAN IP or deployed Azure API.
+ * Physical devices (Expo Go) use the deployed Azure API because most
+ * consumer Wi-Fi routers enable AP isolation, blocking LAN device-to-device traffic.
  */
 import Constants from 'expo-constants';
 
-const LAN_IP = '192.168.2.16'; // your Mac's Wi‑Fi IP — update if it changes
+const AZURE_API = 'https://crm-enterprise-api-dev-01122345.azurewebsites.net';
 
 function isRunningOnDevice(): boolean {
-  // Constants.isDevice can be undefined in some Expo Go versions
-  // executionEnvironment is more reliable in SDK 54+
-  const env = (Constants as any).executionEnvironment; // 'storeClient' | 'standalone' | 'bare' | undefined
+  const env = (Constants as any).executionEnvironment;
   const isDevice = Constants.isDevice;
 
-  // Debug — shows in Metro terminal
   console.log('[Config] Constants.isDevice =', isDevice);
   console.log('[Config] Constants.executionEnvironment =', env);
   console.log('[Config] Platform.OS =', Platform.OS);
 
-  // If executionEnvironment is 'storeClient' → running inside Expo Go on device
   if (env === 'storeClient') return true;
-  // Fall back to isDevice if available
   if (typeof isDevice === 'boolean') return isDevice;
-  // Last resort — assume device if not iOS Simulator
   return true;
 }
 
 function resolveApiUrl(): string {
   if (!__DEV__) {
-    return 'https://crm-enterprise-api-dev-01122345.azurewebsites.net';
+    return AZURE_API;
   }
 
   const onDevice = isRunningOnDevice();
   console.log('[Config] isRunningOnDevice =', onDevice);
 
   if (onDevice) {
-    // Physical device can't reach localhost — use the deployed Azure API
-    const url = 'https://crm-enterprise-api-dev-01122345.azurewebsites.net';
-    console.log('[Config] Resolved API URL =', url);
-    return url;
+    // Physical device → Azure API (LAN usually blocked by router AP isolation)
+    console.log('[Config] Resolved API URL =', AZURE_API);
+    return AZURE_API;
   }
 
   const url = Platform.OS === 'android'

@@ -1,11 +1,11 @@
 import React from 'react';
 import { StyleSheet, View, type ViewStyle, type StyleProp } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { Glass, Shadows, Radius } from '../theme/tokens';
+import { Glass, Shadows, Radius, DarkColors } from '../theme/tokens';
 
 interface GlassCardProps {
   children: React.ReactNode;
-  variant?: 'default' | 'elevated' | 'subtle';
+  variant?: 'default' | 'elevated' | 'subtle' | 'dark';
   style?: StyleProp<ViewStyle>;
   noPadding?: boolean;
 }
@@ -20,13 +20,16 @@ export default function GlassCard({
     default: s.cardDefault,
     elevated: s.cardElevated,
     subtle: s.cardSubtle,
+    dark: s.cardDark,
   };
+
+  const isDark = variant === 'dark';
 
   return (
     <View style={[s.cardOuter, variantStyles[variant], style]}>
       <BlurView
-        intensity={Glass.blurIntensity}
-        tint={Glass.blurTint}
+        intensity={isDark ? 50 : Glass.blurIntensity}
+        tint={isDark ? 'dark' : Glass.blurTint}
         style={[s.blur, noPadding ? null : s.padding]}
       >
         {children}
@@ -54,6 +57,15 @@ const s = StyleSheet.create({
     backgroundColor: Glass.subtleBg,
     borderColor: Glass.cardBorderSubtle,
     ...Shadows.subtle,
+  },
+  cardDark: {
+    backgroundColor: DarkColors.cardBg,
+    borderColor: DarkColors.cardBorder,
+    shadowColor: DarkColors.cardShadow,
+    shadowOpacity: 1,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
   },
   blur: {
     overflow: 'hidden',

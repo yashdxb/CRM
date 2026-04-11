@@ -1,28 +1,30 @@
 /**
  * Design tokens for the Apple Liquid Glass CRM mobile theme.
  * Aligned with the web CRM's premium glassmorphism palette.
+ *
+ * Light theme for all app screens; LoginScreen keeps its own dark palette.
  */
 
 // ─── Colors ─────────────────────────────────────
 
 export const Colors = {
-  // Backgrounds (dark theme)
-  background: '#0f172a',
-  backgroundMid: '#1a2744',
-  backgroundDeep: '#0f172a',
+  // Backgrounds (light theme — matched to web CRM $glass-bg tokens)
+  background: '#f5f7fa',
+  backgroundMid: '#e4e9f2',
+  backgroundDeep: '#d8dde8',
 
-  // Glass (dark glass)
-  glass: 'rgba(255, 255, 255, 0.06)',
-  glassSubtle: 'rgba(255, 255, 255, 0.04)',
-  glassElevated: 'rgba(255, 255, 255, 0.09)',
-  glassBorder: 'rgba(255, 255, 255, 0.1)',
-  glassBorderSubtle: 'rgba(255, 255, 255, 0.06)',
+  // Glass (light glass — matched to web CRM $glass-bg / $glass-border)
+  glass: 'rgba(255, 255, 255, 0.85)',
+  glassSubtle: 'rgba(255, 255, 255, 0.60)',
+  glassElevated: 'rgba(255, 255, 255, 0.90)',
+  glassBorder: 'rgba(0, 0, 0, 0.08)',
+  glassBorderSubtle: 'rgba(0, 0, 0, 0.04)',
 
-  // Text (light-on-dark)
-  textPrimary: '#f1f5f9',
-  textSecondary: 'rgba(148, 163, 184, 0.9)',
-  textMuted: 'rgba(148, 163, 184, 0.6)',
-  textDisabled: 'rgba(148, 163, 184, 0.35)',
+  // Text (dark-on-light)
+  textPrimary: '#1e293b',
+  textSecondary: 'rgba(71, 85, 105, 0.9)',
+  textMuted: 'rgba(100, 116, 139, 0.6)',
+  textDisabled: 'rgba(100, 116, 139, 0.35)',
   textInverse: '#ffffff',
 
   // Primary palette (web CRM aligned)
@@ -63,7 +65,7 @@ export const Colors = {
 
 export const Glass = {
   blurIntensity: 25,
-  blurTint: 'dark' as const,
+  blurTint: 'light' as const,
   cardBg: Colors.glass,
   cardBorder: Colors.glassBorder,
   cardBorderSubtle: Colors.glassBorderSubtle,
@@ -170,4 +172,39 @@ export const Typography = {
     fontWeight: '700' as const,
     lineHeight: 22,
   },
+} as const;
+
+// ─── Dark Theme (Dashboard) ─────────────────────
+
+export const DarkColors = {
+  // Backgrounds (warm charcoal)
+  background: '#111110',
+  backgroundMid: '#1a1917',
+  backgroundDeep: '#0a0a09',
+
+  // Glass (warm dark glass — lifted for visible contrast)
+  cardBg: 'rgba(42, 38, 32, 0.92)',
+  cardBorder: 'rgba(245, 166, 35, 0.22)',
+  cardBorderSubtle: 'rgba(245, 166, 35, 0.10)',
+
+  // Card shadow (warm gold glow)
+  cardShadow: 'rgba(245, 166, 35, 0.12)',
+
+  // Text (warm light-on-dark)
+  textPrimary: '#FAF9F5',
+  textSecondary: 'rgba(217, 199, 171, 0.82)',
+  textMuted: 'rgba(168, 153, 132, 0.50)',
+
+  // Gradient border accent (gold → amber → bronze)
+  gradientBorder: ['#F5A623', '#E8890C', '#CD7F32'] as const,
+
+  // Chevron colors
+  chevronCollapsed: '#F5A623',
+  chevronExpanded: '#CD7F32',
+
+  // Row separator
+  separator: 'rgba(245, 166, 35, 0.15)',
+
+  // Bar/track backgrounds
+  trackBg: 'rgba(245, 166, 35, 0.18)',
 } as const;

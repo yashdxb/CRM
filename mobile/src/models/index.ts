@@ -111,3 +111,28 @@ export interface ActivityListItem {
   ownerName: string | null;
   createdAtUtc: string;
 }
+
+// ── Dashboard ───────────────────────────────────
+export interface PipelineStage {
+  label: string;
+  count: number;
+  color: string;
+}
+
+export interface DashboardTask {
+  id: string;
+  title: string;
+  category: string;
+  time: string;
+  badge?: string;
+  badgeColor?: string;
+  completed: boolean;
+}
+
+export interface DashboardActivity {
+  id: string;
+  description: string;
+  timestamp: string;
+  color: string;
+  icon: string;
+}
