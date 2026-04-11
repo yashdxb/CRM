@@ -52,13 +52,13 @@ function AppGate() {
   if (isLoading) {
     return (
       <LinearGradient
-        colors={[...backgroundGradient.colors]}
-        start={backgroundGradient.start}
-        end={backgroundGradient.end}
+        colors={['#0f172a', '#1a2744', '#0f172a']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
         style={styles.screen}
       >
         <SafeAreaView style={styles.screen}>
-          <StatusBar style="dark" />
+          <StatusBar style="light" />
           <LoadingState label="Restoring session…" />
         </SafeAreaView>
       </LinearGradient>
@@ -125,17 +125,19 @@ function AppShell() {
 
   return (
     <LinearGradient
-      colors={[...backgroundGradient.colors]}
-      start={backgroundGradient.start}
-      end={backgroundGradient.end}
+      colors={['#0f172a', '#1a2744', '#0f172a']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
       style={styles.screen}
     >
       <SafeAreaView style={styles.screen}>
-        <StatusBar style="dark" />
+        <StatusBar style="light" />
 
-        {/* Decorative orbs */}
+        {/* Ambient glow orbs */}
         <View style={styles.orbPrimary} />
         <View style={styles.orbCyan} />
+        <View style={styles.orbPurple} />
+        <View style={styles.orbAccent} />
 
         <View style={styles.appShell}>
           {/* Header */}
@@ -186,8 +188,8 @@ function AppShell() {
           {/* Frosted Glass Tab Bar */}
           <View style={styles.tabBarShell}>
             <BlurView
-              intensity={Glass.blurIntensity}
-              tint={Glass.blurTint as 'systemChromeMaterialLight'}
+              intensity={30}
+              tint="dark"
               style={styles.tabBarBlur}
             >
               <View style={styles.tabBar}>
@@ -236,21 +238,39 @@ const styles = StyleSheet.create({
   },
   orbPrimary: {
     position: 'absolute',
-    top: -100,
-    right: -50,
-    width: 260,
-    height: 260,
+    top: -120,
+    right: -60,
+    width: 320,
+    height: 320,
     borderRadius: 999,
     backgroundColor: 'rgba(102, 126, 234, 0.18)',
   },
   orbCyan: {
     position: 'absolute',
-    bottom: 60,
-    left: -70,
-    width: 200,
-    height: 200,
+    bottom: 80,
+    left: -90,
+    width: 260,
+    height: 260,
     borderRadius: 999,
-    backgroundColor: 'rgba(6, 182, 212, 0.14)',
+    backgroundColor: 'rgba(6, 182, 212, 0.12)',
+  },
+  orbPurple: {
+    position: 'absolute',
+    top: '40%' as unknown as number,
+    right: -30,
+    width: 180,
+    height: 180,
+    borderRadius: 999,
+    backgroundColor: 'rgba(168, 85, 247, 0.1)',
+  },
+  orbAccent: {
+    position: 'absolute',
+    top: '20%' as unknown as number,
+    left: '20%' as unknown as number,
+    width: 120,
+    height: 120,
+    borderRadius: 999,
+    backgroundColor: 'rgba(102, 126, 234, 0.06)',
   },
   appShell: {
     flex: 1,
@@ -278,12 +298,12 @@ const styles = StyleSheet.create({
   brand: {
     fontSize: Typography.title.fontSize,
     fontWeight: Typography.title.fontWeight,
-    color: Colors.textPrimary,
+    color: '#ffffff',
   },
   headerMeta: {
     marginTop: 2,
     fontSize: Typography.caption.fontSize,
-    color: Colors.textSecondary,
+    color: 'rgba(148, 163, 184, 0.8)',
   },
   headerBadge: {
     flexDirection: 'row',
@@ -292,12 +312,12 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    backgroundColor: Colors.glassSubtle,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
     borderWidth: 1,
-    borderColor: Colors.glassBorderSubtle,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   headerBadgeText: {
-    color: Colors.textSecondary,
+    color: 'rgba(148, 163, 184, 0.8)',
     fontSize: Typography.caption.fontSize,
     fontWeight: '600',
   },
@@ -319,13 +339,18 @@ const styles = StyleSheet.create({
     borderRadius: Radius.xl,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: Colors.glassBorder,
-    ...Shadows.card,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    shadowColor: '#000000',
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: -4 },
+    elevation: 12,
   },
   tabBar: {
     flexDirection: 'row',
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.sm,
+    backgroundColor: 'rgba(15, 23, 42, 0.6)',
   },
   tabButton: {
     flex: 1,
@@ -336,7 +361,7 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   tabButtonActive: {
-    backgroundColor: 'rgba(102, 126, 234, 0.08)',
+    backgroundColor: 'rgba(102, 126, 234, 0.12)',
   },
   tabIconBubble: {
     width: 36,
@@ -346,12 +371,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   tabIconBubbleActive: {
-    backgroundColor: 'rgba(102, 126, 234, 0.12)',
+    backgroundColor: 'rgba(102, 126, 234, 0.15)',
   },
   tabLabel: {
     fontSize: Typography.label.fontSize,
     fontWeight: Typography.label.fontWeight,
-    color: Colors.textMuted,
+    color: 'rgba(148, 163, 184, 0.6)',
   },
   tabLabelActive: {
     color: Colors.primary,

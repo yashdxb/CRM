@@ -6,23 +6,23 @@
 // ─── Colors ─────────────────────────────────────
 
 export const Colors = {
-  // Backgrounds (light mesh gradient)
-  background: '#f5f7fa',
-  backgroundMid: '#e4e9f2',
-  backgroundDeep: '#d8dde8',
+  // Backgrounds (dark theme)
+  background: '#0f172a',
+  backgroundMid: '#1a2744',
+  backgroundDeep: '#0f172a',
 
-  // Glass
-  glass: 'rgba(255, 255, 255, 0.65)',
-  glassSubtle: 'rgba(255, 255, 255, 0.45)',
-  glassElevated: 'rgba(255, 255, 255, 0.82)',
-  glassBorder: 'rgba(255, 255, 255, 0.5)',
-  glassBorderSubtle: 'rgba(255, 255, 255, 0.3)',
+  // Glass (dark glass)
+  glass: 'rgba(255, 255, 255, 0.06)',
+  glassSubtle: 'rgba(255, 255, 255, 0.04)',
+  glassElevated: 'rgba(255, 255, 255, 0.09)',
+  glassBorder: 'rgba(255, 255, 255, 0.1)',
+  glassBorderSubtle: 'rgba(255, 255, 255, 0.06)',
 
-  // Text
-  textPrimary: '#1e293b',
-  textSecondary: '#475569',
-  textMuted: '#94a3b8',
-  textDisabled: '#cbd5e1',
+  // Text (light-on-dark)
+  textPrimary: '#f1f5f9',
+  textSecondary: 'rgba(148, 163, 184, 0.9)',
+  textMuted: 'rgba(148, 163, 184, 0.6)',
+  textDisabled: 'rgba(148, 163, 184, 0.35)',
   textInverse: '#ffffff',
 
   // Primary palette (web CRM aligned)
@@ -62,8 +62,8 @@ export const Colors = {
 // ─── Glass ──────────────────────────────────────
 
 export const Glass = {
-  blurIntensity: 40,
-  blurTint: 'systemChromeMaterialLight' as const,
+  blurIntensity: 25,
+  blurTint: 'dark' as const,
   cardBg: Colors.glass,
   cardBorder: Colors.glassBorder,
   cardBorderSubtle: Colors.glassBorderSubtle,

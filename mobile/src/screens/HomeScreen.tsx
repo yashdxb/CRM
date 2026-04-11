@@ -52,7 +52,7 @@ export default function HomeScreen() {
       </GlassCard>
       </FadeIn>
 
-      {/* Metrics Row 1 */}
+      {/* KPI Cards */}
       <FadeIn index={1}>
       <View style={s.metricRow}>
         <MetricCard
@@ -60,17 +60,18 @@ export default function HomeScreen() {
           value={String(leadData?.total ?? '–')}
           icon="leads"
           variant="leads"
+          trend={{ direction: 'up', text: 'Pipeline' }}
         />
         <MetricCard
           label="Deals"
           value={String(dealData?.total ?? '–')}
           icon="deals"
           variant="deals"
+          trend={{ direction: 'up', text: 'Revenue' }}
         />
       </View>
       </FadeIn>
 
-      {/* Metrics Row 2 */}
       <FadeIn index={2}>
       <View style={s.metricRow}>
         <MetricCard
@@ -78,12 +79,14 @@ export default function HomeScreen() {
           value={String(contactData?.total ?? '–')}
           icon="contacts"
           variant="contacts"
+          trend={{ direction: 'up', text: 'Network' }}
         />
         <MetricCard
           label="Activities"
           value={String(activityData?.total ?? '–')}
           icon="activities"
           variant="activities"
+          trend={{ direction: 'up', text: 'Actions' }}
         />
       </View>
       </FadeIn>
@@ -168,18 +171,18 @@ const s = StyleSheet.create({
     fontSize: 28,
     fontWeight: '800',
     lineHeight: 36,
-    color: Colors.textPrimary,
+    color: '#ffffff',
     marginBottom: Spacing.xs,
   },
   titleGradientWrap: {
     color: Colors.primary,
   },
   titleLight: {
-    color: Colors.gray700,
+    color: 'rgba(203, 213, 225, 0.9)',
   },
   heroDescription: {
     ...Typography.body,
-    color: Colors.textMuted,
+    color: 'rgba(148, 163, 184, 0.7)',
     lineHeight: 22,
   },
   focusCard: {
@@ -207,11 +210,11 @@ const s = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: '#f1f5f9',
   },
   sectionSubtitle: {
     fontSize: 13,
-    color: Colors.textMuted,
+    color: 'rgba(148, 163, 184, 0.7)',
     marginTop: 4,
   },
   infoList: {

@@ -124,7 +124,7 @@ const s = StyleSheet.create({
   },
   trailingPill: {
     borderRadius: Radius.pill,
-    backgroundColor: 'rgba(15, 23, 42, 0.08)',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     paddingHorizontal: 10,
     paddingVertical: 5,
   },

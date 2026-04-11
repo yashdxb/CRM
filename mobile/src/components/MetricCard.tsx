@@ -1,10 +1,21 @@
 import React from 'react';
 import { StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import GlassCard from './GlassCard';
 import Icon from './Icon';
-import { Colors, Typography, Spacing } from '../theme/tokens';
+import { Colors, Typography, Spacing, Radius } from '../theme/tokens';
+import { entityGradients, primaryGradient } from '../theme/gradients';
 
 type GradientVariant = 'home' | 'leads' | 'contacts' | 'deals' | 'activities';
+
+/** Accent color per variant for the title bar stripe */
+const accentColors: Record<GradientVariant, string> = {
+  home: '#667eea',
+  leads: '#22d3ee',
+  contacts: '#4ade80',
+  deals: '#fb923c',
+  activities: '#a855f7',
+};
 
 interface MetricCardProps {
   label: string;
@@ -23,32 +34,50 @@ export default function MetricCard({
   trend,
   style,
 }: MetricCardProps) {
+  const gradient =
+    entityGradients[variant as keyof typeof entityGradients] ?? primaryGradient;
+
   return (
-    <GlassCard style={[s.card, style]}>
-      <View style={s.row}>
-        <Icon name={icon} size={20} gradientBubble={variant} bubbleSize={40} />
-        <View style={s.textBlock}>
-          <Text style={s.label}>{label}</Text>
-          <Text style={s.value}>{value}</Text>
-        </View>
-      </View>
-      {trend ? (
-        <View style={s.trendRow}>
-          <Icon
-            name={trend.direction === 'up' ? 'forward' : 'forward'}
-            size={12}
-            color={trend.direction === 'up' ? Colors.green : Colors.red}
-          />
-          <Text
-            style={[
-              s.trendText,
-              { color: trend.direction === 'up' ? Colors.green : Colors.red },
-            ]}
-          >
-            {trend.text}
+    <GlassCard style={[s.card, style]} noPadding>
+      {/* Gradient accent stripe at top */}
+      <LinearGradient
+        colors={[...gradient.colors] as [string, string, ...string[]]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={s.accentStripe}
+      />
+
+      <View style={s.body}>
+        {/* Title row — icon + label */}
+        <View style={s.titleRow}>
+          <Icon name={icon} size={16} gradientBubble={variant} bubbleSize={30} />
+          <Text style={s.label} numberOfLines={1}>
+            {label}
           </Text>
         </View>
-      ) : null}
+
+        {/* Large metric value */}
+        <Text style={s.value}>{value}</Text>
+
+        {/* Optional trend */}
+        {trend ? (
+          <View style={s.trendRow}>
+            <Icon
+              name={trend.direction === 'up' ? 'forward' : 'forward'}
+              size={11}
+              color={trend.direction === 'up' ? Colors.green : Colors.red}
+            />
+            <Text
+              style={[
+                s.trendText,
+                { color: trend.direction === 'up' ? Colors.green : Colors.red },
+              ]}
+            >
+              {trend.text}
+            </Text>
+          </View>
+        ) : null}
+      </View>
     </GlassCard>
   );
 }
@@ -57,31 +86,44 @@ const s = StyleSheet.create({
   card: {
     flex: 1,
   },
-  row: {
+  accentStripe: {
+    height: 3,
+    borderTopLeftRadius: Radius.xl,
+    borderTopRightRadius: Radius.xl,
+  },
+  body: {
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 16,
+  },
+  titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
-  },
-  textBlock: {
-    flex: 1,
-    gap: 2,
+    gap: 10,
+    marginBottom: 12,
   },
   label: {
-    ...Typography.label,
-    color: Colors.textMuted,
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    flex: 1,
   },
   value: {
-    fontSize: 22,
-    fontWeight: '700',
+    fontSize: 28,
+    fontWeight: '800',
     color: Colors.textPrimary,
+    letterSpacing: -0.5,
   },
   trendRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginTop: Spacing.sm,
+    marginTop: 8,
   },
   trendText: {
-    ...Typography.caption,
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
