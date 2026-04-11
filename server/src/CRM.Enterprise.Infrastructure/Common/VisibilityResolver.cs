@@ -20,7 +20,8 @@ public sealed class VisibilityResolver : IVisibilityResolver
     {
         if (!userId.HasValue)
         {
-            return new VisibilityContext(RoleVisibilityScope.All, null);
+            // No user identity → restrict to zero records (fail-closed).
+            return new VisibilityContext(RoleVisibilityScope.Self, Array.Empty<Guid>());
         }
 
         var userInfo = await _dbContext.Users
