@@ -1,4 +1,4 @@
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { catchError, Observable, of, retry, timer } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
@@ -25,8 +25,22 @@ function retryTransient<T>() {
 export class DashboardDataService {
   private readonly http = inject(HttpClient);
 
-  getSummary() {
+  getSummary(
+    period?: 'today' | 'week' | 'month' | 'range',
+    fromUtc?: string,
+    toUtc?: string
+  ) {
     const url = `${environment.apiUrl}/api/dashboard/summary`;
+    let params = new HttpParams();
+    if (period) {
+      params = params.set('period', period);
+    }
+    if (fromUtc) {
+      params = params.set('fromUtc', fromUtc);
+    }
+    if (toUtc) {
+      params = params.set('toUtc', toUtc);
+    }
     const empty: DashboardSummary = {
       totalCustomers: 0,
       leads: 0,
@@ -81,7 +95,7 @@ export class DashboardDataService {
       forecastScenarios: []
     };
 
-    return this.http.get<DashboardSummary>(url).pipe(
+    return this.http.get<DashboardSummary>(url, { params }).pipe(
       retryTransient(),
       catchError((err) => {
         console.error('Failed to load dashboard summary', err);

@@ -5,7 +5,11 @@ using MediatR;
 
 namespace CRM.Enterprise.Application.Dashboard;
 
-public record GetDashboardSummaryQuery(Guid? UserId) : IRequest<DashboardSummaryDto>;
+public record GetDashboardSummaryQuery(
+    Guid? UserId,
+    string? Period = null,
+    DateTime? FromUtc = null,
+    DateTime? ToUtc = null) : IRequest<DashboardSummaryDto>;
 
 public class GetDashboardSummaryHandler : IRequestHandler<GetDashboardSummaryQuery, DashboardSummaryDto>
 {
@@ -17,5 +21,10 @@ public class GetDashboardSummaryHandler : IRequestHandler<GetDashboardSummaryQue
     }
 
     public Task<DashboardSummaryDto> Handle(GetDashboardSummaryQuery request, CancellationToken cancellationToken)
-        => _dashboardReadService.GetSummaryAsync(request.UserId, cancellationToken);
+        => _dashboardReadService.GetSummaryAsync(
+            request.UserId,
+            request.Period,
+            request.FromUtc,
+            request.ToUtc,
+            cancellationToken);
 }

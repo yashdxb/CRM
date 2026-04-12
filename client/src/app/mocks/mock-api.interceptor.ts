@@ -455,7 +455,10 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
   }
 
   if (req.method === 'GET' && path === '/api/dashboard/summary') {
-    const summary = buildDashboardSummary();
+    const period = (req.params.get('period') as 'today' | 'week' | 'month' | 'range' | null) ?? 'month';
+    const fromUtc = req.params.get('fromUtc') ?? undefined;
+    const toUtc = req.params.get('toUtc') ?? undefined;
+    const summary = buildDashboardSummary(period, fromUtc, toUtc);
     return of(new HttpResponse({ status: 200, body: summary })).pipe(delay(100));
   }
 

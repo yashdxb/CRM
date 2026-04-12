@@ -678,31 +678,75 @@ export function deleteOpportunity(id: string): boolean {
   return next.length !== countBefore;
 }
 
-export function buildDashboardSummary(): DashboardSummary {
-  const leads = mockCustomers.filter((c) => c.status === 'Lead').length;
-  const prospects = mockCustomers.filter((c) => c.status === 'Prospect').length;
-  const activeCustomers = mockCustomers.filter((c) => c.status === 'Customer').length;
+export function buildDashboardSummary(
+  period: 'today' | 'week' | 'month' | 'range' = 'month',
+  fromUtc?: string,
+  toUtc?: string
+): DashboardSummary {
+  const now = new Date();
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+  const endOfToday = new Date(now);
+  endOfToday.setHours(23, 59, 59, 999);
 
-  const upcomingActivities = mockActivities.filter((a) => a.status === 'Upcoming').length;
-  const overdueActivities = mockActivities.filter((a) => a.status === 'Overdue').length;
-  const tasksDueToday = mockActivities.filter((a) => {
+  const fromDate = (() => {
+    if (period === 'range' && fromUtc) return new Date(fromUtc);
+    if (period === 'today') return startOfToday;
+    if (period === 'week') {
+      const d = new Date(startOfToday);
+      d.setDate(d.getDate() - 6);
+      return d;
+    }
+    const d = new Date(startOfToday);
+    d.setDate(1);
+    return d;
+  })();
+
+  const toDate = (() => {
+    if (period === 'range' && toUtc) return new Date(toUtc);
+    return endOfToday;
+  })();
+
+  const isInWindow = (value?: string) => {
+    if (!value) return false;
+    const date = new Date(value);
+    return date >= fromDate && date <= toDate;
+  };
+
+  const filteredCustomers = mockCustomers.filter((c) => isInWindow(c.createdAt));
+  const filteredActivities = mockActivities.filter((a) => {
+    const anchor = a.dueDateUtc ?? a.completedDateUtc;
+    return isInWindow(anchor);
+  });
+  const filteredOpportunities = mockOpportunities.filter((opp) => {
+    const anchor = opp.updatedAtUtc ?? opp.createdAtUtc;
+    return isInWindow(anchor);
+  });
+
+  const leads = filteredCustomers.filter((c) => c.status === 'Lead').length;
+  const prospects = filteredCustomers.filter((c) => c.status === 'Prospect').length;
+  const activeCustomers = filteredCustomers.filter((c) => c.status === 'Customer').length;
+
+  const upcomingActivities = filteredActivities.filter((a) => a.status === 'Upcoming').length;
+  const overdueActivities = filteredActivities.filter((a) => a.status === 'Overdue').length;
+  const tasksDueToday = filteredActivities.filter((a) => {
     if (a.status === 'Completed' || !a.dueDateUtc) {
       return false;
     }
-    return new Date(a.dueDateUtc).toDateString() === today.toDateString();
+    return new Date(a.dueDateUtc).toDateString() === now.toDateString();
   }).length;
 
-  const recentCustomers = [...mockCustomers]
+  const recentCustomers = [...filteredCustomers]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 6);
 
-  const activitiesNextWeek = mockActivities
+  const activitiesNextWeek = filteredActivities
     .filter((a) => {
       if (!a.dueDateUtc) {
         return false;
       }
       const due = new Date(a.dueDateUtc).getTime();
-      const diffDays = (due - today.getTime()) / (1000 * 60 * 60 * 24);
+      const diffDays = (due - now.getTime()) / (1000 * 60 * 60 * 24);
       return diffDays <= 7 && diffDays >= -1;
     })
     .sort((a, b) => {
@@ -735,9 +779,9 @@ export function buildDashboardSummary(): DashboardSummary {
     'Virtual Tour',
     'Photography Session'
   ];
-  const totalActivities = mockActivities.length;
+  const totalActivities = Math.max(filteredActivities.length, 1);
   const activityBreakdown = activityTypes.map(type => {
-    const count = mockActivities.filter(a => a.type === type).length;
+    const count = filteredActivities.filter(a => a.type === type).length;
     return {
       type,
       count,
@@ -766,7 +810,7 @@ export function buildDashboardSummary(): DashboardSummary {
     { stage: 'Closed Won', count: activeCustomers, value: activeCustomers * 52000 }
   ];
   const pipelineValueTotal = pipelineValue.reduce((sum, stage) => sum + stage.value, 0);
-  const openOpportunities = mockOpportunities.filter((opp) => opp.status === 'Open').length;
+  const openOpportunities = filteredOpportunities.filter((opp) => opp.status === 'Open').length;
 
   // Conversion trend (weekly for past 6 weeks)
   const weeks = ['W1', 'W2', 'W3', 'W4', 'W5', 'W6'];
@@ -783,7 +827,7 @@ export function buildDashboardSummary(): DashboardSummary {
     { name: 'Omar Ali', deals: 7, revenue: 154000 }
   ];
 
-  const newlyAssignedLeads = mockCustomers
+  const newlyAssignedLeads = filteredCustomers
     .filter((c) => c.status === 'Lead')
     .slice(0, 6)
     .map((lead) => ({
@@ -795,7 +839,7 @@ export function buildDashboardSummary(): DashboardSummary {
       createdAtUtc: lead.createdAt
     }));
 
-  const atRiskDeals = mockOpportunities
+  const atRiskDeals = filteredOpportunities
     .filter((opp) => opp.status === 'Open')
     .slice(0, 6)
     .map((opp, index) => ({
@@ -810,7 +854,7 @@ export function buildDashboardSummary(): DashboardSummary {
     }));
 
   return {
-    totalCustomers: mockCustomers.length,
+    totalCustomers: filteredCustomers.length,
     leads,
     prospects,
     activeCustomers,

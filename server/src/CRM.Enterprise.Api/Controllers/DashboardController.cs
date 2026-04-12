@@ -31,9 +31,15 @@ public class DashboardController : ControllerBase
     }
 
     [HttpGet("summary")]
-    public async Task<ActionResult<DashboardSummaryResponse>> GetSummary(CancellationToken cancellationToken)
+    public async Task<ActionResult<DashboardSummaryResponse>> GetSummary(
+        [FromQuery] string? period,
+        [FromQuery] DateTime? fromUtc,
+        [FromQuery] DateTime? toUtc,
+        CancellationToken cancellationToken)
     {
-        var summary = await _mediator.Send(new GetDashboardSummaryQuery(GetCurrentUserId()), cancellationToken);
+        var summary = await _mediator.Send(
+            new GetDashboardSummaryQuery(GetCurrentUserId(), period, fromUtc, toUtc),
+            cancellationToken);
 
         var recentCustomers = summary.RecentAccounts
             .Select(rc => new CustomerListItem(

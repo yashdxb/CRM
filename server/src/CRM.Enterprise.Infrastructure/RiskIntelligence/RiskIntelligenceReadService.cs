@@ -25,7 +25,7 @@ public sealed class RiskIntelligenceReadService : IRiskIntelligenceReadService
     {
         // These read services share the same scoped DbContext. Running them in parallel
         // triggers EF Core concurrency errors on a single context instance.
-        var summary = await _dashboardReadService.GetSummaryAsync(userId, cancellationToken);
+        var summary = await _dashboardReadService.GetSummaryAsync(userId, cancellationToken: cancellationToken);
         var manager = await _dashboardReadService.GetManagerPipelineHealthAsync(userId, cancellationToken);
         var insights = await _assistantChatService.GetInsightsAsync(userId, cancellationToken);
         var decisions = await _decisionInboxService.GetInboxAsync("Pending", null, currentUserId: null, canApprove: false, canOverride: true, cancellationToken: cancellationToken);

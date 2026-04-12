@@ -457,6 +457,7 @@ export class DashboardPage implements OnInit {
   protected selectPeriod(period: 'today' | 'week' | 'month'): void {
     this.selectedPeriod.set(period);
     this.showRangePicker.set(false);
+    this.refreshSummaryForSelectedPeriod();
   }
 
   protected toggleRangePicker(): void {
@@ -472,7 +473,46 @@ export class DashboardPage implements OnInit {
     this.dateRange.set(range);
     if (range && range.length === 2 && range[0] && range[1]) {
       this.showRangePicker.set(false);
+      this.refreshSummaryForSelectedPeriod();
     }
+  }
+
+  private refreshSummaryForSelectedPeriod(): void {
+    const request = this.buildSummaryRequestParams();
+    this.dashboardData.getSummary(request.period, request.fromUtc, request.toUtc)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((summary) => {
+        const resolvedSummary = summary ?? this.emptySummary;
+        this.summarySignal.set(resolvedSummary);
+        this.emitRiskAlerts(resolvedSummary);
+      });
+  }
+
+  private buildSummaryRequestParams(): {
+    period: 'today' | 'week' | 'month' | 'range';
+    fromUtc?: string;
+    toUtc?: string;
+  } {
+    const period = this.selectedPeriod();
+    if (period !== 'range') {
+      return { period };
+    }
+
+    const range = this.dateRange();
+    if (!range || range.length < 2 || !range[0] || !range[1]) {
+      return { period: 'month' };
+    }
+
+    const from = new Date(range[0]);
+    from.setHours(0, 0, 0, 0);
+    const to = new Date(range[1]);
+    to.setHours(23, 59, 59, 999);
+
+    return {
+      period: 'range',
+      fromUtc: from.toISOString(),
+      toUtc: to.toISOString()
+    };
   }
 
   protected confidenceLabel(value: number): string {
@@ -972,7 +1012,8 @@ export class DashboardPage implements OnInit {
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe(() => {
-        this.dashboardData.getSummary()
+        const request = this.buildSummaryRequestParams();
+        this.dashboardData.getSummary(request.period, request.fromUtc, request.toUtc)
           .pipe(takeUntilDestroyed(this.destroyRef))
           .subscribe(summary => {
             const resolvedSummary = summary ?? this.emptySummary;
@@ -1030,7 +1071,8 @@ export class DashboardPage implements OnInit {
   private loadAllDashboardData(): void {
     this.dataLoadFailed.set(false);
 
-    this.dashboardData.getSummary()
+    const request = this.buildSummaryRequestParams();
+    this.dashboardData.getSummary(request.period, request.fromUtc, request.toUtc)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (summary) => {

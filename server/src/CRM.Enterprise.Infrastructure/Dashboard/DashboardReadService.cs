@@ -88,17 +88,28 @@ public class DashboardReadService : IDashboardReadService
         _cacheOptions = cacheOptions.Value;
     }
 
-    public async Task<DashboardSummaryDto> GetSummaryAsync(Guid? userId, CancellationToken cancellationToken)
+    public async Task<DashboardSummaryDto> GetSummaryAsync(
+        Guid? userId,
+        string? period = null,
+        DateTime? fromUtc = null,
+        DateTime? toUtc = null,
+        CancellationToken cancellationToken = default)
     {
-        var cacheKey = BuildUserScopedCacheKey("dashboard:summary", userId);
+        var (windowStartUtc, windowEndUtcExclusive) = ResolveDashboardWindow(period, fromUtc, toUtc);
+        var cacheWindowToken = $"{windowStartUtc:yyyyMMddHHmmss}-{windowEndUtcExclusive:yyyyMMddHHmmss}";
+        var cacheKey = BuildUserScopedCacheKey("dashboard:summary", userId, cacheWindowToken);
         return await _readModelCache.GetOrCreateAsync(
             cacheKey,
             TimeSpan.FromSeconds(Math.Max(5, _cacheOptions.DashboardSummaryTtlSeconds)),
-            ct => GetSummaryCoreAsync(userId, ct),
+            ct => GetSummaryCoreAsync(userId, windowStartUtc, windowEndUtcExclusive, ct),
             cancellationToken);
     }
 
-    private async Task<DashboardSummaryDto> GetSummaryCoreAsync(Guid? userId, CancellationToken cancellationToken)
+    private async Task<DashboardSummaryDto> GetSummaryCoreAsync(
+        Guid? userId,
+        DateTime windowStartUtc,
+        DateTime windowEndUtcExclusive,
+        CancellationToken cancellationToken)
     {
         var now = DateTime.UtcNow;
         var nextWeek = now.AddDays(7);
@@ -116,6 +127,7 @@ public class DashboardReadService : IDashboardReadService
         var visibility = await ResolveVisibilityAsync(userId, cancellationToken);
 
         var accountQuery = _dbContext.Accounts.AsNoTracking().Where(a => !a.IsDeleted);
+        accountQuery = accountQuery.Where(a => a.CreatedAtUtc >= windowStartUtc && a.CreatedAtUtc < windowEndUtcExclusive);
         if (visibility.UserIds is not null)
         {
             accountQuery = accountQuery.Where(a => visibility.UserIds.Contains(a.OwnerId));
@@ -131,7 +143,10 @@ public class DashboardReadService : IDashboardReadService
 
         var leadsQuery = _dbContext.Leads
             .AsNoTracking()
-            .Where(l => !l.IsDeleted && l.ConvertedOpportunityId == null);
+            .Where(l => !l.IsDeleted
+                        && l.ConvertedOpportunityId == null
+                        && l.CreatedAtUtc >= windowStartUtc
+                        && l.CreatedAtUtc < windowEndUtcExclusive);
         if (visibility.UserIds is not null)
         {
             leadsQuery = leadsQuery.Where(l => visibility.UserIds.Contains(l.OwnerId));
@@ -139,7 +154,11 @@ public class DashboardReadService : IDashboardReadService
 
         var leads = await leadsQuery.CountAsync(cancellationToken);
 
-        var opportunitiesQuery = _dbContext.Opportunities.AsNoTracking().Where(o => !o.IsDeleted && !o.IsClosed);
+        var opportunitiesQuery = _dbContext.Opportunities.AsNoTracking()
+            .Where(o => !o.IsDeleted
+                        && !o.IsClosed
+                        && (o.UpdatedAtUtc ?? o.CreatedAtUtc) >= windowStartUtc
+                        && (o.UpdatedAtUtc ?? o.CreatedAtUtc) < windowEndUtcExclusive);
         if (visibility.UserIds is not null)
         {
             opportunitiesQuery = opportunitiesQuery.Where(o => visibility.UserIds.Contains(o.OwnerId));
@@ -279,6 +298,9 @@ public class DashboardReadService : IDashboardReadService
         var costOfNotKnowingTrend = BuildCostOfNotKnowingTrend(pipelineRows, stageConfidenceMap, now);
 
         var activitiesQuery = _dbContext.Activities.AsNoTracking().Where(a => !a.IsDeleted);
+        activitiesQuery = activitiesQuery.Where(a =>
+            (a.DueDateUtc ?? a.CompletedDateUtc ?? a.CreatedAtUtc) >= windowStartUtc
+            && (a.DueDateUtc ?? a.CompletedDateUtc ?? a.CreatedAtUtc) < windowEndUtcExclusive);
         if (visibility.UserIds is not null)
         {
             activitiesQuery = activitiesQuery.Where(a => visibility.UserIds.Contains(a.OwnerId));
@@ -383,7 +405,9 @@ public class DashboardReadService : IDashboardReadService
 
         var recentCustomersQuery = _dbContext.Accounts
             .Include(a => a.Contacts)
-            .Where(a => !a.IsDeleted);
+            .Where(a => !a.IsDeleted
+                        && a.CreatedAtUtc >= windowStartUtc
+                        && a.CreatedAtUtc < windowEndUtcExclusive);
         if (visibility.UserIds is not null)
         {
             recentCustomersQuery = recentCustomersQuery.Where(a => visibility.UserIds.Contains(a.OwnerId));
@@ -429,6 +453,8 @@ public class DashboardReadService : IDashboardReadService
                 !a.IsDeleted &&
                 !a.CompletedDateUtc.HasValue &&
                 a.DueDateUtc.HasValue &&
+                a.DueDateUtc.Value >= windowStartUtc &&
+                a.DueDateUtc.Value < windowEndUtcExclusive &&
                 a.DueDateUtc.Value >= now &&
                 a.DueDateUtc.Value <= nextWeek);
         if (visibility.UserIds is not null)
@@ -456,6 +482,8 @@ public class DashboardReadService : IDashboardReadService
                     !a.IsDeleted &&
                     !a.CompletedDateUtc.HasValue &&
                     a.Type == ActivityType.Task &&
+                    (a.DueDateUtc ?? a.CreatedAtUtc) >= windowStartUtc &&
+                    (a.DueDateUtc ?? a.CreatedAtUtc) < windowEndUtcExclusive &&
                     (a.OwnerId == userId.Value ||
                      (!string.IsNullOrWhiteSpace(userEmail) && a.CreatedBy == userEmail)))
                 .OrderBy(a => a.DueDateUtc ?? DateTime.MaxValue)
@@ -477,6 +505,8 @@ public class DashboardReadService : IDashboardReadService
                 .Include(l => l.Status)
                 .Where(l => !l.IsDeleted
                             && l.OwnerId == userId.Value
+                            && (l.UpdatedAtUtc ?? l.CreatedAtUtc) >= windowStartUtc
+                            && (l.UpdatedAtUtc ?? l.CreatedAtUtc) < windowEndUtcExclusive
                             && ((l.UpdatedAtUtc ?? l.CreatedAtUtc) >= newlyAssignedCutoff))
                 .OrderByDescending(l => l.UpdatedAtUtc ?? l.CreatedAtUtc)
                 .Take(6)
@@ -1565,11 +1595,52 @@ public class DashboardReadService : IDashboardReadService
             orderedReviewQueue);
     }
 
-    private string BuildUserScopedCacheKey(string endpoint, Guid? userId)
+    private string BuildUserScopedCacheKey(string endpoint, Guid? userId, string? scopeSuffix = null)
     {
         var tenantId = _tenantProvider.TenantId == Guid.Empty ? "default" : _tenantProvider.TenantId.ToString("N");
         var userToken = userId.HasValue ? userId.Value.ToString("N") : "anonymous";
-        return $"tenant:{tenantId}:user:{userToken}:{endpoint}";
+        if (string.IsNullOrWhiteSpace(scopeSuffix))
+        {
+            return $"tenant:{tenantId}:user:{userToken}:{endpoint}";
+        }
+
+        return $"tenant:{tenantId}:user:{userToken}:{endpoint}:{scopeSuffix}";
+    }
+
+    private static (DateTime StartUtc, DateTime EndUtcExclusive) ResolveDashboardWindow(
+        string? period,
+        DateTime? fromUtc,
+        DateTime? toUtc)
+    {
+        var now = DateTime.UtcNow;
+        var normalized = (period ?? "month").Trim().ToLowerInvariant();
+
+        if (normalized == "today")
+        {
+            var start = now.Date;
+            return (start, start.AddDays(1));
+        }
+
+        if (normalized == "week")
+        {
+            var start = now.Date.AddDays(-6);
+            return (start, now.Date.AddDays(1));
+        }
+
+        if (normalized == "range" && fromUtc.HasValue && toUtc.HasValue)
+        {
+            var start = fromUtc.Value;
+            var endExclusive = toUtc.Value;
+            if (endExclusive <= start)
+            {
+                endExclusive = start.AddDays(1);
+            }
+
+            return (start, endExclusive);
+        }
+
+        var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        return (monthStart, now.Date.AddDays(1));
     }
 
     private sealed record DashboardQualificationInsights(

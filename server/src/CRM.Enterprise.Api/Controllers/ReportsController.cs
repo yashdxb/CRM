@@ -53,7 +53,7 @@ public class ReportsController : ControllerBase
     [HttpGet("pipeline-by-stage")]
     public async Task<ActionResult<PipelineByStageReportResponse>> GetPipelineByStage(CancellationToken cancellationToken)
     {
-        var summary = await _dashboardReadService.GetSummaryAsync(GetCurrentUserId(), cancellationToken);
+        var summary = await _dashboardReadService.GetSummaryAsync(GetCurrentUserId(), cancellationToken: cancellationToken);
         var totalValue = summary.PipelineValueTotal <= 0m
             ? summary.PipelineValue.Sum(stage => stage.Value)
             : summary.PipelineValueTotal;
