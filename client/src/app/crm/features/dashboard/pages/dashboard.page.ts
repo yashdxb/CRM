@@ -9,6 +9,7 @@ import { ChartModule } from 'primeng/chart';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { OrderListModule } from 'primeng/orderlist';
+import { DatePickerModule } from 'primeng/datepicker';
 import { Subject, startWith, switchMap } from 'rxjs';
 import { debounceTime, filter } from 'rxjs/operators';
 
@@ -80,6 +81,7 @@ interface AssistantDiagnosticItem {
     ButtonModule,
     DialogModule,
     OrderListModule,
+    DatePickerModule,
     BreadcrumbsComponent
   ],
   templateUrl: './dashboard.page.html',
@@ -196,7 +198,15 @@ export class DashboardPage implements OnInit {
   private readonly assistantInsightsSignal = signal<AssistantInsights>(this.emptyAssistantInsights);
   protected readonly expansionSignals = signal<ExpansionSignal[]>([]);
   protected readonly pendingDecisionInbox = signal<OpportunityApprovalInboxItem[]>([]);
-  protected readonly selectedPeriod = signal<'today' | 'week' | 'month'>('today');
+  protected readonly selectedPeriod = signal<'today' | 'week' | 'month' | 'range'>('month');
+  protected readonly dateRange = signal<Date[] | null>(null);
+  protected readonly showRangePicker = signal(false);
+  protected readonly rangeLabel = computed(() => {
+    const r = this.dateRange();
+    if (!r || r.length < 2 || !r[0] || !r[1]) return '';
+    const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return `${fmt(r[0])} – ${fmt(r[1])}`;
+  });
   protected readonly expansionLoading = signal(false);
   protected readonly expansionSubmitting = signal<Record<string, boolean>>({});
 
@@ -443,6 +453,27 @@ export class DashboardPage implements OnInit {
       }
     ].filter((item) => item.count > 0);
   });
+
+  protected selectPeriod(period: 'today' | 'week' | 'month'): void {
+    this.selectedPeriod.set(period);
+    this.showRangePicker.set(false);
+  }
+
+  protected toggleRangePicker(): void {
+    if (this.selectedPeriod() === 'range') {
+      this.showRangePicker.update(v => !v);
+    } else {
+      this.selectedPeriod.set('range');
+      this.showRangePicker.set(true);
+    }
+  }
+
+  protected onDateRangeChange(range: Date[] | null): void {
+    this.dateRange.set(range);
+    if (range && range.length === 2 && range[0] && range[1]) {
+      this.showRangePicker.set(false);
+    }
+  }
 
   protected confidenceLabel(value: number): string {
     if (value >= 0.75) return 'High';

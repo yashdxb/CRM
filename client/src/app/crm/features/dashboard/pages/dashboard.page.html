@@ -91,10 +91,32 @@
           Performance Overview
         </h2>
         <div class="metrics-period">
-          <button type="button" class="period-btn" [class.active]="selectedPeriod() === 'today'" (click)="selectedPeriod.set('today')">Today</button>
-          <button type="button" class="period-btn" [class.active]="selectedPeriod() === 'week'" (click)="selectedPeriod.set('week')">Week</button>
-          <button type="button" class="period-btn" [class.active]="selectedPeriod() === 'month'" (click)="selectedPeriod.set('month')">Month</button>
+          <button type="button" class="period-btn" [class.active]="selectedPeriod() === 'month'" (click)="selectPeriod('month')">Month</button>
+          <button type="button" class="period-btn" [class.active]="selectedPeriod() === 'week'" (click)="selectPeriod('week')">Week</button>
+          <button type="button" class="period-btn" [class.active]="selectedPeriod() === 'today'" (click)="selectPeriod('today')">Today</button>
+          <div class="period-divider"></div>
+          <button type="button" class="period-btn period-btn--range" [class.active]="selectedPeriod() === 'range'" (click)="toggleRangePicker()">
+            <i class="pi pi-calendar"></i>
+            @if (selectedPeriod() === 'range' && rangeLabel()) {
+              <span class="range-label">{{ rangeLabel() }}</span>
+            } @else {
+              Range
+            }
+          </button>
         </div>
+        @if (showRangePicker()) {
+          <div class="range-picker-dropdown">
+            <p-datepicker
+              selectionMode="range"
+              [inline]="true"
+              [numberOfMonths]="2"
+              [ngModel]="dateRange()"
+              (ngModelChange)="onDateRangeChange($event)"
+              dateFormat="dd M yy"
+              placeholder="Select date range">
+            </p-datepicker>
+          </div>
+        }
       </div>
       <div
         class="metrics-grid"

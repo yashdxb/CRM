@@ -1157,7 +1157,8 @@ let mockUsers: MockUserRecord[] = [
     isActive: true,
     createdAtUtc: addDays(today, -180),
     lastLoginAtUtc: addDays(today, -1),
-    roleIds: ['role-admin']
+    roleIds: ['role-admin'],
+    profilePictureUrl: 'https://i.pravatar.cc/150?u=yasser.ahmed'
   },
   {
     id: 'user-002',
@@ -1169,7 +1170,8 @@ let mockUsers: MockUserRecord[] = [
     isActive: true,
     createdAtUtc: addDays(today, -140),
     lastLoginAtUtc: addDays(today, -4),
-    roleIds: ['role-sales']
+    roleIds: ['role-sales'],
+    profilePictureUrl: 'https://i.pravatar.cc/150?u=leah.singh'
   },
   {
     id: 'user-003',
@@ -1181,7 +1183,8 @@ let mockUsers: MockUserRecord[] = [
     isActive: true,
     createdAtUtc: addDays(today, -120),
     lastLoginAtUtc: addDays(today, -2),
-    roleIds: ['role-success']
+    roleIds: ['role-success'],
+    profilePictureUrl: 'https://i.pravatar.cc/150?u=omar.ali'
   },
   {
     id: 'user-004',
@@ -1193,7 +1196,8 @@ let mockUsers: MockUserRecord[] = [
     isActive: false,
     createdAtUtc: addDays(today, -90),
     lastLoginAtUtc: addDays(today, -50),
-    roleIds: ['role-support']
+    roleIds: ['role-support'],
+    profilePictureUrl: 'https://i.pravatar.cc/150?u=mia.khalid'
   },
   {
     id: 'user-005',
@@ -1205,7 +1209,8 @@ let mockUsers: MockUserRecord[] = [
     isActive: true,
     createdAtUtc: addDays(today, -70),
     lastLoginAtUtc: addDays(today, -3),
-    roleIds: ['role-success']
+    roleIds: ['role-success'],
+    profilePictureUrl: 'https://i.pravatar.cc/150?u=jonas.berg'
   }
 ];
 
@@ -1376,7 +1381,8 @@ export const lookupActiveUsers = (search?: string, max = 200): UserLookupItem[] 
     .map((user) => ({
       id: user.id,
       fullName: user.fullName,
-      email: user.email
+      email: user.email,
+      profilePictureUrl: user.profilePictureUrl ?? null
     }));
 };
 

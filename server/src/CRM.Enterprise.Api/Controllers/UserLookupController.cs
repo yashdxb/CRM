@@ -43,7 +43,7 @@ public class UserLookupController : ControllerBase
         var items = await query
             .OrderBy(u => u.FullName)
             .Take(max)
-            .Select(u => new UserLookupItem(u.Id, u.FullName, u.Email))
+            .Select(u => new UserLookupItem(u.Id, u.FullName, u.Email, u.ProfilePictureUrl))
             .ToListAsync(cancellationToken);
 
         return Ok(items);

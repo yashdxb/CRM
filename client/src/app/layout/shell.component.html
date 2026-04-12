@@ -112,7 +112,13 @@
                     <ul class="online-presence-list">
                       @for (person of onlinePeople(); track person.userId) {
                         <li class="online-presence-item">
-                          <span class="online-presence-avatar" aria-hidden="true">{{ person.initials }}</span>
+                          <span class="online-presence-avatar" aria-hidden="true">
+                            @if (person.profilePictureUrl) {
+                              <img [src]="person.profilePictureUrl" [alt]="person.displayName" />
+                            } @else {
+                              {{ person.initials }}
+                            }
+                          </span>
                           <div class="online-presence-meta">
                             <strong class="online-presence-name">{{ person.displayName }}</strong>
                             @if (person.email) {
@@ -185,7 +191,13 @@
               <div class="direct-chat-main">
                 <header class="direct-chat-header">
                   <div class="direct-chat-header__meta">
-                    <span class="direct-chat-header__avatar" aria-hidden="true">{{ activeUser.initials }}</span>
+                    <span class="direct-chat-header__avatar" aria-hidden="true">
+                      @if (activeUser.profilePictureUrl) {
+                        <img [src]="activeUser.profilePictureUrl" [alt]="activeUser.displayName" />
+                      } @else {
+                        {{ activeUser.initials }}
+                      }
+                    </span>
                     <div class="direct-chat-header__text">
                       <strong>
                         @if (activeChatParticipants().length > 1) {
@@ -247,7 +259,11 @@
                         [class.direct-chat-message--mine]="message.senderUserId === currentUserId"
                       >
                         <span class="direct-chat-message__avatar" aria-hidden="true">
-                          {{ buildAvatarInitials(message.senderDisplayName) }}
+                          @if (getUserProfilePicture(message.senderUserId); as picUrl) {
+                            <img [src]="picUrl" [alt]="message.senderDisplayName" />
+                          } @else {
+                            {{ buildAvatarInitials(message.senderDisplayName) }}
+                          }
                         </span>
                         <div class="direct-chat-message__content">
                           <p><strong class="direct-chat-message__sender">{{ message.senderDisplayName }}:</strong> {{ message.content }}</p>

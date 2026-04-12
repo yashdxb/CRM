@@ -32,6 +32,7 @@ interface PresencePerson {
   displayName: string;
   email: string | null;
   initials: string;
+  profilePictureUrl: string | null;
 }
 
 interface DirectChatMessage {
@@ -137,7 +138,8 @@ export class ShellComponent {
           userId,
           displayName,
           email: user?.email ?? null,
-          initials: this.buildInitials(displayName)
+          initials: this.buildInitials(displayName),
+          profilePictureUrl: user?.profilePictureUrl ?? null
         };
       })
       .sort((first, second) => first.displayName.localeCompare(second.displayName));
@@ -905,11 +907,13 @@ export class ShellComponent {
   }
 
   private mapThreadParticipants(thread: DirectChatThreadItem): PresencePerson[] {
+    const lookup = this.userLookupById();
     return thread.participants.map((participant) => ({
       userId: participant.userId,
       displayName: participant.displayName,
       email: participant.email,
-      initials: this.buildInitials(participant.displayName)
+      initials: this.buildInitials(participant.displayName),
+      profilePictureUrl: lookup.get(participant.userId)?.profilePictureUrl ?? null
     }));
   }
 
@@ -1050,7 +1054,8 @@ export class ShellComponent {
               userId: senderUserId,
               displayName: senderDisplayName,
               email: null,
-              initials: this.buildInitials(senderDisplayName)
+              initials: this.buildInitials(senderDisplayName),
+              profilePictureUrl: this.userLookupById().get(senderUserId)?.profilePictureUrl ?? null
             } : null);
           if (focusUser) {
             this.activeChatUser.set(focusUser);
@@ -1074,6 +1079,10 @@ export class ShellComponent {
 
   protected buildAvatarInitials(displayName: string): string {
     return this.buildInitials(displayName || 'User');
+  }
+
+  protected getUserProfilePicture(userId: string): string | null {
+    return this.userLookupById().get(userId)?.profilePictureUrl ?? null;
   }
 
   private startSelfTyping(threadId: string): void {

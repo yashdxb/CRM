@@ -91,6 +91,7 @@ export interface UserLookupItem {
   id: string;
   fullName: string;
   email: string;
+  profilePictureUrl?: string | null;
 }
 
 export interface UserDetailResponse {

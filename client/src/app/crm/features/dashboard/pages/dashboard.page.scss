@@ -1321,6 +1321,7 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: $space-4;
+  position: relative;
 }
 
 .section-title {
@@ -1339,10 +1340,20 @@
 
 .metrics-period {
   display: flex;
+  align-items: center;
   background: $glass-bg;
   border-radius: $radius-xl;
   padding: 4px;
   border: 1px solid $glass-border;
+  position: relative;
+}
+
+.period-divider {
+  width: 1px;
+  height: 20px;
+  background: rgba(0, 0, 0, 0.1);
+  margin: 0 2px;
+  flex-shrink: 0;
 }
 
 .period-btn {
@@ -1355,6 +1366,7 @@
   border-radius: $radius-lg;
   cursor: pointer;
   transition: all $transition-fast;
+  white-space: nowrap;
   
   &:hover {
     color: $text-secondary;
@@ -1365,6 +1377,42 @@
     background: white;
     color: $primary;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  &--range {
+    display: inline-flex;
+    align-items: center;
+    gap: $space-1;
+
+    i {
+      font-size: $font-size-sm;
+    }
+  }
+}
+
+.range-label {
+  font-size: $font-size-sm;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.range-picker-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 100;
+  margin-top: $space-2;
+  background: white;
+  border-radius: $radius-xl;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 4px 16px rgba(0, 0, 0, 0.08);
+  border: 1px solid $glass-border;
+  padding: $space-3;
+  animation: fade-in-up 0.2s ease-out;
+
+  ::ng-deep .p-datepicker {
+    border: none;
+    background: transparent;
+    font-family: inherit;
   }
 }
 
@@ -2313,6 +2361,7 @@
 
 .chart-container {
   position: relative;
+  z-index: 1; // Lift above .glass-card::before gradient overlay
   width: 100%;
   
   &.medium {
@@ -2372,6 +2421,7 @@
   justify-content: space-between;
   gap: $space-3;
   position: relative;
+  z-index: 1; // Lift above .glass-card::before gradient overlay
   padding-right: calc(#{$space-5} + 120px);
 }
 
@@ -2458,6 +2508,9 @@
   overflow: auto;
   min-height: 0;
   flex: 1 1 auto;
+  // Lift content above .glass-card::before gradient overlay to prevent washed-out appearance
+  position: relative;
+  z-index: 1;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -4127,9 +4180,14 @@
   flex-direction: column;
   height: 100%;
   gap: 0;
-  background: rgba(255, 255, 255, 0.96);
+  background: #fff;
   border-radius: inherit;
   overflow: hidden;
+  // CRITICAL: position + z-index lifts this above the .glass-card::before overlay
+  // that was painting a translucent radial gradient ON TOP of all card content,
+  // causing every chip / header / label to look washed-out.
+  position: relative;
+  z-index: 1;
 }
 
 // ── Header ───────────────────────────────────────────────────────────────────
@@ -4219,14 +4277,14 @@
   gap: 6px;
   padding: 5px 12px;
   border-radius: $radius-full;
-  border: 1px solid rgba(102, 126, 234, 0.1);
-  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(102, 126, 234, 0.18);
+  background: #fff;
   font-size: $font-size-xs;
   font-weight: 600;
-  color: $gray-600;
+  color: $gray-700;
   cursor: pointer;
   transition: all 200ms ease;
-  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
 
   &:hover {
     transform: translateY(-1px);
@@ -4256,7 +4314,7 @@
 // Chip color themes
 .aq-chip--danger {
   .aq-chip__dot { background: #ef4444; }
-  .aq-chip__count { background: rgba(239, 68, 68, 0.12); color: #dc2626; }
+  .aq-chip__count { background: rgba(239, 68, 68, 0.18); color: #dc2626; }
   &.aq-chip--active {
     background: #ef4444; color: #fff; border-color: #ef4444;
     .aq-chip__dot { background: #fff; }
@@ -4266,7 +4324,7 @@
 
 .aq-chip--warning {
   .aq-chip__dot { background: #f59e0b; }
-  .aq-chip__count { background: rgba(245, 158, 11, 0.12); color: #d97706; }
+  .aq-chip__count { background: rgba(245, 158, 11, 0.18); color: #d97706; }
   &.aq-chip--active {
     background: #f59e0b; color: #fff; border-color: #f59e0b;
     .aq-chip__dot { background: #fff; }
@@ -4276,7 +4334,7 @@
 
 .aq-chip--purple {
   .aq-chip__dot { background: #a855f7; }
-  .aq-chip__count { background: rgba(168, 85, 247, 0.12); color: #9333ea; }
+  .aq-chip__count { background: rgba(168, 85, 247, 0.18); color: #9333ea; }
   &.aq-chip--active {
     background: #a855f7; color: #fff; border-color: #a855f7;
     .aq-chip__dot { background: #fff; }
@@ -4286,7 +4344,7 @@
 
 .aq-chip--cyan {
   .aq-chip__dot { background: #06b6d4; }
-  .aq-chip__count { background: rgba(6, 182, 212, 0.12); color: #0891b2; }
+  .aq-chip__count { background: rgba(6, 182, 212, 0.18); color: #0891b2; }
   &.aq-chip--active {
     background: #06b6d4; color: #fff; border-color: #06b6d4;
     .aq-chip__dot { background: #fff; }
@@ -4296,7 +4354,7 @@
 
 .aq-chip--orange {
   .aq-chip__dot { background: #f97316; }
-  .aq-chip__count { background: rgba(249, 115, 22, 0.12); color: #ea580c; }
+  .aq-chip__count { background: rgba(249, 115, 22, 0.18); color: #ea580c; }
   &.aq-chip--active {
     background: #f97316; color: #fff; border-color: #f97316;
     .aq-chip__dot { background: #fff; }
@@ -4306,7 +4364,7 @@
 
 .aq-chip--slate {
   .aq-chip__dot { background: #64748b; }
-  .aq-chip__count { background: rgba(100, 116, 139, 0.12); color: #475569; }
+  .aq-chip__count { background: rgba(100, 116, 139, 0.18); color: #475569; }
   &.aq-chip--active {
     background: #475569; color: #fff; border-color: #475569;
     .aq-chip__dot { background: #fff; }
@@ -4378,11 +4436,11 @@
   color: $gray-500;
   transition: inherit;
 
-  &--danger { background: rgba(239, 68, 68, 0.12); color: #dc2626; }
-  &--warning { background: rgba(245, 158, 11, 0.12); color: #d97706; }
-  &--purple { background: rgba(168, 85, 247, 0.12); color: #9333ea; }
-  &--cyan { background: rgba(6, 182, 212, 0.12); color: #0891b2; }
-  &--orange { background: rgba(249, 115, 22, 0.12); color: #ea580c; }
+  &--danger { background: rgba(239, 68, 68, 0.18); color: #dc2626; }
+  &--warning { background: rgba(245, 158, 11, 0.18); color: #d97706; }
+  &--purple { background: rgba(168, 85, 247, 0.18); color: #9333ea; }
+  &--cyan { background: rgba(6, 182, 212, 0.18); color: #0891b2; }
+  &--orange { background: rgba(249, 115, 22, 0.18); color: #ea580c; }
 }
 
 // ── Item list ────────────────────────────────────────────────────────────────
@@ -4395,7 +4453,7 @@
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  background: linear-gradient(180deg, rgba(248, 250, 255, 0.6) 0%, rgba(255, 255, 255, 0.3) 100%);
+  background: linear-gradient(180deg, #f8faff 0%, #ffffff 100%);
 
   &::-webkit-scrollbar { width: 4px; }
   &::-webkit-scrollbar-track { background: transparent; }
@@ -4411,8 +4469,8 @@
 .aq-item {
   display: flex;
   border-radius: 12px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 255, 0.9));
-  border: 1px solid rgba(102, 126, 234, 0.1);
+  background: linear-gradient(135deg, #ffffff, #f8faff);
+  border: 1px solid rgba(102, 126, 234, 0.12);
   overflow: visible;
   transition: all 220ms ease;
   animation: aq-item-in 350ms ease both;
@@ -5383,11 +5441,32 @@
   .metrics-period {
     width: 100%;
     justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .period-divider {
+    display: none;
   }
 
   .period-btn {
     flex: 1 1 0;
     text-align: center;
+    padding: $space-2 $space-3;
+  }
+
+  .range-picker-dropdown {
+    position: fixed;
+    top: auto;
+    right: $space-3;
+    left: $space-3;
+    bottom: $space-3;
+
+    ::ng-deep .p-datepicker {
+      .p-datepicker-panel {
+        flex-direction: column;
+      }
+    }
   }
   
   .metrics-grid {
