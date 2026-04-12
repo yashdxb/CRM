@@ -25,6 +25,7 @@ public class DashboardLayoutService : IDashboardLayoutService
         "activity-mix",
         "conversion",
         "top-performers",
+        "team-performance",
         "my-tasks",
         "timeline",
         "health"

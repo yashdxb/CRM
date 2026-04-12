@@ -231,6 +231,31 @@ public class DashboardController : ControllerBase
         return Ok(response);
     }
 
+    [HttpGet("manager/team-performance")]
+    public async Task<ActionResult<SalesTeamPerformanceResponse>> GetSalesTeamPerformance(CancellationToken cancellationToken)
+    {
+        var perf = await _mediator.Send(new GetSalesTeamPerformanceQuery(GetCurrentUserId()), cancellationToken);
+        var response = new SalesTeamPerformanceResponse(
+            perf.TeamRevenue,
+            perf.DealsClosed,
+            perf.WinRate,
+            perf.AvgCycleDays,
+            perf.TeamRevenuePrevious,
+            perf.DealsClosedPrevious,
+            perf.WinRatePrevious,
+            perf.AvgCycleDaysPrevious,
+            perf.Reps.Select(r => new RepPerformanceItem(
+                r.UserId,
+                r.Name,
+                r.DealsClosed,
+                r.Revenue,
+                r.WinRate,
+                r.AvgCycleDays,
+                r.ActivitiesCount)).ToList());
+
+        return Ok(response);
+    }
+
     [HttpGet("layout")]
     public async Task<ActionResult<DashboardLayoutResponse>> GetLayout(CancellationToken cancellationToken)
     {

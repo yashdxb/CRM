@@ -1078,6 +1078,89 @@
           </div>
         </ng-container>
 
+        <!-- Sales Team Performance -->
+        <ng-container *ngSwitchCase="'team-performance'">
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="pi pi-users"></i>
+              Sales Team Performance
+            </h3>
+            <div class="card-actions">
+              <ng-container *ngTemplateOutlet="cardControls; context: { $implicit: cardId }"></ng-container>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="team-perf">
+              <!-- Team summary KPIs -->
+              <div class="team-perf__kpis">
+                <div class="team-perf__kpi">
+                  <span class="team-perf__kpi-label">Revenue</span>
+                  <strong class="team-perf__kpi-value">{{ teamPerformance().teamRevenue | currency:resolveCurrencyCode():'symbol':'1.0-0' }}</strong>
+                  <span class="team-perf__kpi-delta" [ngClass]="teamPerfDelta(teamPerformance().teamRevenue, teamPerformance().teamRevenuePrevious) >= 0 ? 'positive' : 'negative'">
+                    <i class="pi" [ngClass]="teamPerfDelta(teamPerformance().teamRevenue, teamPerformance().teamRevenuePrevious) >= 0 ? 'pi-arrow-up' : 'pi-arrow-down'"></i>
+                    {{ teamPerfDelta(teamPerformance().teamRevenue, teamPerformance().teamRevenuePrevious) }}%
+                  </span>
+                </div>
+                <div class="team-perf__kpi">
+                  <span class="team-perf__kpi-label">Deals Won</span>
+                  <strong class="team-perf__kpi-value">{{ teamPerformance().dealsClosed }}</strong>
+                  <span class="team-perf__kpi-delta" [ngClass]="teamPerfDelta(teamPerformance().dealsClosed, teamPerformance().dealsClosedPrevious) >= 0 ? 'positive' : 'negative'">
+                    <i class="pi" [ngClass]="teamPerfDelta(teamPerformance().dealsClosed, teamPerformance().dealsClosedPrevious) >= 0 ? 'pi-arrow-up' : 'pi-arrow-down'"></i>
+                    {{ teamPerfDelta(teamPerformance().dealsClosed, teamPerformance().dealsClosedPrevious) }}%
+                  </span>
+                </div>
+                <div class="team-perf__kpi">
+                  <span class="team-perf__kpi-label">Win Rate</span>
+                  <strong class="team-perf__kpi-value">{{ teamPerformance().winRate }}%</strong>
+                  <span class="team-perf__kpi-delta" [ngClass]="teamPerfDelta(teamPerformance().winRate, teamPerformance().winRatePrevious) >= 0 ? 'positive' : 'negative'">
+                    <i class="pi" [ngClass]="teamPerfDelta(teamPerformance().winRate, teamPerformance().winRatePrevious) >= 0 ? 'pi-arrow-up' : 'pi-arrow-down'"></i>
+                    {{ teamPerfDelta(teamPerformance().winRate, teamPerformance().winRatePrevious) }}%
+                  </span>
+                </div>
+                <div class="team-perf__kpi">
+                  <span class="team-perf__kpi-label">Avg Cycle</span>
+                  <strong class="team-perf__kpi-value">{{ teamPerformance().avgCycleDays }}d</strong>
+                  <span class="team-perf__kpi-delta" [ngClass]="teamPerfDelta(teamPerformance().avgCycleDays, teamPerformance().avgCycleDaysPrevious) <= 0 ? 'positive' : 'negative'">
+                    <i class="pi" [ngClass]="teamPerfDelta(teamPerformance().avgCycleDays, teamPerformance().avgCycleDaysPrevious) <= 0 ? 'pi-arrow-up' : 'pi-arrow-down'"></i>
+                    {{ teamPerfDelta(teamPerformance().avgCycleDays, teamPerformance().avgCycleDaysPrevious) }}%
+                  </span>
+                </div>
+              </div>
+
+              <!-- Per-rep breakdown -->
+              <div class="team-perf__reps" *ngIf="teamPerformanceReps().length > 0">
+                <div class="team-perf__rep" *ngFor="let rep of teamPerformanceReps(); let i = index">
+                  <div class="team-perf__rep-rank" [class.gold]="i === 0" [class.silver]="i === 1" [class.bronze]="i === 2">
+                    {{ i + 1 }}
+                  </div>
+                  <div class="team-perf__rep-avatar">
+                    {{ rep.name.charAt(0) }}
+                  </div>
+                  <div class="team-perf__rep-info">
+                    <div class="team-perf__rep-name">{{ rep.name }}</div>
+                    <div class="team-perf__rep-stats">
+                      <span>{{ rep.dealsClosed }} deals</span>
+                      <span class="separator">•</span>
+                      <span class="revenue">{{ rep.revenue | currency:resolveCurrencyCode():'symbol':'1.0-0' }}</span>
+                      <span class="separator">•</span>
+                      <span>{{ rep.winRate }}% win</span>
+                    </div>
+                  </div>
+                  <div class="team-perf__rep-activity">
+                    <span class="team-perf__rep-activity-count">{{ rep.activitiesCount }}</span>
+                    <span class="team-perf__rep-activity-label">activities</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="team-perf__empty" *ngIf="teamPerformanceReps().length === 0">
+                <i class="pi pi-users"></i>
+                <p>No closed deals this period</p>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+
         <!-- My Tasks -->
         <ng-container *ngSwitchCase="'my-tasks'">
           <div class="aq-card">

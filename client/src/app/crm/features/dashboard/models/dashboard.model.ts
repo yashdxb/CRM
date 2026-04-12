@@ -178,6 +178,28 @@ export interface ManagerReviewDeal {
   expectedCloseDate?: string;
 }
 
+export interface SalesTeamPerformance {
+  teamRevenue: number;
+  dealsClosed: number;
+  winRate: number;
+  avgCycleDays: number;
+  teamRevenuePrevious: number;
+  dealsClosedPrevious: number;
+  winRatePrevious: number;
+  avgCycleDaysPrevious: number;
+  reps: RepPerformance[];
+}
+
+export interface RepPerformance {
+  userId: string;
+  name: string;
+  dealsClosed: number;
+  revenue: number;
+  winRate: number;
+  avgCycleDays: number;
+  activitiesCount: number;
+}
+
 export interface AssistantInsightsKpi {
   key: string;
   label: string;

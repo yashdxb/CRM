@@ -19,6 +19,7 @@ export const DASHBOARD_CARD_CATALOG: DashboardCatalogItem[] = [
   { id: 'activity-mix', label: 'Activity Mix', icon: 'pi pi-chart-pie' },
   { id: 'conversion', label: 'Conversion Trend', icon: 'pi pi-percentage' },
   { id: 'top-performers', label: 'Top Performers', icon: 'pi pi-trophy' },
+  { id: 'team-performance', label: 'Sales Team Performance', icon: 'pi pi-users' },
   { id: 'my-tasks', label: 'My Task', icon: 'pi pi-check-square' },
   { id: 'timeline', label: 'Activity Timeline', icon: 'pi pi-clock' },
   { id: 'health', label: 'Business Health', icon: 'pi pi-heart' }

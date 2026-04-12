@@ -9,5 +9,6 @@ public sealed class RedisCacheOptions
     public string InstanceName { get; set; } = "crm-enterprise:";
     public int DashboardSummaryTtlSeconds { get; set; } = 30;
     public int ManagerPipelineHealthTtlSeconds { get; set; } = 30;
+    public int SalesTeamPerformanceTtlSeconds { get; set; } = 30;
     public int AssistantInsightsTtlSeconds { get; set; } = 30;
 }

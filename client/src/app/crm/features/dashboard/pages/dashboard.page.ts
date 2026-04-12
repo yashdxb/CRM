@@ -13,7 +13,7 @@ import { Subject, startWith, switchMap } from 'rxjs';
 import { debounceTime, filter } from 'rxjs/operators';
 
 import { DashboardDataService } from '../services/dashboard-data.service';
-import { AssistantInsights, AssistantInsightsAction, DashboardSummary, ManagerPipelineHealth, ManagerReviewDeal, RiskIntelligenceItem } from '../models/dashboard.model';
+import { AssistantInsights, AssistantInsightsAction, DashboardSummary, ManagerPipelineHealth, ManagerReviewDeal, RiskIntelligenceItem, SalesTeamPerformance } from '../models/dashboard.model';
 import { Customer } from '../../customers/models/customer.model';
 import { Activity } from '../../activities/models/activity.model';
 import { OpportunityDataService } from '../../opportunities/services/opportunity-data.service';
@@ -175,6 +175,18 @@ export class DashboardPage implements OnInit {
   private readonly managerHealthRefresh$ = new Subject<void>();
   private readonly dashboardRealtimeRefresh$ = new Subject<void>();
   private readonly managerHealthSignal = signal<ManagerPipelineHealth>(this.emptyManagerHealth);
+  private readonly emptyTeamPerformance: SalesTeamPerformance = {
+    teamRevenue: 0,
+    dealsClosed: 0,
+    winRate: 0,
+    avgCycleDays: 0,
+    teamRevenuePrevious: 0,
+    dealsClosedPrevious: 0,
+    winRatePrevious: 0,
+    avgCycleDaysPrevious: 0,
+    reps: []
+  };
+  private readonly teamPerformanceSignal = signal<SalesTeamPerformance>(this.emptyTeamPerformance);
   private readonly emptyAssistantInsights: AssistantInsights = {
     scope: 'Self',
     kpis: [],
@@ -189,6 +201,8 @@ export class DashboardPage implements OnInit {
 
   protected readonly summary = computed(() => this.summarySignal() ?? this.emptySummary);
   protected readonly managerHealth = computed(() => this.managerHealthSignal() ?? this.emptyManagerHealth);
+  protected readonly teamPerformance = computed(() => this.teamPerformanceSignal() ?? this.emptyTeamPerformance);
+  protected readonly teamPerformanceReps = computed(() => this.teamPerformance().reps ?? []);
   protected readonly assistantInsights = computed(() => this.assistantInsightsSignal() ?? this.emptyAssistantInsights);
   protected readonly assistantKpis = computed(() => this.assistantInsights().kpis ?? []);
   protected readonly assistantActions = computed(() => this.assistantInsights().actions ?? []);
@@ -792,6 +806,7 @@ export class DashboardPage implements OnInit {
     'activity-mix': 'sm',
     conversion: 'sm',
     'top-performers': 'md',
+    'team-performance': 'md',
     'my-tasks': 'md',
     timeline: 'lg',
     health: 'md'
@@ -972,6 +987,17 @@ export class DashboardPage implements OnInit {
       .subscribe(health => {
         this.managerHealthSignal.set(health ?? this.emptyManagerHealth);
       });
+
+    this.dashboardData.getSalesTeamPerformance()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(perf => {
+        this.teamPerformanceSignal.set(perf ?? this.emptyTeamPerformance);
+      });
+  }
+
+  protected teamPerfDelta(current: number, previous: number): number {
+    if (previous === 0) return current > 0 ? 100 : 0;
+    return Math.round(((current - previous) / previous) * 100);
   }
 
   protected retryLoadData(): void {

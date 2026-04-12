@@ -2,7 +2,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { catchError, Observable, of, retry, timer } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
-import { AssistantActionExecutionResult, AssistantInsights, AssistantInsightsAction, DashboardSummary, ManagerPipelineHealth } from '../models/dashboard.model';
+import { AssistantActionExecutionResult, AssistantInsights, AssistantInsightsAction, DashboardSummary, ManagerPipelineHealth, SalesTeamPerformance } from '../models/dashboard.model';
 
 /** Retry transient failures (0 = network error, 502, 503, 504) up to 2 times with exponential backoff. */
 function retryTransient<T>() {
@@ -117,6 +117,28 @@ export class DashboardDataService {
       retryTransient(),
       catchError((err) => {
         console.error('Failed to load manager pipeline health', err);
+        return of(empty);
+      })
+    );
+  }
+
+  getSalesTeamPerformance() {
+    const url = `${environment.apiUrl}/api/dashboard/manager/team-performance`;
+    const empty: SalesTeamPerformance = {
+      teamRevenue: 0,
+      dealsClosed: 0,
+      winRate: 0,
+      avgCycleDays: 0,
+      teamRevenuePrevious: 0,
+      dealsClosedPrevious: 0,
+      winRatePrevious: 0,
+      avgCycleDaysPrevious: 0,
+      reps: []
+    };
+    return this.http.get<SalesTeamPerformance>(url).pipe(
+      retryTransient(),
+      catchError((err) => {
+        console.error('Failed to load sales team performance', err);
         return of(empty);
       })
     );

@@ -2659,4 +2659,104 @@ public class DashboardReadService : IDashboardReadService
         Guid RelatedEntityId,
         DateTime? DueDateUtc,
         DateTime? CompletedDateUtc);
+
+    public async Task<SalesTeamPerformanceDto> GetSalesTeamPerformanceAsync(Guid? userId, CancellationToken cancellationToken)
+    {
+        var cacheKey = BuildUserScopedCacheKey("dashboard:team-performance", userId);
+        return await _readModelCache.GetOrCreateAsync(
+            cacheKey,
+            TimeSpan.FromSeconds(Math.Max(5, _cacheOptions.SalesTeamPerformanceTtlSeconds)),
+            ct => GetSalesTeamPerformanceCoreAsync(userId, ct),
+            cancellationToken);
+    }
+
+    private async Task<SalesTeamPerformanceDto> GetSalesTeamPerformanceCoreAsync(Guid? userId, CancellationToken cancellationToken)
+    {
+        var now = DateTime.UtcNow;
+        var periodStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var prevPeriodStart = periodStart.AddMonths(-1);
+        var visibility = await ResolveVisibilityAsync(userId, cancellationToken);
+
+        var closedQuery = _dbContext.Opportunities
+            .AsNoTracking()
+            .Where(o => !o.IsDeleted && o.IsClosed);
+
+        if (visibility.UserIds is not null)
+        {
+            closedQuery = closedQuery.Where(o => visibility.UserIds.Contains(o.OwnerId));
+        }
+
+        var closedDeals = await closedQuery
+            .Where(o => o.UpdatedAtUtc >= prevPeriodStart)
+            .Select(o => new
+            {
+                o.OwnerId,
+                o.Amount,
+                o.IsWon,
+                o.CreatedAtUtc,
+                o.UpdatedAtUtc,
+                ClosedInCurrentPeriod = o.UpdatedAtUtc >= periodStart
+            })
+            .ToListAsync(cancellationToken);
+
+        var currentDeals = closedDeals.Where(d => d.ClosedInCurrentPeriod).ToList();
+        var prevDeals = closedDeals.Where(d => !d.ClosedInCurrentPeriod).ToList();
+
+        var teamRevenue = currentDeals.Where(d => d.IsWon).Sum(d => d.Amount);
+        var dealsClosed = currentDeals.Count(d => d.IsWon);
+        var winRate = currentDeals.Count > 0 ? Math.Round((decimal)currentDeals.Count(d => d.IsWon) / currentDeals.Count * 100m, 1) : 0m;
+        var avgCycleDays = currentDeals.Where(d => d.IsWon).Any()
+            ? Math.Round(currentDeals.Where(d => d.IsWon).Average(d => ((d.UpdatedAtUtc ?? d.CreatedAtUtc) - d.CreatedAtUtc).TotalDays), 1)
+            : 0d;
+
+        var teamRevenuePrev = prevDeals.Where(d => d.IsWon).Sum(d => d.Amount);
+        var dealsClosedPrev = prevDeals.Count(d => d.IsWon);
+        var winRatePrev = prevDeals.Count > 0 ? Math.Round((decimal)prevDeals.Count(d => d.IsWon) / prevDeals.Count * 100m, 1) : 0m;
+        var avgCycleDaysPrev = prevDeals.Where(d => d.IsWon).Any()
+            ? Math.Round(prevDeals.Where(d => d.IsWon).Average(d => ((d.UpdatedAtUtc ?? d.CreatedAtUtc) - d.CreatedAtUtc).TotalDays), 1)
+            : 0d;
+
+        var ownerIds = closedDeals.Select(d => d.OwnerId).Distinct().ToList();
+        var owners = await _dbContext.Users
+            .AsNoTracking()
+            .Where(u => ownerIds.Contains(u.Id))
+            .Select(u => new { u.Id, u.FullName })
+            .ToListAsync(cancellationToken);
+
+        var activityCounts = await _dbContext.Activities
+            .AsNoTracking()
+            .Where(a => !a.IsDeleted && ownerIds.Contains(a.OwnerId) && a.CreatedAtUtc >= periodStart)
+            .GroupBy(a => a.OwnerId)
+            .Select(g => new { OwnerId = g.Key, Count = g.Count() })
+            .ToListAsync(cancellationToken);
+
+        var activityLookup = activityCounts.ToDictionary(a => a.OwnerId, a => a.Count);
+
+        var reps = ownerIds.Select(ownerId =>
+        {
+            var repCurrentDeals = currentDeals.Where(d => d.OwnerId == ownerId).ToList();
+            var repWon = repCurrentDeals.Where(d => d.IsWon).ToList();
+            return new RepPerformanceDto(
+                ownerId,
+                owners.FirstOrDefault(o => o.Id == ownerId)?.FullName ?? "Unknown",
+                repWon.Count,
+                repWon.Sum(d => d.Amount),
+                repCurrentDeals.Count > 0 ? Math.Round((decimal)repWon.Count / repCurrentDeals.Count * 100m, 1) : 0m,
+                repWon.Any() ? Math.Round(repWon.Average(d => ((d.UpdatedAtUtc ?? d.CreatedAtUtc) - d.CreatedAtUtc).TotalDays), 1) : 0d,
+                activityLookup.GetValueOrDefault(ownerId, 0));
+        })
+        .OrderByDescending(r => r.Revenue)
+        .ToList();
+
+        return new SalesTeamPerformanceDto(
+            teamRevenue,
+            dealsClosed,
+            winRate,
+            avgCycleDays,
+            teamRevenuePrev,
+            dealsClosedPrev,
+            winRatePrev,
+            avgCycleDaysPrev,
+            reps);
+    }
 }
