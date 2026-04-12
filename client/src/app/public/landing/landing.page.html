@@ -17,7 +17,6 @@
       <ul class="topbar__nav" [class.topbar__nav--open]="mobileMenuOpen">
         <li><a routerLink="/platform">Platform</a></li>
         <li><a (click)="scrollTo('features')">Features</a></li>
-        <li><a (click)="scrollTo('highlights')">Highlights</a></li>
         <li><a (click)="scrollTo('how-it-works')">How It Works</a></li>
         <li><a (click)="scrollTo('pricing')">Pricing</a></li>
         <li class="topbar__nav-actions">
@@ -401,66 +400,55 @@
 
   <section id="highlights" class="highlights">
     <div class="shell highlights__layout">
-      <div class="highlights__intro">
-        <span class="section-badge scroll-animate">CRM Highlights</span>
-        <h2 class="section-title scroll-animate">See the actual product before you book the full walkthrough</h2>
-        <p class="section-subtitle scroll-animate">These are short CRM clips from the working product, not stock motion graphics. Each one shows a concrete operator surface that buyers usually ask to see first.</p>
-      </div>
+      <span class="section-badge scroll-animate">CRM Product Highlight</span>
+      <h2 class="section-title scroll-animate">See North Edge CRM in Action</h2>
+      <p class="section-subtitle scroll-animate">
+        A quick walkthrough of the live CRM experience across pipeline operations, qualification, and manager visibility.
+      </p>
 
-      <div class="highlights__showcase scroll-animate">
-        <div class="highlights__player-shell">
+      <div class="highlights__showcase">
+        <div class="highlights__player-shell scroll-animate">
           <div class="highlights__player-meta">
             <div>
-              <span class="highlights__eyebrow">{{ activeVideoHighlight.eyebrow }}</span>
-              <h3>{{ activeVideoHighlight.title }}</h3>
+              <span class="highlights__eyebrow">CRM Highlight</span>
+              <h3>North Edge CRM Product Walkthrough</h3>
             </div>
-            <span class="highlights__duration">{{ activeVideoHighlight.duration }}</span>
+            <span class="highlights__duration">YouTube</span>
           </div>
 
-          <video
-            #highlightVideo
+          <iframe
             class="highlights__player"
-            controls
-            playsinline
-            preload="metadata"
-            [poster]="activeVideoHighlight.poster"
-            [attr.src]="activeVideoHighlight.videoUrl"
-          ></video>
+            src="https://www.youtube.com/embed/n3MNmExMCbk"
+            title="North Edge CRM Highlight Video"
+            loading="lazy"
+            referrerpolicy="strict-origin-when-cross-origin"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen>
+          </iframe>
 
           <div class="highlights__summary">
-            <p>{{ activeVideoHighlight.summary }}</p>
+            <p>
+              This highlight video introduces the CRM operating model, from sales execution and risk visibility to actionable
+              manager workflows.
+            </p>
             <ul class="highlights__bullets">
-              <li *ngFor="let bullet of activeVideoHighlight.bullets">
-                <i class="pi pi-check-circle" aria-hidden="true"></i>
-                <span>{{ bullet }}</span>
-              </li>
+              <li><i class="pi pi-check-circle"></i> Pipeline and deal execution visibility</li>
+              <li><i class="pi pi-check-circle"></i> Qualification and readiness context</li>
+              <li><i class="pi pi-check-circle"></i> Manager review and action orchestration</li>
             </ul>
           </div>
         </div>
 
-        <div class="highlights__playlist">
-          <button
-            *ngFor="let clip of videoHighlights; let i = index"
-            type="button"
-            class="highlights__playlist-item"
-            [class.highlights__playlist-item--active]="i === activeVideoHighlightIndex"
-            (click)="selectVideoHighlight(i)"
-          >
-            <span class="highlights__playlist-index">0{{ i + 1 }}</span>
+        <aside class="highlights__playlist scroll-animate" aria-label="Highlight resources">
+          <button type="button" class="highlights__playlist-item highlights__playlist-item--active">
+            <span class="highlights__playlist-index">01</span>
             <span class="highlights__playlist-copy">
-              <strong>{{ clip.title }}</strong>
-              <small>{{ clip.summary }}</small>
+              <strong>CRM Highlight Video</strong>
+              <small>Product walkthrough hosted on YouTube</small>
             </span>
-            <span class="highlights__playlist-duration">{{ clip.duration }}</span>
+            <span class="highlights__playlist-duration">Play</span>
           </button>
-        </div>
-      </div>
-
-      <div class="highlights__cta scroll-animate">
-        <p>Need the full end-to-end story across lead qualification, risk operations, approvals, and reporting?</p>
-        <button type="button" class="hero-btn hero-btn--primary" (click)="onWatchDemo()">
-          <i class="pi pi-calendar"></i> Book the full CRM demo
-        </button>
+        </aside>
       </div>
     </div>
   </section>
@@ -598,7 +586,6 @@
         <h4>Product</h4>
         <ul>
           <li><a (click)="scrollTo('features')">Features</a></li>
-          <li><a (click)="scrollTo('highlights')">Highlights</a></li>
           <li><a (click)="scrollTo('pricing')">Pricing</a></li>
           <li><a (click)="scrollTo('how-it-works')">How It Works</a></li>
         </ul>
