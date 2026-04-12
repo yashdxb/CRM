@@ -2717,22 +2717,39 @@ public class DashboardReadService : IDashboardReadService
             : 0d;
 
         var ownerIds = closedDeals.Select(d => d.OwnerId).Distinct().ToList();
+
+        // Include all team members who own any opportunity (not just closed ones)
+        var teamMemberQuery = _dbContext.Opportunities
+            .AsNoTracking()
+            .Where(o => !o.IsDeleted);
+        if (visibility.UserIds is not null)
+        {
+            teamMemberQuery = teamMemberQuery.Where(o => visibility.UserIds.Contains(o.OwnerId));
+        }
+        var allTeamMemberIds = await teamMemberQuery
+            .Select(o => o.OwnerId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        // Merge: closed-deal owners + all opportunity owners
+        var allRepIds = allTeamMemberIds.Union(ownerIds).Distinct().ToList();
+
         var owners = await _dbContext.Users
             .AsNoTracking()
-            .Where(u => ownerIds.Contains(u.Id))
+            .Where(u => allRepIds.Contains(u.Id))
             .Select(u => new { u.Id, u.FullName })
             .ToListAsync(cancellationToken);
 
         var activityCounts = await _dbContext.Activities
             .AsNoTracking()
-            .Where(a => !a.IsDeleted && ownerIds.Contains(a.OwnerId) && a.CreatedAtUtc >= periodStart)
+            .Where(a => !a.IsDeleted && allRepIds.Contains(a.OwnerId) && a.CreatedAtUtc >= periodStart)
             .GroupBy(a => a.OwnerId)
             .Select(g => new { OwnerId = g.Key, Count = g.Count() })
             .ToListAsync(cancellationToken);
 
         var activityLookup = activityCounts.ToDictionary(a => a.OwnerId, a => a.Count);
 
-        var reps = ownerIds.Select(ownerId =>
+        var reps = allRepIds.Select(ownerId =>
         {
             var repCurrentDeals = currentDeals.Where(d => d.OwnerId == ownerId).ToList();
             var repWon = repCurrentDeals.Where(d => d.IsWon).ToList();
