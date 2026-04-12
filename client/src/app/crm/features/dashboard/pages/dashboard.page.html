@@ -1201,11 +1201,11 @@
                   </div>
                   <div class="team-perf__rep-identity rep-col-name">
                     <div class="team-perf__rep-avatar">
-                      @if (rep.profilePictureUrl) {
-                        <img [src]="rep.profilePictureUrl" [alt]="rep.name" class="team-perf__rep-avatar-img" />
-                      } @else {
-                        {{ rep.name.charAt(0) }}
-                      }
+                      <img
+                        [src]="rep.profilePictureUrl || ('https://i.pravatar.cc/150?u=' + (rep.userId || rep.name))"
+                        [alt]="rep.name + ' avatar'"
+                        [title]="rep.name + ' avatar'"
+                        class="team-perf__rep-avatar-img" />
                     </div>
                     <span class="team-perf__rep-name">{{ rep.name }}</span>
                   </div>
