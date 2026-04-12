@@ -231,7 +231,13 @@
             <h2 class="card-title"><i class="pi pi-users"></i> Account Team</h2>
             <div class="team-list" *ngIf="teamMembers().length > 0; else noTeam">
               <div class="team-member" *ngFor="let member of teamMembers()">
-                <div class="member-avatar">{{ teamMemberInitials(member.userName) }}</div>
+                <div class="member-avatar">
+                  <img
+                    [src]="$any(member).profilePictureUrl || ('https://i.pravatar.cc/150?u=' + (member.userId || member.userName))"
+                    [alt]="member.userName + ' avatar'"
+                    [title]="member.userName + ' avatar'"
+                  />
+                </div>
                 <div class="member-info">
                   <span class="member-name">{{ member.userName }}</span>
                   <span class="member-role">{{ member.role }}</span>

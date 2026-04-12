@@ -19,7 +19,13 @@
   <main class="convert-container">
     <div class="glass-card" *ngIf="lead() as leadData">
       <div class="lead-summary">
-        <div class="lead-avatar">{{ leadData.name.charAt(0) }}</div>
+        <div class="lead-avatar">
+          <img
+            [src]="$any(leadData).profilePictureUrl || ('https://i.pravatar.cc/150?u=' + (leadData.email || leadData.id))"
+            [alt]="leadData.name + ' avatar'"
+            [title]="leadData.name + ' avatar'"
+          />
+        </div>
         <div class="lead-meta">
           <span class="lead-name">{{ leadData.name }}</span>
           <span class="lead-company">{{ leadData.company }}</span>

@@ -173,7 +173,11 @@
                           class="user-avatar"
                           [ngClass]="getAvatarClasses(user)"
                         >
-                          {{ user.fullName.slice(0, 1) }}
+                          <img
+                            [src]="user.profilePictureUrl || ('https://i.pravatar.cc/150?u=' + (user.email || user.id))"
+                            [alt]="user.fullName + ' avatar'"
+                            [title]="user.fullName + ' avatar'"
+                          />
                           <span class="presence-dot" [ngClass]="isOnline(user) ? 'online' : 'offline'"></span>
                         </div>
                         <div class="user-info">

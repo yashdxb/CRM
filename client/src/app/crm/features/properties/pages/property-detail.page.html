@@ -881,7 +881,13 @@
             <div class="alert-rule-card" *ngFor="let rule of alertRules()" [class.alert-rule-card--inactive]="!rule.isActive">
               <div class="alert-rule__header">
                 <div class="alert-rule__client">
-                  <div class="alert-rule__avatar">{{ rule.clientName.charAt(0) }}</div>
+                  <div class="alert-rule__avatar">
+                    <img
+                      [src]="$any(rule).profilePictureUrl || ('https://i.pravatar.cc/150?u=' + (rule.clientEmail || $any(rule).clientId || rule.id))"
+                      [alt]="rule.clientName + ' avatar'"
+                      [title]="rule.clientName + ' avatar'"
+                    />
+                  </div>
                   <div>
                     <strong>{{ rule.clientName }}</strong>
                     <span class="alert-rule__email">{{ rule.clientEmail }}</span>

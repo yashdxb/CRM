@@ -506,7 +506,11 @@
               </td>
               <td class="td-customer">
                 <div class="customer-avatar">
-                  {{ row.name.charAt(0).toUpperCase() }}
+                  <img
+                    [src]="$any(row).profilePictureUrl || ('https://i.pravatar.cc/150?u=' + (row.email || row.id))"
+                    [alt]="row.name + ' avatar'"
+                    [title]="row.name + ' avatar'"
+                  />
                 </div>
                 <div class="customer-info">
                   <span class="customer-name">{{ row.name }}</span>
@@ -576,7 +580,11 @@
         <div class="customer-card" *ngFor="let row of filteredCustomers()">
           <div class="card-header">
             <div class="card-avatar">
-              {{ row.name.charAt(0).toUpperCase() }}
+              <img
+                [src]="$any(row).profilePictureUrl || ('https://i.pravatar.cc/150?u=' + (row.email || row.id))"
+                [alt]="row.name + ' avatar'"
+                [title]="row.name + ' avatar'"
+              />
             </div>
             <span class="card-status" [attr.data-status]="row.status.toLowerCase()">
               {{ row.status }}

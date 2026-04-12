@@ -1111,7 +1111,11 @@
                   {{ i + 1 }}
                 </div>
                 <div class="performer-avatar">
-                  {{ performer.name.charAt(0) }}
+                  <img
+                    [src]="performer.avatar || ('https://i.pravatar.cc/150?u=' + performer.name)"
+                    [alt]="performer.name + ' avatar'"
+                    [title]="performer.name + ' avatar'"
+                  />
                 </div>
                 <div class="performer-info">
                   <div class="performer-name">{{ performer.name }}</div>

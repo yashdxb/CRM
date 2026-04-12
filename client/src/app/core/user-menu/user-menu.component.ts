@@ -105,7 +105,12 @@ export class UserMenuComponent {
     const fullName = typeof payload['unique_name'] === 'string' ? payload['unique_name'] : 'User';
     const email = typeof payload['email'] === 'string' ? payload['email'] : '';
     const role = roles[0] ?? 'User';
+    const avatarUrl =
+      (typeof payload['profile_picture_url'] === 'string' && payload['profile_picture_url']) ||
+      (typeof payload['profilePictureUrl'] === 'string' && payload['profilePictureUrl']) ||
+      (typeof payload['picture'] === 'string' && payload['picture']) ||
+      undefined;
 
-    return { fullName, email, role };
+    return { fullName, email, role, avatarUrl };
   }
 }

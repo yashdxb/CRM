@@ -296,7 +296,11 @@
           <div class="lead-card" *ngFor="let lead of getLeadsByStatus(status)" (click)="canManage() ? onEdit(lead) : null" role="article" [attr.aria-label]="lead.name + ' – ' + lead.company">
             <div class="lead-card-header">
               <div class="lead-avatar" [attr.data-status]="lead.status">
-                {{ lead.name.charAt(0) }}
+                <img
+                  [src]="$any(lead).profilePictureUrl || ('https://i.pravatar.cc/150?u=' + (lead.email || lead.id))"
+                  [alt]="lead.name + ' avatar'"
+                  [title]="lead.name + ' avatar'"
+                />
               </div>
               <div class="lead-meta">
                 <span class="lead-name">{{ lead.name }}</span>
@@ -447,7 +451,11 @@
                   <td class="td-lead">
                     <div class="lead-cell">
                       <div class="avatar" [attr.data-status]="lead.status">
-                        {{ lead.name.charAt(0) }}
+                        <img
+                          [src]="$any(lead).profilePictureUrl || ('https://i.pravatar.cc/150?u=' + (lead.email || lead.id))"
+                          [alt]="lead.name + ' avatar'"
+                          [title]="lead.name + ' avatar'"
+                        />
                       </div>
                       <div class="lead-info">
                         <span class="name">{{ lead.name }}</span>

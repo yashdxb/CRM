@@ -173,7 +173,13 @@
             <h2 class="card-title"><i class="pi pi-id-card"></i> Stakeholders</h2>
             <div class="stakeholder-list" *ngIf="contactRoles().length; else noStakeholders">
               <div *ngFor="let cr of contactRoles()" class="stakeholder-item">
-                <div class="stakeholder-avatar">{{ (cr.contactName || '?')[0] }}</div>
+                <div class="stakeholder-avatar">
+                  <img
+                    [src]="$any(cr).profilePictureUrl || ('https://i.pravatar.cc/150?u=' + (cr.email || cr.contactId || cr.id))"
+                    [alt]="(cr.contactName || 'Stakeholder') + ' avatar'"
+                    [title]="(cr.contactName || 'Stakeholder') + ' avatar'"
+                  />
+                </div>
                 <div class="stakeholder-info">
                   <span class="stakeholder-name">{{ cr.contactName }}</span>
                   <span class="stakeholder-role">{{ cr.role }}</span>
@@ -198,7 +204,13 @@
             <h2 class="card-title"><i class="pi pi-users"></i> Team</h2>
             <div class="team-list" *ngIf="teamMembers().length; else noTeam">
               <div *ngFor="let tm of teamMembers()" class="team-item">
-                <div class="team-avatar">{{ (tm.userName || '?')[0] }}</div>
+                <div class="team-avatar">
+                  <img
+                    [src]="$any(tm).profilePictureUrl || ('https://i.pravatar.cc/150?u=' + (tm.userId || tm.userName))"
+                    [alt]="(tm.userName || 'Team member') + ' avatar'"
+                    [title]="(tm.userName || 'Team member') + ' avatar'"
+                  />
+                </div>
                 <div class="team-info">
                   <span class="team-name">{{ tm.userName }}</span>
                   <span class="team-role">{{ tm.role }}</span>

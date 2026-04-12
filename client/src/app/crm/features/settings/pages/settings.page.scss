@@ -676,6 +676,13 @@
   overflow: hidden;
   background: var(--avatar-gradient, $primary-gradient);
 
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: inherit;
+  }
+
   &.avatar-active {
     background: var(--avatar-gradient, $primary-gradient);
   }

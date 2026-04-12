@@ -8,10 +8,10 @@
         [attr.aria-expanded]="isOpen()"
       >
         <p-avatar 
-          [label]="initials()" 
+          [image]="user().avatarUrl || ('https://i.pravatar.cc/150?u=' + (user().email || user().fullName))"
           shape="circle" 
           styleClass="user-menu__avatar"
-          [style]="{ 'background': 'linear-gradient(135deg, #6366f1, #8b5cf6)', 'color': 'white' }"
+          [style]="{ 'background': 'linear-gradient(135deg, #6366f1, #8b5cf6)' }"
         ></p-avatar>
         <div class="user-menu__info">
           <span class="user-menu__name">{{ user().fullName }}</span>
@@ -23,10 +23,10 @@
       <div class="user-menu__dropdown" *ngIf="isOpen()" [@dropdownAnimation]>
         <div class="user-menu__header">
           <p-avatar 
-            [label]="initials()" 
+            [image]="user().avatarUrl || ('https://i.pravatar.cc/150?u=' + (user().email || user().fullName))"
             shape="circle" 
             size="large"
-            [style]="{ 'background': 'linear-gradient(135deg, #6366f1, #8b5cf6)', 'color': 'white' }"
+            [style]="{ 'background': 'linear-gradient(135deg, #6366f1, #8b5cf6)' }"
           ></p-avatar>
           <div>
             <p class="user-menu__header-name">{{ user().fullName }}</p>

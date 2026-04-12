@@ -308,7 +308,11 @@
           <div class="deal-card" *ngFor="let deal of getOpportunitiesByStage(stage)" (click)="canManage() ? onEdit(deal) : null">
             <div class="deal-card-header">
               <div class="deal-avatar" [style.background]="'linear-gradient(135deg, ' + stageColumnColor(deal.stage) + ' 0%, ' + stageColumnColor(deal.stage) + 'cc 100%)'">
-                {{ deal.name.charAt(0) || 'D' }}
+                <img
+                  [src]="$any(deal).profilePictureUrl || ('https://i.pravatar.cc/150?u=' + deal.id)"
+                  [alt]="deal.name + ' avatar'"
+                  [title]="deal.name + ' avatar'"
+                />
               </div>
               <div class="deal-meta">
                 <span class="deal-name">{{ deal.name }}</span>

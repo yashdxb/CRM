@@ -355,7 +355,13 @@
             >
               <ng-template pTemplate="item" let-option>
                 <div class="select-option" [attr.data-testid]="'lead-rule-owner-' + option.value">
-                  <div class="user-avatar-sm">{{ option.label.charAt(0) }}</div>
+                  <div class="user-avatar-sm">
+                    <img
+                      [src]="$any(option).profilePictureUrl || ('https://i.pravatar.cc/150?u=' + ($any(option).email || option.value || option.label))"
+                      [alt]="option.label + ' avatar'"
+                      [title]="option.label + ' avatar'"
+                    />
+                  </div>
                   {{ option.label }}
                 </div>
               </ng-template>
