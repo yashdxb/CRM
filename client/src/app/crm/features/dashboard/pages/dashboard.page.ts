@@ -196,6 +196,7 @@ export class DashboardPage implements OnInit {
   private readonly assistantInsightsSignal = signal<AssistantInsights>(this.emptyAssistantInsights);
   protected readonly expansionSignals = signal<ExpansionSignal[]>([]);
   protected readonly pendingDecisionInbox = signal<OpportunityApprovalInboxItem[]>([]);
+  protected readonly selectedPeriod = signal<'today' | 'week' | 'month'>('today');
   protected readonly expansionLoading = signal(false);
   protected readonly expansionSubmitting = signal<Record<string, boolean>>({});
 

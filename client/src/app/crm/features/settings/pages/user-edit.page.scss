@@ -194,6 +194,11 @@
 
 .form-card {
   @include form.form-section;
+
+  &:hover,
+  &:focus-within {
+    transform: none;
+  }
 }
 
 .section-title {

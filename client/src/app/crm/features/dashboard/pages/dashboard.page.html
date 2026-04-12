@@ -91,9 +91,9 @@
           Performance Overview
         </h2>
         <div class="metrics-period">
-          <button pButton type="button" class="period-btn active">Today</button>
-          <button pButton type="button" class="period-btn">Week</button>
-          <button pButton type="button" class="period-btn">Month</button>
+          <button type="button" class="period-btn" [class.active]="selectedPeriod() === 'today'" (click)="selectedPeriod.set('today')">Today</button>
+          <button type="button" class="period-btn" [class.active]="selectedPeriod() === 'week'" (click)="selectedPeriod.set('week')">Week</button>
+          <button type="button" class="period-btn" [class.active]="selectedPeriod() === 'month'" (click)="selectedPeriod.set('month')">Month</button>
         </div>
       </div>
       <div
