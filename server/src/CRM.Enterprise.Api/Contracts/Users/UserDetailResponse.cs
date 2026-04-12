@@ -20,5 +20,6 @@ public record UserDetailResponse(
     string DashboardPackType,
     IReadOnlyList<Guid> RoleIds,
     IReadOnlyList<string> Roles,
+    string? ProfilePictureUrl = null,
     bool? InviteEmailSent = null,
     string? InviteDeliveryMessage = null);

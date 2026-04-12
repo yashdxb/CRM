@@ -160,4 +160,14 @@ export class UserAdminDataService {
   delete(id: string) {
     return this.http.delete<void>(`${this.baseUrl}/api/users/${id}`);
   }
+
+  uploadProfilePicture(userId: string, file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<{ url: string }>(`${this.baseUrl}/api/users/${userId}/profile-picture`, formData);
+  }
+
+  deleteProfilePicture(userId: string) {
+    return this.http.delete<void>(`${this.baseUrl}/api/users/${userId}/profile-picture`);
+  }
 }

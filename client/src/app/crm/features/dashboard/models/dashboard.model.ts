@@ -198,6 +198,7 @@ export interface RepPerformance {
   winRate: number;
   avgCycleDays: number;
   activitiesCount: number;
+  profilePictureUrl?: string | null;
 }
 
 export interface AssistantInsightsKpi {

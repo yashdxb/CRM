@@ -19,13 +19,49 @@
           </p>
         </div>
         <div class="header-meta">
-          <span class="meta-chip">
-            <i class="pi pi-user"></i>
-            {{ user()?.fullName || 'User profile' }}
-          </span>
-          <span class="status-pill" [ngClass]="user()?.isActive ? 'status-pill--active' : 'status-pill--inactive'">
-            {{ user()?.isActive ? 'Active' : 'Inactive' }}
-          </span>
+          <!-- Avatar -->
+          <div class="user-avatar-section">
+            <div class="user-avatar" [class.user-avatar--has-image]="user()?.profilePictureUrl">
+              @if (avatarPreviewUrl() || user()?.profilePictureUrl) {
+                <img
+                  [src]="avatarPreviewUrl() || user()?.profilePictureUrl"
+                  alt="Profile picture"
+                  class="user-avatar__img"
+                />
+              } @else {
+                <span class="user-avatar__initial">{{ user()?.fullName?.charAt(0)?.toUpperCase() || '?' }}</span>
+              }
+              <label class="user-avatar__overlay" for="avatar-upload" [class.uploading]="uploadingAvatar()">
+                @if (uploadingAvatar()) {
+                  <i class="pi pi-spin pi-spinner"></i>
+                } @else {
+                  <i class="pi pi-camera"></i>
+                }
+              </label>
+              <input
+                type="file"
+                id="avatar-upload"
+                class="user-avatar__input"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                (change)="onAvatarSelected($event)"
+                [disabled]="uploadingAvatar()"
+              />
+            </div>
+            @if (user()?.profilePictureUrl && !uploadingAvatar()) {
+              <button type="button" class="user-avatar__remove" (click)="onRemoveAvatar()" title="Remove picture">
+                <i class="pi pi-times"></i>
+              </button>
+            }
+          </div>
+          <div class="header-meta__info">
+            <span class="meta-chip">
+              <i class="pi pi-user"></i>
+              {{ user()?.fullName || 'User profile' }}
+            </span>
+            <span class="status-pill" [ngClass]="user()?.isActive ? 'status-pill--active' : 'status-pill--inactive'">
+              {{ user()?.isActive ? 'Active' : 'Inactive' }}
+            </span>
+          </div>
         </div>
       </div>
     </div>

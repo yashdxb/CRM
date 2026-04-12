@@ -60,6 +60,7 @@ export interface UserListItem {
   dashboardPackName: string;
   dashboardPackType: string;
   isOnline?: boolean | null;
+  profilePictureUrl?: string | null;
 }
 
 export interface DashboardPackOption {
@@ -109,6 +110,7 @@ export interface UserDetailResponse {
   dashboardPackType: string;
   roleIds: string[];
   roles: string[];
+  profilePictureUrl?: string | null;
   inviteEmailSent?: boolean | null;
   inviteDeliveryMessage?: string | null;
 }

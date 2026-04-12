@@ -540,10 +540,22 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
   }
 
   if (req.method === 'DELETE' && /^\/api\/users\/.+/.test(path)) {
+    // Profile picture delete must be checked BEFORE generic user delete
+    const picDeleteMatch = path.match(/^\/api\/users\/([^/]+)\/profile-picture$/);
+    if (picDeleteMatch) {
+      return respond(null, 204, 120);
+    }
     const match = path.match(/^\/api\/users\/([^/]+)$/);
     if (match) {
       const ok = deleteUser(match[1]);
       return respond(ok ? null : { message: 'Not found' }, ok ? 204 : 404, 120);
+    }
+  }
+
+  if (req.method === 'POST' && /profile-picture$/.test(path)) {
+    const match = path.match(/^\/api\/users\/([^/]+)\/profile-picture$/);
+    if (match) {
+      return respond({ url: `https://mock-storage.example.com/user-avatars/${match[1]}.jpg` }, 200, 300);
     }
   }
 

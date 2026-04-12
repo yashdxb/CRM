@@ -2737,7 +2737,7 @@ public class DashboardReadService : IDashboardReadService
         var owners = await _dbContext.Users
             .AsNoTracking()
             .Where(u => allRepIds.Contains(u.Id))
-            .Select(u => new { u.Id, u.FullName })
+            .Select(u => new { u.Id, u.FullName, u.ProfilePictureUrl })
             .ToListAsync(cancellationToken);
 
         var activityCounts = await _dbContext.Activities
@@ -2753,14 +2753,16 @@ public class DashboardReadService : IDashboardReadService
         {
             var repCurrentDeals = currentDeals.Where(d => d.OwnerId == ownerId).ToList();
             var repWon = repCurrentDeals.Where(d => d.IsWon).ToList();
+            var owner = owners.FirstOrDefault(o => o.Id == ownerId);
             return new RepPerformanceDto(
                 ownerId,
-                owners.FirstOrDefault(o => o.Id == ownerId)?.FullName ?? "Unknown",
+                owner?.FullName ?? "Unknown",
                 repWon.Count,
                 repWon.Sum(d => d.Amount),
                 repCurrentDeals.Count > 0 ? Math.Round((decimal)repWon.Count / repCurrentDeals.Count * 100m, 1) : 0m,
                 repWon.Any() ? Math.Round(repWon.Average(d => ((d.UpdatedAtUtc ?? d.CreatedAtUtc) - d.CreatedAtUtc).TotalDays), 1) : 0d,
-                activityLookup.GetValueOrDefault(ownerId, 0));
+                activityLookup.GetValueOrDefault(ownerId, 0),
+                owner?.ProfilePictureUrl);
         })
         .OrderByDescending(r => r.Revenue)
         .ToList();

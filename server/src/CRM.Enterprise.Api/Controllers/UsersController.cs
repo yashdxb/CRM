@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading;
 using CRM.Enterprise.Api.Contracts.Users;
 using CRM.Enterprise.Application.Dashboard;
+using CRM.Enterprise.Application.Storage;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Domain.Enums;
 using CRM.Enterprise.Application.Notifications;
@@ -36,6 +37,7 @@ public class UsersController : ControllerBase
     private readonly ITenantProvider _tenantProvider;
     private readonly IDashboardLayoutService _dashboardLayoutService;
     private readonly IWorkspaceEmailDeliveryPolicy _emailDeliveryPolicy;
+    private readonly IBlobStorageService _blobStorage;
     private readonly string? _brandLogoUrl;
     private readonly string? _brandWebsiteUrl;
 
@@ -45,6 +47,7 @@ public class UsersController : ControllerBase
         IEmailSender emailSender,
         IWorkspaceEmailDeliveryPolicy emailDeliveryPolicy,
         IDashboardLayoutService dashboardLayoutService,
+        IBlobStorageService blobStorage,
         IConfiguration configuration,
         ITenantProvider tenantProvider,
         ILogger<UsersController> logger,
@@ -55,6 +58,7 @@ public class UsersController : ControllerBase
         _emailSender = emailSender;
         _emailDeliveryPolicy = emailDeliveryPolicy;
         _dashboardLayoutService = dashboardLayoutService;
+        _blobStorage = blobStorage;
         _brandLogoUrl = configuration["Branding:LogoUrl"];
         _brandWebsiteUrl = configuration["Branding:WebsiteUrl"];
         _tenantProvider = tenantProvider;
@@ -122,7 +126,8 @@ public class UsersController : ControllerBase
                 u.LastLoginPlatform,
                 u.LastLoginIp,
                 u.CommandCenterLayoutJson,
-                u.TimeZone
+                u.TimeZone,
+                u.ProfilePictureUrl
             })
             .ToListAsync(cancellationToken);
 
@@ -189,7 +194,8 @@ public class UsersController : ControllerBase
                 pack.Key,
                 pack.Name,
                 pack.Type,
-                onlineUsers.Contains(u.Id.ToString()));
+                onlineUsers.Contains(u.Id.ToString()),
+                u.ProfilePictureUrl);
         }).ToList();
 
         return Ok(new UserSearchResponse(items, total));
@@ -936,7 +942,8 @@ public class UsersController : ControllerBase
                 u.CreatedAtUtc,
                 u.LastLoginAtUtc,
                 u.LastInviteSentAtUtc,
-                u.CommandCenterLayoutJson
+                u.CommandCenterLayoutJson,
+                u.ProfilePictureUrl
             })
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -993,7 +1000,8 @@ public class UsersController : ControllerBase
             pack.Name,
             pack.Type,
             roleIds,
-            roleNames);
+            roleNames,
+            row.ProfilePictureUrl);
     }
 
     private static class PasswordGenerator
@@ -1210,5 +1218,76 @@ public class UsersController : ControllerBase
             _logger.LogWarning(ex, "Failed to send invite email to {Email}.", user.Email);
             return false;
         }
+    }
+
+    // ── Profile Picture ──────────────────────────────────────────────
+
+    private const string ProfilePictureContainer = "user-avatars";
+    private static readonly HashSet<string> AllowedImageTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "image/jpeg", "image/png", "image/webp", "image/gif"
+    };
+
+    [HttpPost("{id:guid}/profile-picture")]
+    [Authorize(Policy = Permissions.Policies.AdministrationManage)]
+    [RequestSizeLimit(5 * 1024 * 1024)] // 5 MB
+    public async Task<IActionResult> UploadProfilePicture(Guid id, IFormFile file, CancellationToken ct)
+    {
+        if (file is null || file.Length == 0)
+            return BadRequest("No file provided.");
+
+        if (!AllowedImageTypes.Contains(file.ContentType))
+            return BadRequest("Only JPEG, PNG, WebP, and GIF images are allowed.");
+
+        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted, ct);
+        if (user is null) return NotFound();
+
+        // Delete existing blob if present
+        if (!string.IsNullOrEmpty(user.ProfilePictureUrl))
+        {
+            var oldBlobName = ExtractBlobName(user.ProfilePictureUrl);
+            if (oldBlobName is not null)
+                await _blobStorage.DeleteAsync(ProfilePictureContainer, oldBlobName, ct);
+        }
+
+        var extension = Path.GetExtension(file.FileName)?.ToLowerInvariant() ?? ".jpg";
+        var blobName = $"{id}{extension}";
+
+        await using var stream = file.OpenReadStream();
+        var url = await _blobStorage.UploadAsync(ProfilePictureContainer, blobName, stream, file.ContentType, ct);
+
+        user.ProfilePictureUrl = url;
+        await _dbContext.SaveChangesAsync(ct);
+
+        return Ok(new { url });
+    }
+
+    [HttpDelete("{id:guid}/profile-picture")]
+    [Authorize(Policy = Permissions.Policies.AdministrationManage)]
+    public async Task<IActionResult> DeleteProfilePicture(Guid id, CancellationToken ct)
+    {
+        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted, ct);
+        if (user is null) return NotFound();
+
+        if (!string.IsNullOrEmpty(user.ProfilePictureUrl))
+        {
+            var blobName = ExtractBlobName(user.ProfilePictureUrl);
+            if (blobName is not null)
+                await _blobStorage.DeleteAsync(ProfilePictureContainer, blobName, ct);
+
+            user.ProfilePictureUrl = null;
+            await _dbContext.SaveChangesAsync(ct);
+        }
+
+        return NoContent();
+    }
+
+    private static string? ExtractBlobName(string url)
+    {
+        // Blob URL format: https://<account>.blob.core.windows.net/<container>/<blob>
+        // or dev storage:  http://127.0.0.1:10000/devstoreaccount1/<container>/<blob>
+        if (Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Segments.Length >= 3)
+            return Uri.UnescapeDataString(uri.Segments[^1]);
+        return null;
     }
 }

@@ -5477,6 +5477,14 @@
   font-weight: 600;
   font-size: $font-size-xs;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.team-perf__rep-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .team-perf__rep-name {

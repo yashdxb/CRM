@@ -78,6 +78,8 @@ export class UserEditPage implements OnInit {
   protected readonly accessAccordionValue = signal<string[]>(['permissions', 'security', 'dashboard']);
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
+  protected readonly uploadingAvatar = signal(false);
+  protected readonly avatarPreviewUrl = signal<string | null>(null);
   protected readonly generatedPassword = signal<string | null>(null);
   private readonly initialFormState = signal<string | null>(null);
   private readonly initialDashboardPackKey = signal<string | null>(null);
@@ -735,5 +737,67 @@ export class UserEditPage implements OnInit {
       value += pool[index];
     }
     return value;
+  }
+
+  // ── Avatar ────────────────────────────────────────────────────
+
+  onAvatarSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    const userId = this.user()?.id;
+    if (!userId) return;
+
+    // Local preview
+    const reader = new FileReader();
+    reader.onload = () => this.avatarPreviewUrl.set(reader.result as string);
+    reader.readAsDataURL(file);
+
+    this.uploadingAvatar.set(true);
+    this.dataService.uploadProfilePicture(userId, file)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => {
+          this.uploadingAvatar.set(false);
+          this.avatarPreviewUrl.set(null);
+          const current = this.user();
+          if (current) {
+            this.user.set({ ...current, profilePictureUrl: res.url });
+          }
+          this.toastService.show('success', 'Profile picture updated');
+        },
+        error: () => {
+          this.uploadingAvatar.set(false);
+          this.avatarPreviewUrl.set(null);
+          this.toastService.show('error', 'Failed to upload profile picture');
+        }
+      });
+
+    // Reset input so the same file can be re-selected
+    input.value = '';
+  }
+
+  onRemoveAvatar() {
+    const userId = this.user()?.id;
+    if (!userId) return;
+
+    this.uploadingAvatar.set(true);
+    this.dataService.deleteProfilePicture(userId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.uploadingAvatar.set(false);
+          const current = this.user();
+          if (current) {
+            this.user.set({ ...current, profilePictureUrl: null });
+          }
+          this.toastService.show('success', 'Profile picture removed');
+        },
+        error: () => {
+          this.uploadingAvatar.set(false);
+          this.toastService.show('error', 'Failed to remove profile picture');
+        }
+      });
   }
 }

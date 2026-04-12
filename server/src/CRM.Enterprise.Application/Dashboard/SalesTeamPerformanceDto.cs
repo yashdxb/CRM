@@ -21,4 +21,5 @@ public record RepPerformanceDto(
     decimal Revenue,
     decimal WinRate,
     double AvgCycleDays,
-    int ActivitiesCount);
+    int ActivitiesCount,
+    string? ProfilePictureUrl = null);

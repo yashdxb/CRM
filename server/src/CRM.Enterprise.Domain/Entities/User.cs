@@ -35,6 +35,8 @@ public class User : AuditableEntity
     public string? LastLoginDeviceType { get; set; }
     [MaxLength(64)]
     public string? LastLoginPlatform { get; set; }
+    [MaxLength(2048)]
+    public string? ProfilePictureUrl { get; set; }
 
     public ICollection<UserRole> Roles { get; set; } = new List<UserRole>();
 }

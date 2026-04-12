@@ -22,4 +22,5 @@ public record UserListItem(
     string DashboardPackKey,
     string DashboardPackName,
     string DashboardPackType,
-    bool IsOnline);
+    bool IsOnline,
+    string? ProfilePictureUrl = null);

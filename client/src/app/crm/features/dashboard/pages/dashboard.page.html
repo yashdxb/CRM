@@ -1146,7 +1146,11 @@
                   </div>
                   <div class="team-perf__rep-identity rep-col-name">
                     <div class="team-perf__rep-avatar">
-                      {{ rep.name.charAt(0) }}
+                      @if (rep.profilePictureUrl) {
+                        <img [src]="rep.profilePictureUrl" [alt]="rep.name" class="team-perf__rep-avatar-img" />
+                      } @else {
+                        {{ rep.name.charAt(0) }}
+                      }
                     </div>
                     <span class="team-perf__rep-name">{{ rep.name }}</span>
                   </div>

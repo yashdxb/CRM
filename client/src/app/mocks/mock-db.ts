@@ -1143,6 +1143,7 @@ interface MockUserRecord {
   createdAtUtc: string;
   lastLoginAtUtc?: string | null;
   roleIds: string[];
+  profilePictureUrl?: string | null;
 }
 
 let mockUsers: MockUserRecord[] = [
@@ -1210,6 +1211,7 @@ let mockUsers: MockUserRecord[] = [
 
 const toUserDetail = (record: MockUserRecord): UserDetailResponse => ({
   ...record,
+  profilePictureUrl: record.profilePictureUrl ?? null,
   dashboardPackKey: `role-default:${record.roleIds
     .map((roleId) => mockRoles.find((role) => role.id === roleId)?.hierarchyLevel ?? 1)
     .reduce((max, level) => Math.max(max, level ?? 1), 1)}`,
@@ -1239,7 +1241,8 @@ const toUserListItem = (record: MockUserRecord): UserListItem => {
     lastLoginAtUtc: detail.lastLoginAtUtc,
     dashboardPackKey: `role-default:${highestRoleLevel}`,
     dashboardPackName: `H${highestRoleLevel} Pack`,
-    dashboardPackType: 'role-default'
+    dashboardPackType: 'role-default',
+    profilePictureUrl: detail.profilePictureUrl ?? null
   };
 };
 
