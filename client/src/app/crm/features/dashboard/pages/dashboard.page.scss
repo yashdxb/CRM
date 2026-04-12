@@ -5369,16 +5369,58 @@
 .team-perf__reps {
   display: flex;
   flex-direction: column;
-  gap: $space-2;
+  gap: 0;
 }
 
+// Column widths shared between header and rows
+.rep-col-rank {
+  width: 32px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.rep-col-name {
+  flex: 1.4;
+  min-width: 0;
+}
+
+.rep-col-metric {
+  flex: 1;
+  text-align: center;
+  min-width: 0;
+}
+
+// Table header
+.team-perf__rep-header {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-1 $space-3;
+  margin-bottom: $space-1;
+  border-bottom: 1px solid rgba($primary, 0.08);
+}
+
+.team-perf__rep-header-cell {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: $text-muted;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+// Rep row
 .team-perf__rep {
   display: flex;
   align-items: center;
-  gap: $space-3;
+  gap: $space-2;
   padding: $space-2 $space-3;
   border-radius: $radius-lg;
   transition: all $transition-fast;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+
+  &:last-child {
+    border-bottom: none;
+  }
 
   &:hover {
     background: rgba($primary, 0.03);
@@ -5413,68 +5455,74 @@
   }
 }
 
+.team-perf__rep-identity {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  min-width: 0;
+}
+
 .team-perf__rep-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: $radius-lg;
+  width: 30px;
+  height: 30px;
+  border-radius: $radius-md;
   background: $cyan-gradient;
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: $font-size-sm;
-}
-
-.team-perf__rep-info {
-  flex: 1;
-  min-width: 0;
+  font-size: $font-size-xs;
+  flex-shrink: 0;
 }
 
 .team-perf__rep-name {
   font-size: $font-size-sm;
   font-weight: 600;
   color: $text-primary;
-  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.team-perf__rep-stats {
-  display: flex;
-  align-items: center;
-  gap: $space-1;
-  font-size: $font-size-xs;
-  color: $text-muted;
-
-  .separator {
-    opacity: 0.5;
-  }
-
-  .revenue {
-    color: $success;
-    font-weight: 500;
-  }
-}
-
-.team-perf__rep-activity {
+.team-perf__rep-metric {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 1px;
-  min-width: 52px;
+
+  strong {
+    font-size: $font-size-sm;
+    font-weight: 700;
+    color: $text-primary;
+
+    &.revenue {
+      color: $success;
+    }
+
+    &.activity {
+      color: $primary;
+    }
+
+    &.good {
+      color: $success;
+    }
+
+    &.okay {
+      color: #f59e0b;
+    }
+
+    &.low {
+      color: $danger;
+    }
+  }
 }
 
-.team-perf__rep-activity-count {
-  font-size: $font-size-lg;
-  font-weight: 700;
-  color: $primary;
-}
-
-.team-perf__rep-activity-label {
+.team-perf__rep-metric-label {
   font-size: 0.625rem;
-  font-weight: 600;
   color: $text-muted;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
 .team-perf__empty {

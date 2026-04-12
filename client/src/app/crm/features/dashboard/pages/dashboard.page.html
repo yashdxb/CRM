@@ -1129,26 +1129,42 @@
 
               <!-- Per-rep breakdown -->
               <div class="team-perf__reps" *ngIf="teamPerformanceReps().length > 0">
+                <!-- Table header -->
+                <div class="team-perf__rep-header">
+                  <div class="team-perf__rep-header-cell rep-col-rank">#</div>
+                  <div class="team-perf__rep-header-cell rep-col-name">Rep</div>
+                  <div class="team-perf__rep-header-cell rep-col-metric">Deals</div>
+                  <div class="team-perf__rep-header-cell rep-col-metric">Revenue</div>
+                  <div class="team-perf__rep-header-cell rep-col-metric">Win %</div>
+                  <div class="team-perf__rep-header-cell rep-col-metric">Avg Cycle</div>
+                  <div class="team-perf__rep-header-cell rep-col-metric">Activities</div>
+                </div>
+
                 <div class="team-perf__rep" *ngFor="let rep of teamPerformanceReps(); let i = index">
-                  <div class="team-perf__rep-rank" [class.gold]="i === 0" [class.silver]="i === 1" [class.bronze]="i === 2">
+                  <div class="team-perf__rep-rank rep-col-rank" [class.gold]="i === 0" [class.silver]="i === 1" [class.bronze]="i === 2">
                     {{ i + 1 }}
                   </div>
-                  <div class="team-perf__rep-avatar">
-                    {{ rep.name.charAt(0) }}
-                  </div>
-                  <div class="team-perf__rep-info">
-                    <div class="team-perf__rep-name">{{ rep.name }}</div>
-                    <div class="team-perf__rep-stats">
-                      <span>{{ rep.dealsClosed }} deals</span>
-                      <span class="separator">•</span>
-                      <span class="revenue">{{ rep.revenue | currency:resolveCurrencyCode():'symbol':'1.0-0' }}</span>
-                      <span class="separator">•</span>
-                      <span>{{ rep.winRate }}% win</span>
+                  <div class="team-perf__rep-identity rep-col-name">
+                    <div class="team-perf__rep-avatar">
+                      {{ rep.name.charAt(0) }}
                     </div>
+                    <span class="team-perf__rep-name">{{ rep.name }}</span>
                   </div>
-                  <div class="team-perf__rep-activity">
-                    <span class="team-perf__rep-activity-count">{{ rep.activitiesCount }}</span>
-                    <span class="team-perf__rep-activity-label">activities</span>
+                  <div class="team-perf__rep-metric rep-col-metric">
+                    <strong>{{ rep.dealsClosed }}</strong>
+                    <span class="team-perf__rep-metric-label">won</span>
+                  </div>
+                  <div class="team-perf__rep-metric rep-col-metric">
+                    <strong class="revenue">{{ rep.revenue | currency:resolveCurrencyCode():'symbol':'1.0-0' }}</strong>
+                  </div>
+                  <div class="team-perf__rep-metric rep-col-metric">
+                    <strong [ngClass]="rep.winRate >= 50 ? 'good' : rep.winRate >= 25 ? 'okay' : 'low'">{{ rep.winRate }}%</strong>
+                  </div>
+                  <div class="team-perf__rep-metric rep-col-metric">
+                    <strong>{{ rep.avgCycleDays }}d</strong>
+                  </div>
+                  <div class="team-perf__rep-metric rep-col-metric">
+                    <strong class="activity">{{ rep.activitiesCount }}</strong>
                   </div>
                 </div>
               </div>
