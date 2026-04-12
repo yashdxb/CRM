@@ -31,11 +31,34 @@ public sealed class DecisionInboxService : IDecisionInboxService
     public async Task<IReadOnlyList<DecisionInboxItemDto>> GetInboxAsync(
         string? status = null,
         string? purpose = null,
+        Guid? currentUserId = null,
+        bool canApprove = false,
+        bool canOverride = false,
         CancellationToken cancellationToken = default)
     {
-        var genericRequests = await _dbContext.DecisionRequests
+        var genericQuery = _dbContext.DecisionRequests
             .AsNoTracking()
-            .Where(r => !r.IsDeleted)
+            .Where(r => !r.IsDeleted);
+
+        // User-scoped filtering for generic decision requests
+        if (currentUserId.HasValue && !canOverride)
+        {
+            if (canApprove)
+            {
+                // Managers see items where they are the current step assignee or requester
+                genericQuery = genericQuery.Where(r =>
+                    r.RequestedByUserId == currentUserId.Value ||
+                    r.Steps.Any(s => !s.IsDeleted && s.AssigneeUserId == currentUserId.Value));
+            }
+            else
+            {
+                // Sales Reps see only items they submitted
+                genericQuery = genericQuery.Where(r =>
+                    r.RequestedByUserId == currentUserId.Value);
+            }
+        }
+
+        var genericRequests = await genericQuery
             .OrderByDescending(r => r.RequestedOnUtc)
             .Select(r => new { r.Id, r.LegacyApprovalId })
             .ToListAsync(cancellationToken);
@@ -69,7 +92,7 @@ public sealed class DecisionInboxService : IDecisionInboxService
             .Select(r => r.LegacyApprovalId!.Value)
             .ToHashSet();
 
-        var legacyItems = await _opportunityApprovalService.GetInboxAsync(status, purpose, cancellationToken);
+        var legacyItems = await _opportunityApprovalService.GetInboxAsync(status, purpose, currentUserId, canApprove, canOverride, cancellationToken);
         var legacyFallback = legacyItems
             .Where(item => !representedLegacyApprovalIds.Contains(item.Id))
             .Select(MapLegacyInboxItem)
@@ -720,7 +743,7 @@ public sealed class DecisionInboxService : IDecisionInboxService
             return genericItem;
         }
 
-        var adapterItems = await GetInboxAsync(null, null, cancellationToken);
+        var adapterItems = await GetInboxAsync(null, null, cancellationToken: cancellationToken);
         return adapterItems.FirstOrDefault(i => i.Id == decisionId);
     }
 
@@ -760,7 +783,7 @@ public sealed class DecisionInboxService : IDecisionInboxService
 
     private async Task<int> GetPendingActionCountAsync(CancellationToken cancellationToken)
     {
-        var pendingItems = await GetInboxAsync("Pending", null, cancellationToken);
+        var pendingItems = await GetInboxAsync("Pending", null, cancellationToken: cancellationToken);
         return pendingItems.Count;
     }
 
@@ -1182,7 +1205,7 @@ public sealed class DecisionInboxService : IDecisionInboxService
             throw new InvalidOperationException(result.Error ?? "Unable to create approval decision.");
         }
 
-        var inboxItems = await GetInboxAsync(null, null, cancellationToken);
+        var inboxItems = await GetInboxAsync(null, null, cancellationToken: cancellationToken);
         var mapped = inboxItems.FirstOrDefault(i => i.Id == result.Value.Id);
         if (mapped is not null)
         {
@@ -1291,7 +1314,7 @@ public sealed class DecisionInboxService : IDecisionInboxService
             throw new InvalidOperationException(result.Error ?? "Unable to update decision.");
         }
 
-        var items = await GetInboxAsync(null, null, cancellationToken);
+        var items = await GetInboxAsync(null, null, cancellationToken: cancellationToken);
         var updated = items.FirstOrDefault(i => i.Id == approvalId)
             ?? throw new KeyNotFoundException("Decision item not found after update.");
 

@@ -121,6 +121,9 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
     public async Task<IReadOnlyList<OpportunityApprovalInboxItemDto>> GetInboxAsync(
         string? status = null,
         string? purpose = null,
+        Guid? currentUserId = null,
+        bool canApprove = false,
+        bool canOverride = false,
         CancellationToken cancellationToken = default)
     {
         var nowUtc = DateTime.UtcNow;
@@ -132,6 +135,25 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
         var approvalsQuery = _dbContext.OpportunityApprovals
             .AsNoTracking()
             .Where(a => !a.IsDeleted);
+
+        // User-scoped filtering based on permissions
+        if (currentUserId.HasValue && !canOverride)
+        {
+            if (canApprove)
+            {
+                // Managers see items assigned to them (or unassigned)
+                approvalsQuery = approvalsQuery.Where(a =>
+                    a.ApproverUserId == currentUserId.Value ||
+                    a.ApproverUserId == null);
+            }
+            else
+            {
+                // Sales Reps (request-only) see only items they submitted
+                approvalsQuery = approvalsQuery.Where(a =>
+                    a.RequestedByUserId == currentUserId.Value);
+            }
+        }
+        // Admins with canOverride see all — no additional filter
 
         if (!string.IsNullOrWhiteSpace(status))
         {

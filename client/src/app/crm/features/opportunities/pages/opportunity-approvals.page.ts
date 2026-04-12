@@ -109,6 +109,9 @@ export class OpportunityApprovalsPage {
     );
   });
 
+  /** True when the user can only request approvals (Sales Rep) — no approve/override. */
+  protected readonly isRequester = computed(() => !this.canManage());
+
   protected readonly filteredApprovals = computed(() => {
     const query = this.searchQuery().trim().toLowerCase();
     return this.approvals().filter((item) => {
@@ -211,23 +214,31 @@ export class OpportunityApprovalsPage {
   });
 
   protected readonly pageTitle = computed(() => {
-    return 'Pending Action Center';
+    return this.isRequester() ? 'My Approval Requests' : 'Pending Action Center';
   });
 
   protected readonly heroDescription = computed(() => {
-    return 'Review high-impact deal approvals in one operational queue. Each card surfaces risk, workflow context, and the next decision without forcing a table-first workflow.';
+    return this.isRequester()
+      ? 'Track the status of your submitted deal approvals. You\u2019ll see updates as managers review and decide.'
+      : 'Review high-impact deal approvals in one operational queue. Each card surfaces risk, workflow context, and the next decision without forcing a table-first workflow.';
   });
 
   protected readonly queueSubtitle = computed(() => {
-    return 'Review, comment, and decide inline. Use Details when you need the full deal form.';
+    return this.isRequester()
+      ? 'View details and track progress on your submitted requests.'
+      : 'Review, comment, and decide inline. Use Details when you need the full deal form.';
   });
 
   protected readonly emptyListMessage = computed(() => {
-    return 'No pending actions match the selected filters.';
+    return this.isRequester()
+      ? 'You have no pending approval requests.'
+      : 'No pending actions match the selected filters.';
   });
 
   protected readonly emptyDetailSubtitle = computed(() => {
-    return 'Choose an item from the queue to review policy context and take action.';
+    return this.isRequester()
+      ? 'Your submitted approvals will appear here once created.'
+      : 'Choose an item from the queue to review policy context and take action.';
   });
 
   constructor() {

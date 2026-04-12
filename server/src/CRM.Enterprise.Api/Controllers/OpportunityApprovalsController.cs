@@ -38,7 +38,11 @@ public class OpportunityApprovalsController : ControllerBase
         [FromQuery] string? purpose,
         CancellationToken cancellationToken)
     {
-        var items = await _approvalService.GetInboxAsync(status, purpose, cancellationToken);
+        var actor = GetActor();
+        var canApproveFlag = CanApprove();
+        var canOverrideFlag = HasPermission(Permissions.Policies.OpportunitiesApprovalsOverride);
+        var items = await _approvalService.GetInboxAsync(
+            status, purpose, actor.UserId, canApproveFlag, canOverrideFlag, cancellationToken);
         return Ok(items.Select(ToInboxItem));
     }
 

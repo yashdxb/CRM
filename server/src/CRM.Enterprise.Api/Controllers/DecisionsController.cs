@@ -25,7 +25,11 @@ public class DecisionsController : ControllerBase
         [FromQuery] string? purpose,
         CancellationToken cancellationToken)
     {
-        var items = await _decisionInboxService.GetInboxAsync(status, purpose, cancellationToken);
+        var actor = GetActor();
+        var canApproveFlag = CanApprove();
+        var canOverrideFlag = HasPermission(Permissions.Policies.OpportunitiesApprovalsOverride);
+        var items = await _decisionInboxService.GetInboxAsync(
+            status, purpose, actor.UserId, canApproveFlag, canOverrideFlag, cancellationToken);
         return Ok(items.Select(Map));
     }
 

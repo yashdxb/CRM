@@ -28,7 +28,7 @@ public sealed class RiskIntelligenceReadService : IRiskIntelligenceReadService
         var summary = await _dashboardReadService.GetSummaryAsync(userId, cancellationToken);
         var manager = await _dashboardReadService.GetManagerPipelineHealthAsync(userId, cancellationToken);
         var insights = await _assistantChatService.GetInsightsAsync(userId, cancellationToken);
-        var decisions = await _decisionInboxService.GetInboxAsync("Pending", null, cancellationToken);
+        var decisions = await _decisionInboxService.GetInboxAsync("Pending", null, currentUserId: null, canApprove: false, canOverride: true, cancellationToken: cancellationToken);
         var nowUtc = DateTime.UtcNow;
 
         var priorityItems = new List<RiskGuidanceItemDto>();

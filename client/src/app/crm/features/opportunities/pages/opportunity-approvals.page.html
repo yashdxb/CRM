@@ -11,11 +11,16 @@
     <div class="hero-copy">
       <div class="hero-badge">
         <span class="badge-dot"></span>
-        <span>Decision Inbox</span>
+        <span>{{ isRequester() ? 'My Requests' : 'Decision Inbox' }}</span>
       </div>
       <h1 class="hero-title">
-        <span class="hero-title__gradient">Pending Action</span>
-        <span class="hero-title__light">Center</span>
+        @if (isRequester()) {
+          <span class="hero-title__gradient">My Approval</span>
+          <span class="hero-title__light">Requests</span>
+        } @else {
+          <span class="hero-title__gradient">Pending Action</span>
+          <span class="hero-title__light">Center</span>
+        }
       </h1>
       <p class="hero-description">{{ heroDescription() }}</p>
       <p class="hero-subtitle">{{ queueSubtitle() }}</p>
@@ -28,9 +33,9 @@
             <i class="pi pi-bolt"></i>
           </div>
           <div class="hero-visual-card__content">
-            <span class="hero-visual-card__label">Urgent queue</span>
-            <strong class="hero-visual-card__value">{{ kpis().urgent }}</strong>
-            <span class="hero-visual-card__meta">{{ kpis().dueToday }} due today</span>
+            <span class="hero-visual-card__label">{{ isRequester() ? 'Awaiting review' : 'Urgent queue' }}</span>
+            <strong class="hero-visual-card__value">{{ isRequester() ? kpis().pending : kpis().urgent }}</strong>
+            <span class="hero-visual-card__meta">{{ isRequester() ? 'Submitted by you' : kpis().dueToday + ' due today' }}</span>
           </div>
         </div>
 
@@ -39,9 +44,9 @@
             <i class="pi pi-wallet"></i>
           </div>
           <div class="hero-visual-card__content">
-            <span class="hero-visual-card__label">Pending value</span>
+            <span class="hero-visual-card__label">{{ isRequester() ? 'Request value' : 'Pending value' }}</span>
             <strong class="hero-visual-card__value">{{ formatCompactCurrency(kpis().totalAmount) }}</strong>
-            <span class="hero-visual-card__meta">{{ kpis().pending }} approvals in play</span>
+            <span class="hero-visual-card__meta">{{ isRequester() ? kpis().pending + ' requests pending' : kpis().pending + ' approvals in play' }}</span>
           </div>
         </div>
       </div>
@@ -262,6 +267,7 @@
                 </div>
               </div>
 
+              @if (canManage()) {
               <label class="note-field">
                 <span class="detail-label">Decision note</span>
                 <textarea
@@ -273,18 +279,21 @@
                   (click)="$event.stopPropagation()"
                 ></textarea>
               </label>
+              }
             </div>
 
             <div class="approval-card__actions" (click)="$event.stopPropagation()">
-              <button
-                pButton
-                type="button"
-                class="secondary-action"
-                label="Request Info"
-                icon="pi pi-comment"
-                [disabled]="isActioning(item.id)"
-                (click)="requestInfo(item)"
-              ></button>
+              @if (canManage()) {
+                <button
+                  pButton
+                  type="button"
+                  class="secondary-action"
+                  label="Request Info"
+                  icon="pi pi-comment"
+                  [disabled]="isActioning(item.id)"
+                  (click)="requestInfo(item)"
+                ></button>
+              }
               <button
                 pButton
                 type="button"
@@ -294,23 +303,25 @@
                 iconPos="right"
                 (click)="openOpportunity(item)"
               ></button>
-              <button
-                pButton
-                type="button"
-                class="reject-action"
-                label="Reject"
-                [disabled]="isActioning(item.id)"
-                (click)="decide(item, false)"
-              ></button>
-              <button
-                pButton
-                type="button"
-                class="approve-action"
-                label="Approve"
-                [loading]="isActioning(item.id)"
-                [disabled]="isActioning(item.id)"
-                (click)="decide(item, true)"
-              ></button>
+              @if (canManage()) {
+                <button
+                  pButton
+                  type="button"
+                  class="reject-action"
+                  label="Reject"
+                  [disabled]="isActioning(item.id)"
+                  (click)="decide(item, false)"
+                ></button>
+                <button
+                  pButton
+                  type="button"
+                  class="approve-action"
+                  label="Approve"
+                  [loading]="isActioning(item.id)"
+                  [disabled]="isActioning(item.id)"
+                  (click)="decide(item, true)"
+                ></button>
+              }
             </div>
           </article>
         </div>
@@ -381,14 +392,16 @@
                   </td>
                   <td (click)="$event.stopPropagation()">
                     <div class="approval-data-actions">
-                      <button
-                        pButton
-                        type="button"
-                        class="secondary-action secondary-action--compact"
-                        label="Request Info"
-                        [disabled]="isActioning(item.id)"
-                        (click)="requestInfo(item)"
-                      ></button>
+                      @if (canManage()) {
+                        <button
+                          pButton
+                          type="button"
+                          class="secondary-action secondary-action--compact"
+                          label="Request Info"
+                          [disabled]="isActioning(item.id)"
+                          (click)="requestInfo(item)"
+                        ></button>
+                      }
                       <button
                         pButton
                         type="button"
@@ -396,23 +409,25 @@
                         label="Details"
                         (click)="openOpportunity(item)"
                       ></button>
-                      <button
-                        pButton
-                        type="button"
-                        class="reject-action reject-action--compact"
-                        label="Reject"
-                        [disabled]="isActioning(item.id)"
-                        (click)="decide(item, false)"
-                      ></button>
-                      <button
-                        pButton
-                        type="button"
-                        class="approve-action approve-action--compact"
-                        label="Approve"
-                        [loading]="isActioning(item.id)"
-                        [disabled]="isActioning(item.id)"
-                        (click)="decide(item, true)"
-                      ></button>
+                      @if (canManage()) {
+                        <button
+                          pButton
+                          type="button"
+                          class="reject-action reject-action--compact"
+                          label="Reject"
+                          [disabled]="isActioning(item.id)"
+                          (click)="decide(item, false)"
+                        ></button>
+                        <button
+                          pButton
+                          type="button"
+                          class="approve-action approve-action--compact"
+                          label="Approve"
+                          [loading]="isActioning(item.id)"
+                          [disabled]="isActioning(item.id)"
+                          (click)="decide(item, true)"
+                        ></button>
+                      }
                     </div>
                   </td>
                 </tr>

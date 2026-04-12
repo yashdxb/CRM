@@ -5,6 +5,9 @@ public interface IDecisionInboxService
     Task<IReadOnlyList<DecisionInboxItemDto>> GetInboxAsync(
         string? status = null,
         string? purpose = null,
+        Guid? currentUserId = null,
+        bool canApprove = false,
+        bool canOverride = false,
         CancellationToken cancellationToken = default);
 
     Task<DecisionInboxItemDto> CreateAsync(
