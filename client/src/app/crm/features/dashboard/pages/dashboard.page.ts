@@ -491,6 +491,53 @@ export class DashboardPage implements OnInit {
     return data.confidenceWeightedPipelineValue - data.pipelineValueTotal;
   }
 
+  protected metricTone(metricId: string): string {
+    switch (metricId) {
+      case 'raw-pipeline':
+        return 'aqua';
+      case 'at-risk':
+        return 'coral';
+      case 'no-next-step':
+        return 'amber';
+      case 'tasks-due':
+        return 'emerald';
+      case 'overdue-activities':
+        return 'orange';
+      case 'new-leads':
+        return 'violet';
+      default:
+        return 'slate';
+    }
+  }
+
+  protected metricHealthCaption(metric: { id: string; percentage: number }): string {
+    const percentage = Math.max(0, Math.min(100, metric.percentage ?? 0));
+    switch (metric.id) {
+      case 'raw-pipeline':
+        return 'Open value currently in motion';
+      case 'at-risk':
+        return `${percentage}% of open deals need recovery`;
+      case 'no-next-step':
+        return `${percentage}% of open deals need a next action`;
+      case 'tasks-due':
+        return `${percentage}% of visible work is due today`;
+      case 'overdue-activities':
+        return `${percentage}% of visible work is overdue`;
+      case 'new-leads':
+        return `${percentage}% of the lead pool is newly assigned`;
+      default:
+        return `${percentage}% of the monitored workload`;
+    }
+  }
+
+  protected weightedPipelineHeadline(): string {
+    return this.weightedPipelineDelta() >= 0 ? 'Protected forecast' : 'Forecast exposed';
+  }
+
+  protected weightedPipelineDirectionLabel(): string {
+    return this.weightedPipelineDelta() >= 0 ? 'Confidence holding above raw movement' : 'Confidence trails the raw pipeline';
+  }
+
   protected readonly recentAccounts = computed(() => this.summary()?.recentCustomers?.slice(0, 5) ?? []);
   protected readonly upcomingActivities = computed(() => this.summary()?.activitiesNextWeek?.slice(0, 6) ?? []);
   protected readonly myTasks = computed(() => this.summary()?.myTasks?.slice(0, 6) ?? []);

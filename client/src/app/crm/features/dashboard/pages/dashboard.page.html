@@ -110,15 +110,32 @@
           data-min-width="180"
           data-min-height="140">
           <div class="metric-glow primary"></div>
-          <div class="metric-icon-large primary">
-            <i class="pi pi-chart-line"></i>
+          <div class="metric-hero-header">
+            <div class="metric-hero-kicker">
+              <span class="metric-hero-kicker__label">Forecast cockpit</span>
+              <span class="metric-hero-kicker__tone" [class.down]="weightedPipelineDelta() < 0" [class.up]="weightedPipelineDelta() >= 0">
+                {{ weightedPipelineHeadline() }}
+              </span>
+            </div>
           </div>
-          <div class="metric-body">
-            <div class="metric-value-large">{{ summary().confidenceWeightedPipelineValue | currency:resolveCurrencyCode():'symbol':'1.0-0' }}</div>
-            <div class="metric-label">Confidence-Weighted Forecast</div>
-            <div class="metric-trend" [class.down]="weightedPipelineDelta() < 0" [class.up]="weightedPipelineDelta() >= 0">
-              <i class="pi" [class.pi-shield]="weightedPipelineDelta() >= 0" [class.pi-arrow-down]="weightedPipelineDelta() < 0"></i>
-              <span>Raw pipeline {{ totalPipelineValue() | currency:resolveCurrencyCode():'symbol':'1.0-0' }}</span>
+          <div class="metric-hero-main">
+            <div class="metric-icon-large primary">
+              <i class="pi pi-chart-line"></i>
+            </div>
+            <div class="metric-body">
+              <div class="metric-value-large">{{ summary().confidenceWeightedPipelineValue | currency:resolveCurrencyCode():'symbol':'1.0-0' }}</div>
+              <div class="metric-label">Confidence-Weighted Forecast</div>
+              <div class="metric-hero-pills">
+                <span class="metric-hero-pill">
+                  Raw {{ totalPipelineValue() | currency:resolveCurrencyCode():'symbol':'1.0-0' }}
+                </span>
+                <span class="metric-hero-pill">Retention {{ pipelineRetentionPct() }}%</span>
+                <span class="metric-hero-pill">Calibration {{ calibrationLevel() }}</span>
+              </div>
+              <div class="metric-trend" [class.down]="weightedPipelineDelta() < 0" [class.up]="weightedPipelineDelta() >= 0">
+                <i class="pi" [class.pi-shield]="weightedPipelineDelta() >= 0" [class.pi-arrow-down]="weightedPipelineDelta() < 0"></i>
+                <span>{{ weightedPipelineDirectionLabel() }}</span>
+              </div>
             </div>
           </div>
           <div class="resize-handle handle-e" (mousedown)="startResize($event, kpiFeaturedCard, 'e')"></div>
@@ -131,28 +148,40 @@
           [ngStyle]="getCardDimensions('kpi-' + metric.id)"
           data-min-width="160"
           data-min-height="140">
-          <div class="metric-header">
+          <div class="metric-glow" [ngClass]="'metric-glow--' + metricTone(metric.id)"></div>
+          <div class="metric-topline">
+            <div class="metric-status-rail" [ngClass]="'metric-status-rail--' + metricTone(metric.id)">
+              <span class="metric-status-dot"></span>
+              <span class="metric-status-copy">{{ metric.sub }}</span>
+            </div>
             <button type="button" class="kpi-drag-handle" cdkDragHandle aria-label="Reorder KPI">
               <i class="pi pi-bars"></i>
             </button>
-            <div class="metric-icon" [class]="metric.color" cdkDragHandle>
+          </div>
+          <div class="metric-main">
+            <div class="metric-icon" [class]="metricTone(metric.id)" cdkDragHandle>
               <i class="pi" [class]="metric.icon"></i>
             </div>
-            <div class="metric-trend">
-              <span>{{ metric.sub }}</span>
+            <div class="metric-copy">
+              <div class="metric-value" *ngIf="metric.format === 'currency'; else numericMetricValue">
+                {{ metric.value | currency:resolveCurrencyCode():'symbol':'1.0-0' }}
+              </div>
+              <ng-template #numericMetricValue>
+                <div class="metric-value">
+                  {{ metric.value | number:'1.0-0' }}
+                </div>
+              </ng-template>
+              <div class="metric-label">{{ metric.label }}</div>
             </div>
           </div>
-          <div class="metric-value" *ngIf="metric.format === 'currency'; else numericMetricValue">
-            {{ metric.value | currency:resolveCurrencyCode():'symbol':'1.0-0' }}
-          </div>
-          <ng-template #numericMetricValue>
-            <div class="metric-value">
-              {{ metric.value | number:'1.0-0' }}
+          <div class="metric-footer">
+            <div class="metric-health">
+              <span class="metric-health-caption">{{ metricHealthCaption(metric) }}</span>
+              <span class="metric-health-value">{{ metric.percentage }}%</span>
             </div>
-          </ng-template>
-          <div class="metric-label">{{ metric.label }}</div>
-          <div class="metric-bar">
-            <div class="metric-bar-fill" [class]="metric.color" [style.width.%]="metric.percentage"></div>
+            <div class="metric-bar" [ngClass]="'metric-bar--' + metricTone(metric.id)">
+              <div class="metric-bar-fill" [class]="metricTone(metric.id)" [style.width.%]="metric.percentage"></div>
+            </div>
           </div>
           <div class="resize-handle handle-e" (mousedown)="startResize($event, kpiCard, 'e')"></div>
           <div class="resize-handle handle-se" (mousedown)="startResize($event, kpiCard, 'se')"></div>
