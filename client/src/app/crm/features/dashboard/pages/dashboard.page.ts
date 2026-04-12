@@ -2749,7 +2749,12 @@ export class DashboardPage implements OnInit {
     if (this.roleDefaultLayout.length > 0) {
       const sanitized = this.roleDefaultLayout.filter((id) => known.has(id) && !this.uiSuppressedCardIds.has(id));
       if (sanitized.length > 0) {
-        return sanitized;
+        // Append any new catalog cards not yet in the saved role default
+        const seen = new Set(sanitized);
+        const newCards = this.cardCatalog
+          .map(card => card.id)
+          .filter(id => !seen.has(id) && !this.uiSuppressedCardIds.has(id));
+        return [...sanitized, ...newCards];
       }
     }
     return this.cardCatalog.map(card => card.id).filter((id) => !this.uiSuppressedCardIds.has(id));
