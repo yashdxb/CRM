@@ -18,7 +18,6 @@
         <li><a routerLink="/platform">Platform</a></li>
         <li><a (click)="scrollTo('features')">Features</a></li>
         <li><a (click)="scrollTo('how-it-works')">How It Works</a></li>
-        <li><a (click)="scrollTo('pricing')">Pricing</a></li>
         <li class="topbar__nav-actions">
           <button type="button" class="nav-btn nav-btn--ghost" (click)="onSignIn()">Sign In</button>
           <button type="button" class="nav-btn nav-btn--primary" (click)="onWatchDemo()">Book a Demo</button>
@@ -281,7 +280,7 @@
     <div class="shell banner__inner">
       <span class="banner__icon"><i class="pi pi-unlock"></i></span>
       <h2 class="banner__title">One License. Unlimited Users. Forever.</h2>
-      <p class="banner__subtitle">No per-seat pricing. No annual renewals. Pay once and your entire team gets full access — forever.</p>
+      <p class="banner__subtitle">No user caps. No forced annual renewals. Your full team can operate without licensing friction.</p>
     </div>
   </section>
 
@@ -508,28 +507,6 @@
     </div>
   </section>
 
-  <!-- Pricing -->
-  <section id="pricing" class="pricing">
-    <div class="shell">
-      <span class="section-badge scroll-animate">Simple Pricing</span>
-      <h2 class="section-title scroll-animate">Commercially Simple, Operationally Flexible.</h2>
-      <div class="pricing__card scroll-animate">
-        <div class="pricing__badge">Most Popular</div>
-        <h3 class="pricing__plan">Enterprise</h3>
-        <div class="pricing__price">
-          <span class="pricing__amount">One-Time Payment</span>
-          <span class="pricing__term">Commercial scope is finalized during the demo based on deployment, rollout, and support needs.</span>
-        </div>
-        <ul class="pricing__features">
-          <li *ngFor="let note of commercialNotes"><i class="pi pi-check-circle"></i> {{ note }}</li>
-        </ul>
-        <button type="button" class="pricing__cta" (click)="onWatchDemo()">
-          <i class="pi pi-calendar"></i> Book a Demo
-        </button>
-      </div>
-    </div>
-  </section>
-
   <section class="commercial">
     <div class="shell commercial__inner">
       <div class="commercial__content">
@@ -586,7 +563,6 @@
         <h4>Product</h4>
         <ul>
           <li><a (click)="scrollTo('features')">Features</a></li>
-          <li><a (click)="scrollTo('pricing')">Pricing</a></li>
           <li><a (click)="scrollTo('how-it-works')">How It Works</a></li>
         </ul>
       </div>
