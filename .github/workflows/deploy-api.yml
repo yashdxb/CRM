@@ -117,7 +117,7 @@ jobs:
           fi
 
           # Verify /api/auth/config (critical for login)
-          CONFIG_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "$API_URL/api/auth/config")
+          CONFIG_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "$API_URL/api/auth/config" || echo "000")
           if [ "$CONFIG_STATUS" = "200" ]; then
             echo "✅ /api/auth/config returned 200"
           else
@@ -126,11 +126,11 @@ jobs:
           fi
 
           # Verify /healthz (includes DB check)
-          HEALTHZ_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$API_URL/healthz")
+          HEALTHZ_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$API_URL/healthz" || echo "000")
           if [ "$HEALTHZ_STATUS" = "200" ]; then
             echo "✅ /healthz (with DB) returned 200"
           else
-            echo "⚠️  /healthz returned $HEALTHZ_STATUS — DB may be unreachable"
+            echo "⚠️  /healthz returned $HEALTHZ_STATUS (or timed out) — DB may be unreachable"
           fi
 
           # Verify startup command is empty (deployment guardrail)
