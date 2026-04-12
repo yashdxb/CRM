@@ -1582,20 +1582,20 @@ public class DatabaseInitializer : IDatabaseInitializer
     }
 
     // Essential admin users — always seeded, including Production.
-    private readonly (string Name, string Email, string TimeZone, string Locale, string[] Roles, string Password)[] _essentialUsers =
+    private readonly (string Name, string Email, string TimeZone, string Locale, string[] Roles, string Password, string? ProfilePictureUrl)[] _essentialUsers =
     {
-        ("Yasser Ahamed", "yasser.ahamed@live.com", "UTC", "en-US", new[] { Permissions.RoleNames.SuperAdmin }, "yAsh@123"),
+        ("Yasser Ahamed", "yasser.ahamed@live.com", "UTC", "en-US", new[] { Permissions.RoleNames.SuperAdmin }, "yAsh@123", "https://i.pravatar.cc/150?u=yasser.ahamed"),
     };
 
     // Demo/test users — seeded only in non-Production or when explicitly allowed.
-    private readonly (string Name, string Email, string TimeZone, string Locale, string[] Roles, string Password)[] _seedUsers =
+    private readonly (string Name, string Email, string TimeZone, string Locale, string[] Roles, string Password, string? ProfilePictureUrl)[] _seedUsers =
     {
-        ("Super Admin", "super.admin@crmenterprise.demo", "UTC", "en-US", new[] { Permissions.RoleNames.SuperAdmin }, "ChangeThisSuper!1"),
-        ("Jordan Patel", "jordan.patel@crmenterprise.demo", "America/New_York", "en-US", new[] { "Sales Manager" }, "ChangeThisSales!1"),
-        ("Ava Chen", "ava.chen@crmenterprise.demo", "America/Los_Angeles", "en-US", new[] { "Sales Rep" }, "ChangeThisRep!1"),
-        ("Leo Martin", "leo.martin@crmenterprise.demo", "Europe/London", "en-GB", new[] { "Sales Rep" }, "ChangeThisRep!1"),
-        ("Priya Nair", "priya.nair@crmenterprise.demo", "Asia/Kolkata", "en-IN", new[] { "Customer Success" }, "ChangeThisCsm!1"),
-        ("Nina Okafor", "nina.okafor@crmenterprise.demo", "America/Chicago", "en-US", new[] { "Support" }, "ChangeThisSup!1" )
+        ("Super Admin", "super.admin@crmenterprise.demo", "UTC", "en-US", new[] { Permissions.RoleNames.SuperAdmin }, "ChangeThisSuper!1", "https://i.pravatar.cc/150?u=super.admin"),
+        ("Jordan Patel", "jordan.patel@crmenterprise.demo", "America/New_York", "en-US", new[] { "Sales Manager" }, "ChangeThisSales!1", "https://i.pravatar.cc/150?u=jordan.patel"),
+        ("Ava Chen", "ava.chen@crmenterprise.demo", "America/Los_Angeles", "en-US", new[] { "Sales Rep" }, "ChangeThisRep!1", "https://i.pravatar.cc/150?u=ava.chen"),
+        ("Leo Martin", "leo.martin@crmenterprise.demo", "Europe/London", "en-GB", new[] { "Sales Rep" }, "ChangeThisRep!1", "https://i.pravatar.cc/150?u=leo.martin"),
+        ("Priya Nair", "priya.nair@crmenterprise.demo", "Asia/Kolkata", "en-IN", new[] { "Customer Success" }, "ChangeThisCsm!1", "https://i.pravatar.cc/150?u=priya.nair"),
+        ("Nina Okafor", "nina.okafor@crmenterprise.demo", "America/Chicago", "en-US", new[] { "Support" }, "ChangeThisSup!1", "https://i.pravatar.cc/150?u=nina.okafor")
     };
 
     private readonly (string Name, string Description, string[] Permissions)[] _roleDefinitions =
@@ -2110,9 +2110,9 @@ public class DatabaseInitializer : IDatabaseInitializer
     {
         // Essential admin users are always seeded, even in Production.
         // Force password reset so the seed password always wins (prevents drift).
-        foreach (var (name, email, tz, locale, roles, password) in _essentialUsers)
+        foreach (var (name, email, tz, locale, roles, password, pictureUrl) in _essentialUsers)
         {
-            await EnsureDemoUserAsync(name, email, tz, locale, roles, password, cancellationToken, forcePasswordReset: true);
+            await EnsureDemoUserAsync(name, email, tz, locale, roles, password, cancellationToken, forcePasswordReset: true, profilePictureUrl: pictureUrl);
         }
 
         if (!ShouldSeedProductionTestData())
@@ -2120,9 +2120,9 @@ public class DatabaseInitializer : IDatabaseInitializer
             return;
         }
 
-        foreach (var (name, email, tz, locale, roles, password) in _seedUsers)
+        foreach (var (name, email, tz, locale, roles, password, pictureUrl) in _seedUsers)
         {
-            await EnsureDemoUserAsync(name, email, tz, locale, roles, password, cancellationToken);
+            await EnsureDemoUserAsync(name, email, tz, locale, roles, password, cancellationToken, profilePictureUrl: pictureUrl);
         }
     }
 
@@ -2958,7 +2958,8 @@ public class DatabaseInitializer : IDatabaseInitializer
         IEnumerable<string> roleNames,
         string defaultPassword,
         CancellationToken cancellationToken,
-        bool forcePasswordReset = false)
+        bool forcePasswordReset = false,
+        string? profilePictureUrl = null)
     {
         var normalizedEmail = NormalizeEmail(email);
         var tenantId = _tenantProvider.TenantId;
@@ -2978,7 +2979,8 @@ public class DatabaseInitializer : IDatabaseInitializer
                 EmailNormalized = normalizedEmail,
                 TimeZone = timeZone,
                 Locale = locale,
-                IsActive = true
+                IsActive = true,
+                ProfilePictureUrl = profilePictureUrl
             };
             _dbContext.Users.Add(user);
         }
@@ -2990,6 +2992,10 @@ public class DatabaseInitializer : IDatabaseInitializer
             user.TimeZone = timeZone;
             user.Locale = locale;
             user.IsActive = true;
+            if (profilePictureUrl is not null && string.IsNullOrWhiteSpace(user.ProfilePictureUrl))
+            {
+                user.ProfilePictureUrl = profilePictureUrl;
+            }
         }
 
         if (forcePasswordReset || string.IsNullOrWhiteSpace(user.PasswordHash))
