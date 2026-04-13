@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, ElementRef, HostListener, OnInit, ViewChild, inject } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, ElementRef, HostListener, OnInit, inject } from '@angular/core';
 import { CommonModule, DOCUMENT } from '@angular/common';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -95,16 +95,6 @@ type OrchestrationPreviewSlide = {
 
 type HeroPreviewSlide = PipelinePreviewSlide | LeadPreviewSlide | DealPreviewSlide | PropertyPreviewSlide | OrchestrationPreviewSlide;
 
-type VideoHighlight = {
-  title: string;
-  eyebrow: string;
-  summary: string;
-  duration: string;
-  videoUrl: string;
-  poster: string;
-  bullets: string[];
-};
-
 @Component({
   selector: 'app-landing-page',
   standalone: true,
@@ -125,7 +115,6 @@ type VideoHighlight = {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class LandingPage implements OnInit, AfterViewInit {
-  @ViewChild('highlightVideo') private highlightVideoRef?: ElementRef<HTMLVideoElement>;
   private readonly torontoZone = 'America/Toronto';
   private readonly heroPreviewIntervalMs = 4200;
   private readonly svc = inject(CrmLandingService);
@@ -388,73 +377,6 @@ export class LandingPage implements OnInit, AfterViewInit {
     }
   ];
 
-  readonly videoHighlights: VideoHighlight[] = [
-    {
-      eyebrow: 'Executive visibility',
-      title: 'Dashboard command center',
-      summary: 'A working dashboard view that shows KPI visibility, AI recommendations, and operational signals in one manager-ready surface.',
-      duration: '0:43',
-      videoUrl: '/assets/landing/videos/dashboard.mp4',
-      poster: '/assets/landing/videos/dashboard-poster-live.png',
-      bullets: ['KPI visibility', 'AI recommendations', 'Manager-ready layout']
-    },
-    {
-      eyebrow: 'Lead qualification',
-      title: 'Leads workspace',
-      summary: 'Shows the lead operating flow with qualification context, score visibility, and the working detail surface used by reps and managers.',
-      duration: '0:41',
-      videoUrl: '/assets/landing/videos/leads.mp4',
-      poster: '/assets/landing/videos/leads-poster-live.png',
-      bullets: ['Lead score visibility', 'Qualification context', 'Rep workflow']
-    },
-    {
-      eyebrow: 'Risk operations',
-      title: 'Risk Intelligence in motion',
-      summary: 'Shows how the CRM ranks priority risks, explains the issue, and routes the operator to the next defensible action.',
-      duration: '0:07',
-      videoUrl: '/assets/landing/videos/risk-intelligence.mp4',
-      poster: '/assets/landing/videos/risk-intelligence-poster-live.png',
-      bullets: ['Priority risk queue', 'Selected-risk narrative', 'Action-first review flow']
-    },
-    {
-      eyebrow: 'Manager action',
-      title: 'Pending Action Center',
-      summary: 'Demonstrates the decision inbox for approvals, reviews, and operator follow-up so nothing critical stays buried in the pipeline.',
-      duration: '0:02',
-      videoUrl: '/assets/landing/videos/decision-inbox.mp4',
-      poster: '/assets/landing/videos/decision-inbox-poster-live.png',
-      bullets: ['Approval visibility', 'Decision inbox', 'Clear operator queue']
-    },
-    {
-      eyebrow: 'Deal execution',
-      title: 'Deals workspace',
-      summary: 'Covers active deal management, owner workflow, and commercial execution inside the CRM.',
-      duration: '0:19',
-      videoUrl: '/assets/landing/videos/deals.mp4',
-      poster: '/assets/landing/videos/deals-poster-live.png',
-      bullets: ['Deal workspace', 'Execution flow', 'Pipeline control']
-    },
-    {
-      eyebrow: 'Reporting',
-      title: 'Reports workspace',
-      summary: 'Shows the CRM reporting surface used for operational visibility, review, and publish-ready reporting.',
-      duration: '0:05',
-      videoUrl: '/assets/landing/videos/reports.mp4',
-      poster: '/assets/landing/videos/reports-poster-live.png',
-      bullets: ['Report workspace', 'Operational visibility', 'Publish-ready review']
-    },
-    {
-      eyebrow: 'Property operations',
-      title: 'Property workspace',
-      summary: 'Demonstrates the broker and property operating surface for listings, execution context, and workspace visibility.',
-      duration: '0:09',
-      videoUrl: '/assets/landing/videos/property-workspace.mp4',
-      poster: '/assets/landing/videos/property-workspace-poster-live.png',
-      bullets: ['Listing workspace', 'Property execution', 'Broker relevance']
-    }
-  ];
-  activeVideoHighlightIndex = 0;
-
   readonly commercialNotes = [
     'Unlimited internal users under one commercial model',
     'Tenant branding, workflow, and report customization included',
@@ -650,10 +572,6 @@ export class LandingPage implements OnInit, AfterViewInit {
     return slide as OrchestrationPreviewSlide;
   }
 
-  get activeVideoHighlight(): VideoHighlight {
-    return this.videoHighlights[this.activeVideoHighlightIndex] ?? this.videoHighlights[0];
-  }
-
   onWatchDemo(): void {
     this.refreshMinDemoDateTime();
     this.showDemoForm = true;
@@ -683,15 +601,6 @@ export class LandingPage implements OnInit, AfterViewInit {
     this.cdr.markForCheck();
     const target = this.elRef.nativeElement.querySelector(`.journey-step-anchor[data-index="${nextIndex}"]`) as HTMLElement | null;
     target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
-
-  selectVideoHighlight(index: number): void {
-    if (!this.videoHighlights.length) {
-      return;
-    }
-    this.activeVideoHighlightIndex = Math.max(0, Math.min(index, this.videoHighlights.length - 1));
-    this.cdr.markForCheck();
-    queueMicrotask(() => this.reloadHighlightVideo());
   }
 
   advanceHeroPreview(): void {
@@ -993,15 +902,6 @@ export class LandingPage implements OnInit, AfterViewInit {
       window.clearInterval(this.heroPreviewIntervalId);
       this.heroPreviewIntervalId = null;
     }
-  }
-
-  private reloadHighlightVideo(): void {
-    const video = this.highlightVideoRef?.nativeElement;
-    if (!video) {
-      return;
-    }
-    video.load();
-    void video.play().catch(() => undefined);
   }
 
 }

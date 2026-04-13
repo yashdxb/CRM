@@ -2392,6 +2392,57 @@
   font-weight: 700;
 }
 
+.highlights__playlist-link {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  padding: 0.58rem 0.85rem;
+  border-radius: 0.8rem;
+  background: rgba(37, 99, 235, 0.2);
+  border: 1px solid rgba(96, 165, 250, 0.25);
+  color: #dbeafe;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background 180ms ease, transform 180ms ease;
+
+  &:hover {
+    background: rgba(37, 99, 235, 0.3);
+    transform: translateY(-1px);
+  }
+}
+
+.highlights__resource-card {
+  display: grid;
+  gap: 0.7rem;
+  padding: 1rem;
+  border-radius: 1.15rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(15, 23, 42, 0.34);
+
+  p {
+    margin: 0;
+    color: rgba(241, 246, 255, 0.72);
+    line-height: 1.6;
+  }
+
+  ul {
+    margin: 0;
+    padding-left: 1.1rem;
+    color: rgba(241, 246, 255, 0.84);
+    display: grid;
+    gap: 0.45rem;
+  }
+}
+
+.highlights__resource-label {
+  color: #bfdbfe;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
 .highlights__cta {
   display: flex;
   align-items: center;

@@ -16,6 +16,7 @@
       </a>
       <ul class="topbar__nav" [class.topbar__nav--open]="mobileMenuOpen">
         <li><a routerLink="/platform">Platform</a></li>
+        <li><a (click)="scrollTo('highlights')">Highlights</a></li>
         <li><a (click)="scrollTo('features')">Features</a></li>
         <li><a (click)="scrollTo('how-it-works')">How It Works</a></li>
         <li class="topbar__nav-actions">
@@ -402,7 +403,7 @@
       <span class="section-badge scroll-animate">CRM Product Highlight</span>
       <h2 class="section-title scroll-animate">See North Edge CRM in Action</h2>
       <p class="section-subtitle scroll-animate">
-        A quick walkthrough of the live CRM experience across pipeline operations, qualification, and manager visibility.
+        A concise product walkthrough across command-center visibility, lead qualification, decision flow, and operational control.
       </p>
 
       <div class="highlights__showcase">
@@ -417,7 +418,7 @@
 
           <iframe
             class="highlights__player"
-            src="https://www.youtube.com/embed/n3MNmExMCbk"
+            src="https://www.youtube.com/embed/mXb343GLxUI"
             title="North Edge CRM Highlight Video"
             loading="lazy"
             referrerpolicy="strict-origin-when-cross-origin"
@@ -427,26 +428,48 @@
 
           <div class="highlights__summary">
             <p>
-              This highlight video introduces the CRM operating model, from sales execution and risk visibility to actionable
-              manager workflows.
+              This walkthrough shows the actual CRM operating model, not a slide deck. It moves through live surfaces used by reps, managers, and operators to run qualification, review pipeline risk, and act on the next best decision.
             </p>
             <ul class="highlights__bullets">
-              <li><i class="pi pi-check-circle"></i> Pipeline and deal execution visibility</li>
-              <li><i class="pi pi-check-circle"></i> Qualification and readiness context</li>
-              <li><i class="pi pi-check-circle"></i> Manager review and action orchestration</li>
+              <li><i class="pi pi-check-circle"></i> Dashboard command center and KPI visibility</li>
+              <li><i class="pi pi-check-circle"></i> Lead qualification, readiness, and manager context</li>
+              <li><i class="pi pi-check-circle"></i> Risk review, decision flow, and operational control</li>
             </ul>
           </div>
         </div>
 
         <aside class="highlights__playlist scroll-animate" aria-label="Highlight resources">
-          <button type="button" class="highlights__playlist-item highlights__playlist-item--active">
+          <div class="highlights__playlist-item highlights__playlist-item--active">
             <span class="highlights__playlist-index">01</span>
             <span class="highlights__playlist-copy">
-              <strong>CRM Highlight Video</strong>
-              <small>Product walkthrough hosted on YouTube</small>
+              <strong>Full CRM highlight</strong>
+              <small>Hosted on YouTube for simple playback and easy sharing.</small>
             </span>
-            <span class="highlights__playlist-duration">Play</span>
-          </button>
+            <a
+              class="highlights__playlist-link"
+              href="https://www.youtube.com/watch?v=mXb343GLxUI"
+              target="_blank"
+              rel="noopener noreferrer">
+              Watch on YouTube
+            </a>
+          </div>
+
+          <div class="highlights__resource-card">
+            <span class="highlights__resource-label">What this covers</span>
+            <ul>
+              <li>Lead and pipeline operating flow</li>
+              <li>Qualification with evidence and readiness</li>
+              <li>Manager review, decision inbox, and reporting context</li>
+            </ul>
+          </div>
+
+          <div class="highlights__resource-card">
+            <span class="highlights__resource-label">Next step</span>
+            <p>If the product direction matches your operating model, book a live walkthrough and we will map the rollout, signals, and governance flow to your team.</p>
+            <button type="button" class="hero-btn hero-btn--primary" (click)="onWatchDemo()">
+              <i class="pi pi-calendar"></i> Book a Demo
+            </button>
+          </div>
         </aside>
       </div>
     </div>
@@ -562,6 +585,7 @@
       <div class="footer__col">
         <h4>Product</h4>
         <ul>
+          <li><a (click)="scrollTo('highlights')">Highlights</a></li>
           <li><a (click)="scrollTo('features')">Features</a></li>
           <li><a (click)="scrollTo('how-it-works')">How It Works</a></li>
         </ul>
