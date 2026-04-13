@@ -51,6 +51,48 @@ public sealed record OpportunityStagePresetDefinition(
 
 public static class VerticalPresetDefaults
 {
+    public static VerticalPresetConfiguration Normalize(VerticalPresetConfiguration? config)
+    {
+        if (config is null)
+        {
+            return Create(null);
+        }
+
+        var fallback = Create(config.PresetId);
+        return config with
+        {
+            Vocabulary = config.Vocabulary with
+            {
+                LeadQualificationLabel = string.IsNullOrWhiteSpace(config.Vocabulary.LeadQualificationLabel)
+                    ? fallback.Vocabulary.LeadQualificationLabel
+                    : config.Vocabulary.LeadQualificationLabel,
+                OpportunitySingularLabel = string.IsNullOrWhiteSpace(config.Vocabulary.OpportunitySingularLabel)
+                    ? fallback.Vocabulary.OpportunitySingularLabel
+                    : config.Vocabulary.OpportunitySingularLabel,
+                OpportunityPluralLabel = string.IsNullOrWhiteSpace(config.Vocabulary.OpportunityPluralLabel)
+                    ? fallback.Vocabulary.OpportunityPluralLabel
+                    : config.Vocabulary.OpportunityPluralLabel,
+                PipelineLabel = string.IsNullOrWhiteSpace(config.Vocabulary.PipelineLabel)
+                    ? fallback.Vocabulary.PipelineLabel
+                    : config.Vocabulary.PipelineLabel,
+                QualificationGuidance = string.IsNullOrWhiteSpace(config.Vocabulary.QualificationGuidance)
+                    ? fallback.Vocabulary.QualificationGuidance
+                    : config.Vocabulary.QualificationGuidance
+            },
+            BrokerageLeadProfileCatalog = new BrokerageLeadProfileCatalog(
+                config.BrokerageLeadProfileCatalog.BuyerTypes.Count == 0 ? fallback.BrokerageLeadProfileCatalog.BuyerTypes : config.BrokerageLeadProfileCatalog.BuyerTypes,
+                config.BrokerageLeadProfileCatalog.MotivationUrgencies.Count == 0 ? fallback.BrokerageLeadProfileCatalog.MotivationUrgencies : config.BrokerageLeadProfileCatalog.MotivationUrgencies,
+                config.BrokerageLeadProfileCatalog.FinancingReadinessOptions.Count == 0 ? fallback.BrokerageLeadProfileCatalog.FinancingReadinessOptions : config.BrokerageLeadProfileCatalog.FinancingReadinessOptions,
+                config.BrokerageLeadProfileCatalog.PreApprovalStatuses.Count == 0 ? fallback.BrokerageLeadProfileCatalog.PreApprovalStatuses : config.BrokerageLeadProfileCatalog.PreApprovalStatuses,
+                config.BrokerageLeadProfileCatalog.PreferredAreas.Count == 0 ? fallback.BrokerageLeadProfileCatalog.PreferredAreas : config.BrokerageLeadProfileCatalog.PreferredAreas,
+                config.BrokerageLeadProfileCatalog.PropertyTypes.Count == 0 ? fallback.BrokerageLeadProfileCatalog.PropertyTypes : config.BrokerageLeadProfileCatalog.PropertyTypes,
+                config.BrokerageLeadProfileCatalog.BudgetBands.Count == 0 ? fallback.BrokerageLeadProfileCatalog.BudgetBands : config.BrokerageLeadProfileCatalog.BudgetBands),
+            DashboardPackDefaults = config.DashboardPackDefaults.Count == 0 ? fallback.DashboardPackDefaults : config.DashboardPackDefaults,
+            ReportLibraryHighlights = config.ReportLibraryHighlights.Count == 0 ? fallback.ReportLibraryHighlights : config.ReportLibraryHighlights,
+            WorkflowTemplateHighlights = config.WorkflowTemplateHighlights.Count == 0 ? fallback.WorkflowTemplateHighlights : config.WorkflowTemplateHighlights
+        };
+    }
+
     public static VerticalPresetConfiguration Create(string? presetId)
     {
         return VerticalPresetIds.Normalize(presetId) switch

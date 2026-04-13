@@ -62,13 +62,14 @@ public class TenantContextController : ControllerBase
         }
 
         var tenant = await _dbContext.Tenants
-            .AsNoTracking()
             .FirstOrDefaultAsync(t => t.Id == _tenantProvider.TenantId, cancellationToken);
 
         if (tenant is null)
         {
             return NotFound(new { message = "Tenant not found." });
         }
+
+        var verticalPresetConfiguration = await EnsureVerticalPresetConfigurationPersistedAsync(tenant, cancellationToken);
 
         var modules = tenant.IndustryModules == null
             ? Array.Empty<string>()
@@ -138,7 +139,7 @@ public class TenantContextController : ControllerBase
             tenant.Key,
             tenant.Name,
             tenant.IndustryPreset,
-            ResolveVerticalPresetConfiguration(tenant),
+            verticalPresetConfiguration,
             modules,
             featureFlags,
             tenant.LogoUrl));
@@ -211,7 +212,7 @@ public class TenantContextController : ControllerBase
                 var parsed = JsonSerializer.Deserialize<VerticalPresetConfiguration>(tenant.VerticalPresetConfigJson, JsonOptions);
                 if (parsed is not null)
                 {
-                    return parsed;
+                    return VerticalPresetDefaults.Normalize(parsed);
                 }
             }
             catch (JsonException)
@@ -220,5 +221,26 @@ public class TenantContextController : ControllerBase
         }
 
         return VerticalPresetDefaults.Create(tenant.IndustryPreset);
+    }
+
+    private async Task<VerticalPresetConfiguration> EnsureVerticalPresetConfigurationPersistedAsync(Tenant tenant, CancellationToken cancellationToken)
+    {
+        var resolved = ResolveVerticalPresetConfiguration(tenant);
+        var normalizedJson = JsonSerializer.Serialize(resolved, JsonOptions);
+
+        if (string.Equals(tenant.VerticalPresetConfigJson, normalizedJson, StringComparison.Ordinal))
+        {
+            return resolved;
+        }
+
+        if (_dbContext.Entry(tenant).State == EntityState.Detached)
+        {
+            _dbContext.Attach(tenant);
+        }
+
+        tenant.VerticalPresetConfigJson = normalizedJson;
+        tenant.UpdatedAtUtc = DateTime.UtcNow;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return resolved;
     }
 }

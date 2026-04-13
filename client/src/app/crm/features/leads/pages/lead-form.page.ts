@@ -68,6 +68,7 @@ import { EmailListItem } from '../../emails/models/email.model';
 import { FormDraftDetail, FormDraftSummary } from '../../../../core/drafts/form-draft.model';
 import { FormDraftService } from '../../../../core/drafts/form-draft.service';
 import { MailComposeService } from '../../../../core/email/mail-compose.service';
+import { TenantContextService } from '../../../../core/tenant/tenant-context.service';
 
 /** Progression statuses shown in the stepper (left → right) */
 const LEAD_PROGRESSION_STATUSES: readonly LeadStatus[] = ['New', 'Contacted', 'Qualified'] as const;
@@ -317,6 +318,8 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   protected readonly propertyTypeOptions = signal<Array<{ label: string; value: string }>>([]);
   protected readonly budgetBandOptions = signal<Array<{ label: string; value: string }>>([]);
   protected readonly verticalPresetConfiguration = signal<VerticalPresetConfiguration | null>(null);
+  protected readonly tenantIndustryPreset = signal<string | null>(null);
+  protected readonly tenantPropertiesFeatureEnabled = signal(false);
   protected evidenceOptions: OptionItem[] = LeadFormPage.defaultEvidenceSources().map((source) =>
     LeadFormPage.toEvidenceOption(source)
   );
@@ -422,6 +425,7 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   private readonly authService = inject(AuthService);
   private readonly formDraftService = inject(FormDraftService);
   private readonly mailCompose = inject(MailComposeService);
+  private readonly tenantContextService = inject(TenantContextService);
   private readonly route = inject(ActivatedRoute);
   protected readonly router = inject(Router);
   private readonly crmEvents = inject(CrmEventsService);
@@ -450,6 +454,7 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     const lead = history.state?.lead as Lead | undefined;
     this.loadOwners();
     this.loadEvidenceSources();
+    this.loadTenantContext();
     this.loadLeadDispositionPolicy();
     this.loadPhoneTypes();
     this.loadPhoneCountries();
@@ -2675,7 +2680,11 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   }
 
   protected isBrokeragePreset(): boolean {
-    return (this.verticalPresetConfiguration()?.presetId ?? 'CoreCRM') === 'RealEstateBrokerage';
+    const presetId = this.verticalPresetConfiguration()?.presetId
+      ?? this.tenantIndustryPreset()
+      ?? 'CoreCRM';
+    return this.tenantPropertiesFeatureEnabled()
+      || LeadFormPage.normalizePresetId(presetId) === LeadFormPage.normalizePresetId('RealEstateBrokerage');
   }
 
   protected qualificationSectionTitle(): string {
@@ -2697,7 +2706,28 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     this.preferredAreaOptions.set(this.mapCatalogOptions(catalog?.preferredAreas));
     this.propertyTypeOptions.set(this.mapCatalogOptions(catalog?.propertyTypes));
     this.budgetBandOptions.set(this.mapCatalogOptions(catalog?.budgetBands));
+    if (LeadFormPage.normalizePresetId(config?.presetId) === LeadFormPage.normalizePresetId('RealEstateBrokerage')) {
+      this.overviewAccordionOpenPanels.update((items) => items.includes('buyer-profile') ? items : [...items, 'buyer-profile']);
+    }
     this.ensureBrokerageSelectionsRemainVisible();
+  }
+
+  private loadTenantContext() {
+    this.tenantContextService.getTenantContext()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (context) => {
+          this.tenantIndustryPreset.set(context.industryPreset ?? context.verticalPresetConfiguration?.presetId ?? null);
+          this.tenantPropertiesFeatureEnabled.set(!!context.featureFlags?.['properties']);
+          if (LeadFormPage.normalizePresetId(context.industryPreset ?? context.verticalPresetConfiguration?.presetId) === LeadFormPage.normalizePresetId('RealEstateBrokerage')) {
+            this.overviewAccordionOpenPanels.update((items) => items.includes('buyer-profile') ? items : [...items, 'buyer-profile']);
+          }
+        },
+        error: () => {
+          this.tenantIndustryPreset.set(null);
+          this.tenantPropertiesFeatureEnabled.set(false);
+        }
+      });
   }
 
   private mapCatalogOptions(values: readonly string[] | null | undefined): Array<{ label: string; value: string }> {
@@ -2705,6 +2735,13 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
       .map((value) => (value ?? '').trim())
       .filter((value, index, all) => value.length > 0 && all.findIndex((candidate) => candidate.toLowerCase() === value.toLowerCase()) === index)
       .map((value) => ({ label: value, value }));
+  }
+
+  private static normalizePresetId(value: string | null | undefined): string {
+    return (value ?? '')
+      .trim()
+      .toLowerCase()
+      .replace(/[\s_-]+/g, '');
   }
 
   private ensureBrokerageSelectionsRemainVisible() {
@@ -4160,6 +4197,7 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
       'Inferred from context'
     ];
   }
+
 
   private static normalizeLeadDispositionPolicy(policy: LeadDispositionPolicy | null | undefined): LeadDispositionPolicy {
     const normalize = (items: readonly string[] | null | undefined) => {

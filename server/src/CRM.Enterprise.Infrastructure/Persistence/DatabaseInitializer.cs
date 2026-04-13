@@ -1777,6 +1777,12 @@ public class DatabaseInitializer : IDatabaseInitializer
             ? await EnsureSeedTenantsAsync(defaultTenant.Key, cancellationToken)
             : Array.Empty<Tenant>();
 
+        await EnsureTenantVerticalPresetDefaultsAsync(defaultTenant, cancellationToken);
+        foreach (var tenant in seedTenants)
+        {
+            await EnsureTenantVerticalPresetDefaultsAsync(tenant, cancellationToken);
+        }
+
         await BackfillTenantIdsAsync(defaultTenant.Id, cancellationToken);
         await SeedTenantDataAsync(defaultTenant, cancellationToken);
         if (allowTestDataSeed)
@@ -2371,6 +2377,52 @@ public class DatabaseInitializer : IDatabaseInitializer
         _dbContext.Tenants.Add(tenant);
         await _dbContext.SaveChangesAsync(cancellationToken);
         return tenant;
+    }
+
+    private async Task EnsureTenantVerticalPresetDefaultsAsync(Tenant tenant, CancellationToken cancellationToken)
+    {
+        var presetId = VerticalPresetIds.Normalize(tenant.IndustryPreset);
+        var existing = DeserializeVerticalPresetConfiguration(tenant.VerticalPresetConfigJson);
+        var normalized = VerticalPresetDefaults.Normalize(existing ?? VerticalPresetDefaults.Create(presetId));
+        var normalizedJson = System.Text.Json.JsonSerializer.Serialize(normalized);
+        var changed = false;
+
+        if (!string.Equals(tenant.IndustryPreset, presetId, StringComparison.Ordinal))
+        {
+            tenant.IndustryPreset = presetId;
+            changed = true;
+        }
+
+        if (!string.Equals(tenant.VerticalPresetConfigJson, normalizedJson, StringComparison.Ordinal))
+        {
+            tenant.VerticalPresetConfigJson = normalizedJson;
+            changed = true;
+        }
+
+        if (!changed)
+        {
+            return;
+        }
+
+        tenant.UpdatedAtUtc = DateTime.UtcNow;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private static VerticalPresetConfiguration? DeserializeVerticalPresetConfiguration(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return null;
+        }
+
+        try
+        {
+            return System.Text.Json.JsonSerializer.Deserialize<VerticalPresetConfiguration>(json);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return null;
+        }
     }
 
     private async Task<IReadOnlyList<Tenant>> EnsureSeedTenantsAsync(string defaultKey, CancellationToken cancellationToken)

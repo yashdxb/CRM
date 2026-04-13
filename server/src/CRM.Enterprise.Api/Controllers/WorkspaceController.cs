@@ -67,13 +67,14 @@ public class WorkspaceController : ControllerBase
     {
         var tenantId = _tenantProvider.TenantId;
         var tenant = await _dbContext.Tenants
-            .AsNoTracking()
             .FirstOrDefaultAsync(t => t.Id == tenantId, cancellationToken);
 
         if (tenant is null)
         {
             return NotFound();
         }
+
+        var verticalPresetConfiguration = await EnsureVerticalPresetConfigurationPersistedAsync(tenant, cancellationToken);
 
         return Ok(new WorkspaceSettingsResponse(
             tenant.Id,
@@ -82,7 +83,7 @@ public class WorkspaceController : ControllerBase
             tenant.TimeZone,
             tenant.Currency,
             tenant.IndustryPreset,
-            ResolveVerticalPresetConfiguration(tenant),
+            verticalPresetConfiguration,
             tenant.LeadFirstTouchSlaHours,
             tenant.DefaultContractTermMonths,
             tenant.DefaultDeliveryOwnerRoleId,
@@ -113,6 +114,7 @@ public class WorkspaceController : ControllerBase
             return NotFound();
         }
 
+        var originalIndustryPreset = tenant.IndustryPreset;
         tenant.Name = request.Name.Trim();
         tenant.TimeZone = request.TimeZone.Trim();
         tenant.Currency = request.Currency.Trim();
@@ -182,6 +184,18 @@ public class WorkspaceController : ControllerBase
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
+        if (!string.Equals(originalIndustryPreset, tenant.IndustryPreset, StringComparison.OrdinalIgnoreCase))
+        {
+            await _industryPresetService.ApplyPresetAsync(tenantId, tenant.IndustryPreset, false, cancellationToken);
+            tenant = await _dbContext.Tenants.FirstOrDefaultAsync(t => t.Id == tenantId, cancellationToken);
+            if (tenant is null)
+            {
+                return NotFound();
+            }
+        }
+
+        var verticalPresetConfiguration = await EnsureVerticalPresetConfigurationPersistedAsync(tenant, cancellationToken);
+
         return Ok(new WorkspaceSettingsResponse(
             tenant.Id,
             tenant.Key,
@@ -189,7 +203,7 @@ public class WorkspaceController : ControllerBase
             tenant.TimeZone,
             tenant.Currency,
             tenant.IndustryPreset,
-            ResolveVerticalPresetConfiguration(tenant),
+            verticalPresetConfiguration,
             tenant.LeadFirstTouchSlaHours,
             tenant.DefaultContractTermMonths,
             tenant.DefaultDeliveryOwnerRoleId,
@@ -222,13 +236,14 @@ public class WorkspaceController : ControllerBase
         await _industryPresetService.ApplyPresetAsync(tenantId, request.PresetId, request.ResetExisting, cancellationToken);
 
         var tenant = await _dbContext.Tenants
-            .AsNoTracking()
             .FirstOrDefaultAsync(t => t.Id == tenantId, cancellationToken);
 
         if (tenant is null)
         {
             return NotFound();
         }
+
+        var verticalPresetConfiguration = await EnsureVerticalPresetConfigurationPersistedAsync(tenant, cancellationToken);
 
         return Ok(new WorkspaceSettingsResponse(
             tenant.Id,
@@ -237,7 +252,7 @@ public class WorkspaceController : ControllerBase
             tenant.TimeZone,
             tenant.Currency,
             tenant.IndustryPreset,
-            ResolveVerticalPresetConfiguration(tenant),
+            verticalPresetConfiguration,
             tenant.LeadFirstTouchSlaHours,
             tenant.DefaultContractTermMonths,
             tenant.DefaultDeliveryOwnerRoleId,
@@ -360,7 +375,7 @@ public class WorkspaceController : ControllerBase
                 var parsed = JsonSerializer.Deserialize<VerticalPresetConfiguration>(tenant.VerticalPresetConfigJson, JsonOptions);
                 if (parsed is not null)
                 {
-                    return parsed;
+                    return VerticalPresetDefaults.Normalize(parsed);
                 }
             }
             catch (JsonException)
@@ -369,6 +384,27 @@ public class WorkspaceController : ControllerBase
         }
 
         return VerticalPresetDefaults.Create(tenant.IndustryPreset);
+    }
+
+    private async Task<VerticalPresetConfiguration> EnsureVerticalPresetConfigurationPersistedAsync(Tenant tenant, CancellationToken cancellationToken)
+    {
+        var resolved = ResolveVerticalPresetConfiguration(tenant);
+        var normalizedJson = JsonSerializer.Serialize(resolved, JsonOptions);
+
+        if (string.Equals(tenant.VerticalPresetConfigJson, normalizedJson, StringComparison.Ordinal))
+        {
+            return resolved;
+        }
+
+        if (_dbContext.Entry(tenant).State == EntityState.Detached)
+        {
+            _dbContext.Attach(tenant);
+        }
+
+        tenant.VerticalPresetConfigJson = normalizedJson;
+        tenant.UpdatedAtUtc = DateTime.UtcNow;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return resolved;
     }
 
     private static DecisionEscalationPolicy ResolveDecisionEscalationPolicy(Tenant tenant)

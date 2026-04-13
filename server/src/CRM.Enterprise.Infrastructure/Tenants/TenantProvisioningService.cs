@@ -4,6 +4,7 @@ using CRM.Enterprise.Infrastructure.Persistence;
 using CRM.Enterprise.Security;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace CRM.Enterprise.Infrastructure.Tenants;
 
@@ -49,8 +50,9 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
             Name = normalizedName,
             TimeZone = string.IsNullOrWhiteSpace(timeZone) ? "UTC" : timeZone.Trim(),
             Currency = string.IsNullOrWhiteSpace(currency) ? "USD" : currency.Trim(),
-            IndustryPreset = string.IsNullOrWhiteSpace(industryPreset) ? "CoreCRM" : industryPreset.Trim(),
+            IndustryPreset = VerticalPresetIds.Normalize(industryPreset),
             IndustryModules = industryModules is { Count: > 0 } ? string.Join(',', industryModules) : null,
+            VerticalPresetConfigJson = JsonSerializer.Serialize(VerticalPresetDefaults.Create(industryPreset)),
             CreatedAtUtc = DateTime.UtcNow
         };
 
