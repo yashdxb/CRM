@@ -259,6 +259,36 @@ This file tracks recurring UI/data issues and how to fix them quickly.
 
 **Why this is safe**
 
+## 9) Lead list score filters/sorts drift from lifecycle scoring
+**Symptoms**
+- Lead list cards and detail show lifecycle overall score, but some server-side list filters/sorts behave like legacy score.
+- Views such as at-risk / ready-to-convert can rank or include leads inconsistently with displayed lifecycle overall score.
+
+**Root cause**
+- `SearchAsync` in lead service used persisted `Lead.Score` for several score-sensitive filters/sorts.
+- Persisted score can diverge from lifecycle composite (qualification + data quality + conversation + history).
+
+**Fix pattern**
+1) In `SearchAsync`, project an inline lifecycle-overall score expression for query-time filtering/sorting.
+2) Use that score for score-centric filters/sorts (`lead_score_desc`, readiness views, at-risk/ready-to-convert logic).
+3) Return the same effective score in list projection so API payload matches sort/filter semantics.
+
+**Example implementation**
+- File: `server/src/CRM.Enterprise.Infrastructure/Leads/LeadService.cs`
+  - Added `scoredQuery` projection with lifecycle-aligned score and signal counts.
+  - Updated conversation view filters and sort switch to use lifecycle-aligned fields.
+  - Updated list projection score to lifecycle effective score.
+
+**Verification**
+- `dotnet build server/src/CRM.Enterprise.Api/CRM.Enterprise.Api.csproj` passes.
+- `npm run build` (client) passes.
+- `npx playwright test e2e/smoke.spec.ts --reporter=line` passes.
+
+**Why this is safe**
+- Changes are scoped to lead search query semantics and list score projection.
+- No schema migration or destructive data operation.
+- Aligns API list behavior with already-shipped lifecycle scoring UI.
+
 ## 9) Azure login outage caused by App Service startup command and missing DB migrations
 **Symptoms**
 - Production login timed out or returned generic browser CORS-style failures.

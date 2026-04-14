@@ -4,6 +4,50 @@ Purpose: Capture day-to-day operational issues, resolutions, and verification. T
 
 ---
 
+## 2026-04-14 — Lifecycle Scoring Alignment + Search/Sort Consistency + Push
+
+**Date:** 2026-04-14  
+**Environment:** Development (Local)  
+**Owner:** Yasser / Copilot
+
+### Work Completed
+
+| # | Area | Summary | Status |
+|---|------|---------|--------|
+| 1 | Lead Scoring Model | Completed lifecycle score rollout across backend + frontend (Overall, CQVS qualification, Lead Data Quality, Conversation, History) with policy-backed weights. | DONE |
+| 2 | API Contracts | Exposed lifecycle score payload in lead list/detail contracts and mapped from application DTOs to API responses. | DONE |
+| 3 | Lead Form | Bound edit experience to backend lifecycle payload with local fallback during in-progress edits; added explicit score sections and score audit feed in history. | DONE |
+| 4 | Lead Search Consistency | Updated server search/filter/sort score-sensitive logic to use lifecycle overall semantics instead of legacy persisted score for score-centric views. | DONE |
+| 5 | Validation | Verified API build, client build, and Playwright smoke all pass after changes. | DONE |
+| 6 | Git/Push | Pushed implementation commit and follow-up docs commit to `origin/master`. | DONE |
+
+### Files Touched (Implementation)
+
+| File | Changes |
+|------|---------|
+| `server/src/CRM.Enterprise.Infrastructure/Leads/LeadService.cs` | Lifecycle score computation wiring + search/filter/sort lifecycle-consistent behavior |
+| `server/src/CRM.Enterprise.Application/Leads/LeadDtos.cs` | Added lifecycle DTOs |
+| `server/src/CRM.Enterprise.Api/Contracts/Leads/LeadListItem.cs` | Added lifecycle score API contract records |
+| `server/src/CRM.Enterprise.Api/Controllers/LeadsController.cs` | Mapped lifecycle payload to API response |
+| `server/src/CRM.Enterprise.Application/Qualifications/QualificationPolicy.cs` | Added normalized lifecycle weight policy |
+| `client/src/app/crm/features/leads/pages/lead-form.page.ts` | Backend-preferred lifecycle score usage + audit loading |
+| `client/src/app/crm/features/leads/pages/lead-form.page.html` | Explicit score cards + score audit section |
+| `client/src/app/crm/features/leads/pages/leads.page.ts` | Lifecycle score usage/hints on list page |
+| `client/src/app/crm/features/leads/services/lead-data.service.ts` | Added lead audit endpoint usage |
+
+### Verification
+- `dotnet build server/src/CRM.Enterprise.Api/CRM.Enterprise.Api.csproj` — passed
+- `npm run build` (client) — passed
+- `npx playwright test e2e/smoke.spec.ts --reporter=line` — passed
+
+### ClickUp Sync Notes
+- Backlog mirror updated in `docs/CRM_BACKLOG.md` under recent delivery updates.
+- Action for PM/owner: set corresponding ClickUp stories to DONE/PARTIAL as applicable and attach commit evidence:
+  - `6f62693` (lifecycle scoring/search alignment)
+  - `d823c75` (docs update)
+
+---
+
 ## 2026-04-06 — Azure SQL Cleanup, Firewall Hardening, Role Hierarchy Fix, Lead Qualification Tab Improvements
 
 **Date:** 2026-04-06  

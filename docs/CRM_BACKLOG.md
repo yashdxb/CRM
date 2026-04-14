@@ -12,6 +12,23 @@ Legend:
 
 ## Recent Delivery Updates (2026-04-06)
 
+- Leads Lifecycle Scoring Alignment + Search/Sort Consistency (2026-04-14)
+  Status: DONE
+  - Implemented lifecycle composite scoring end-to-end (Overall, CQVS qualification, Lead Data Quality, Conversation, History).
+  - Exposed lifecycle score payload in lead API contracts and controller mapping.
+  - Updated lead form to prefer backend lifecycle payload during edit and display explicit sectioned score cards.
+  - Added score audit rendering in lead history.
+  - Aligned server lead search/filter/sort score-sensitive behavior with lifecycle overall semantics.
+  - Validation evidence:
+    - `dotnet build` passed
+    - `npm run build` passed
+    - `playwright smoke` passed
+  - Commit evidence:
+    - `6f62693` — implementation
+    - `d823c75` — docs sync
+  - ClickUp sync:
+    - Update related lead-scoring/story items to DONE and attach the above commits as evidence.
+
 - Azure SQL Data Cleanup & Firewall Hardening (Operations)
   Status: DONE
   - Cascade-deleted all test/nonsense data from Azure SQL dev (4 script iterations + fixup)
