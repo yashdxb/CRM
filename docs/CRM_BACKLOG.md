@@ -2139,6 +2139,69 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
         - `server/src/CRM.Enterprise.Api/Controllers/CustomersController.cs`
         - `server/src/CRM.Enterprise.Infrastructure/Persistence/CrmDbContext.cs`
 
+---
+
+## Brokerage Lead Profile Catalog — Settings CRUD (2026-04-13)
+
+Epic: Buyer Profile Catalog Management
+Tier: NEXT
+Tags: `module:Settings`, `module:Leads`, `next`
+Context: The 4 buyer-profile dropdowns on the Lead form (Buyer type, Preferred area, Property type, Budget band — plus Motivation urgency, Financing readiness, Pre-approval status) are hardcoded in `VerticalPresetConfiguration.cs`. There is no UI or API for tenant admins to manage these lists. All 4 stories are required for the feature to be fully operational.
+
+- Settings | Brokerage Lead Profile Catalog — Backend CRUD endpoints. (ClickUp: TBD, Status: NOT STARTED)
+  - As a tenant admin, I want to retrieve and update the Buyer Profile catalog via API so that changes persist per-tenant in the database.
+  - Acceptance criteria:
+    - `GET /api/workspace/brokerage-catalog` returns the full `BrokerageLeadProfileCatalog` (all 7 lists) for the authenticated tenant.
+    - `PUT /api/workspace/brokerage-catalog` accepts the full catalog object, validates that no list is null, normalizes via `VerticalPresetDefaults.Normalize()`, and persists to `Tenants.VerticalPresetConfigJson`.
+    - Responds 400 if any list contains empty strings or duplicates.
+    - Requires `workspace:edit` permission.
+    - Changes are immediately reflected when the tenant context endpoint is called next.
+  - Scope:
+    - Add `GetBrokerageCatalog` and `UpdateBrokerageCatalog` actions to `WorkspaceController`.
+    - Add `BrokerageCatalogUpdateRequest` contract record under `Api/Contracts/Workspace/`.
+    - No new domain entity needed — stores in existing `VerticalPresetConfigJson`.
+
+- Settings | Brokerage Lead Profile Catalog — Admin settings page UI. (ClickUp: TBD, Status: NOT STARTED)
+  - As a tenant admin, I want a Settings page to manage all buyer-profile catalog lists so I can add, rename, and remove options without a code change.
+  - Acceptance criteria:
+    - New settings page at route `/app/settings/buyer-profile-catalog` accessible from the Settings sidebar under Workspace.
+    - Page shows 7 labeled sections: Buyer Types, Motivation Urgencies, Financing Readiness, Pre-Approval Statuses, Preferred Areas, Property Types, Budget Bands.
+    - Each section shows current values as removable chips/tags.
+    - Inline "Add item" text input with Enter-to-add per section.
+    - Save button persists all changes via `PUT /api/workspace/brokerage-catalog`.
+    - Toast success/error feedback on save.
+    - Changes are reflected in the Lead form dropdowns on next load (tenant context refresh).
+    - Follows form-page design system (`_form-page-styles.scss` glass card pattern).
+    - Only shown when `featureFlags['properties']` is true (i.e. RealEstateBrokerage tenant).
+  - Scope:
+    - New Angular component: `client/src/app/crm/features/settings/pages/buyer-profile-catalog.page.ts` + `.html` + `.scss`.
+    - New route entry in `app.routes.ts` under `/app/settings/buyer-profile-catalog`.
+    - New settings nav link in the settings sidebar.
+    - Service method in `workspace-settings.service.ts` (or equivalent) for `GET`/`PUT` catalog.
+
+- Settings | Brokerage Lead Profile Catalog — Mock layer seed with RealEstateBrokerage defaults. (ClickUp: TBD, Status: NOT STARTED)
+  - As a developer, I want the mock API layer to return realistic catalog values for a brokerage tenant so that the Lead form dropdowns are populated in local dev (mock mode).
+  - Acceptance criteria:
+    - `mock-db.ts` `brokerageLeadProfileCatalog` object is populated with the same defaults as `VerticalPresetDefaults.Create(RealEstateBrokerage)` (all 7 lists, matching strings).
+    - Mock interceptor handles `GET /api/workspace/brokerage-catalog` and returns the catalog from mock-db.
+    - Mock interceptor handles `PUT /api/workspace/brokerage-catalog` and updates mock-db in memory.
+    - Running with `useMockApi = true` shows all 4 buyer-profile dropdowns populated on the Lead form.
+  - Scope:
+    - Update `client/src/app/mocks/mock-db.ts` `brokerageLeadProfileCatalog` to full values.
+    - Add GET + PUT handlers in `mock-api.interceptor.ts` for `/api/workspace/brokerage-catalog`.
+
+- Leads | Lead form — Empty-state guidance when buyer-profile catalog is unconfigured. (ClickUp: TBD, Status: NOT STARTED)
+  - As a user of a non-brokerage tenant (or a new brokerage tenant with no catalog seeded), I want to see a helpful hint instead of an empty, unexplained dropdown so I know how to resolve it.
+  - Acceptance criteria:
+    - When a buyer-profile dropdown has 0 options, it is disabled and shows a placeholder: "Not configured — set up in Settings".
+    - A small info callout below the Buyer Profile section links to the catalog settings page when `featureFlags['properties']` is true.
+    - For non-brokerage tenants, the entire Buyer Profile section is hidden (no empty dropdowns visible).
+    - No console errors when catalog is empty.
+  - Scope:
+    - Update `lead-form.page.html` buyer-profile section visibility guard: show section only when `featureFlags['properties']` is true.
+    - Update `lead-form.page.ts` to pass a `disabled` binding when catalog list is empty.
+    - Add inline "configure catalog" link to the settings page.
+
 ## Public Site / Landing Direction
 
 - Landing Page | As a buyer, I want the public landing page to feel premium and differentiated without turning into an animation-heavy marketing page. (ClickUp: 86e0bjbtp, Status: NOT STARTED)
