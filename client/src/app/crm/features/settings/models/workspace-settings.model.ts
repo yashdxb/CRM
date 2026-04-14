@@ -146,6 +146,14 @@ export interface QualificationPolicy {
   exposureWeights: QualificationExposureWeight[];
   leadDataWeights: QualificationLeadDataWeight[];
   evidenceSources: string[];
+  lifecycleScoreWeights?: QualificationLifecycleScoreWeights | null;
+}
+
+export interface QualificationLifecycleScoreWeights {
+  qualificationWeight: number;
+  leadDataQualityWeight: number;
+  conversationWeight: number;
+  historyWeight: number;
 }
 
 export interface QualificationFactorDefinition {

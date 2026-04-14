@@ -24,11 +24,13 @@ import { InputMaskModule } from 'primeng/inputmask';
 import { TabsModule } from 'primeng/tabs';
 import { AccordionModule } from 'primeng/accordion';
 import { SplitButtonModule } from 'primeng/splitbutton';
+import { ChartModule } from 'primeng/chart';
 import { PhoneNumberFormat, PhoneNumberUtil } from 'google-libphonenumber';
 
 import { map, Observable } from 'rxjs';
 
 import {
+  LeadAuditEventItem,
   Lead,
   LeadAssignmentStrategy,
   LeadCustomQualificationFactorValue,
@@ -36,6 +38,7 @@ import {
   LeadDuplicateCheckCandidate,
   LeadDuplicateCheckResponse,
   LEAD_STATUSES,
+  LeadLifecycleScore,
   LeadScoreBreakdownItem,
   LeadStatus,
   LeadStatusHistoryItem
@@ -60,7 +63,7 @@ import {
   VerticalPresetConfiguration
 } from '../../settings/models/workspace-settings.model';
 import { AttachmentDataService, AttachmentItem } from '../../../../shared/services/attachment-data.service';
-import { computeLeadScore, computeQualificationRawScore, LeadDataWeight, LeadScoreResult, QualificationFactorConfig } from './lead-scoring.util';
+import { computeLeadScore, computeQualificationRawScore, LeadDataWeight, LeadScoreInputs, LeadScoreResult, QualificationFactorConfig } from './lead-scoring.util';
 import { Activity } from '../../activities/models/activity.model';
 import { ActivityDataService } from '../../activities/services/activity-data.service';
 import { CrmEventsService } from '../../../../core/realtime/crm-events.service';
@@ -216,6 +219,7 @@ const CQVS_GROUP_DEFINITIONS: Array<{
     TabsModule,
     AccordionModule,
     SplitButtonModule,
+    ChartModule,
     BreadcrumbsComponent
   ],
   templateUrl: "./lead-form.page.html",
@@ -243,7 +247,6 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   protected overviewAccordionOpenPanels = signal<string[]>(['lead-basics', 'contact-details', 'score']);
   protected qualificationAccordionOpenPanels = signal<string[]>([
     'qualification-factors',
-    'qualification-scoring',
     'qualification-context',
     'qualification-disposition'
   ]);
@@ -362,6 +365,7 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   protected conversationAiSemanticIntent = signal<string | null>(null);
   protected conversationAiToneJustification = signal<string | null>(null);
   protected conversionReadiness = signal<LeadConversionReadiness | null>(null);
+  protected lifecycleScore = signal<LeadLifecycleScore | null>(null);
   protected leadNumber = signal<string | null>(null);
   protected serverNextEvidenceSuggestions = signal<string[]>([]);
   protected nextEvidenceSuggestions = signal<string[]>([]);
@@ -377,6 +381,7 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   protected riskFlags = signal<string[]>([]);
   protected routingReason = signal<string | null>(null);
   protected statusHistory = signal<LeadStatusHistoryItem[]>([]);
+  protected scoreAuditEvents = signal<LeadAuditEventItem[]>([]);
   protected attachments = signal<AttachmentItem[]>([]);
   protected attachmentsLoading = signal(false);
   protected attachmentUploading = signal(false);
@@ -445,11 +450,14 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   private pendingLeaveDecision: Promise<boolean> | null = null;
   private leaveAfterSave = false;
   private leaveAfterDraftSave = false;
+  private cqvsRadarRenderTimer: ReturnType<typeof setTimeout> | null = null;
+  protected showCqvsRadar = signal(false);
 
   ngOnInit() {
     this.editingId = this.route.snapshot.paramMap.get('id');
     this.loadRecentDrafts();
     this.activeTab.set(this.getDefaultTab());
+    this.scheduleCqvsRadarRender(this.activeTab() === 'qualification');
     this.restoreAccordionState();
     const lead = history.state?.lead as Lead | undefined;
     this.loadOwners();
@@ -492,6 +500,7 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   ngOnDestroy(): void {
     this.resolvePendingLeave(false);
     this.clearEditingIdleTimer();
+    this.clearCqvsRadarRenderTimer();
     if (this.editingId) {
       this.crmEvents.setRecordEditingState('lead', this.editingId, false);
       this.crmEvents.leaveRecordPresence('lead', this.editingId);
@@ -701,6 +710,7 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
       return;
     }
     this.activeTab.set(tab);
+    this.scheduleCqvsRadarRender(tab === 'qualification');
   }
 
   protected onActiveTabChange(tab: string | number | null | undefined): void {
@@ -710,6 +720,20 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     if (tab === 'overview' || tab === 'qualification' || tab === 'activity' || tab === 'history' || tab === 'documents') {
       this.setActiveTab(tab);
     }
+  }
+
+  private scheduleCqvsRadarRender(shouldRender: boolean): void {
+    this.clearCqvsRadarRenderTimer();
+    if (!shouldRender) {
+      this.showCqvsRadar.set(false);
+      return;
+    }
+
+    this.showCqvsRadar.set(false);
+    this.cqvsRadarRenderTimer = setTimeout(() => {
+      this.showCqvsRadar.set(true);
+      this.cqvsRadarRenderTimer = null;
+    }, 60);
   }
 
   protected isTabDisabled(tab: 'overview' | 'qualification' | 'activity' | 'history' | 'documents') {
@@ -2037,6 +2061,7 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     this.conversationAiSemanticIntent.set(lead.conversationAiSemanticIntent ?? null);
     this.conversationAiToneJustification.set(lead.conversationAiToneJustification ?? null);
     this.conversionReadiness.set(lead.conversionReadiness ?? null);
+    this.lifecycleScore.set(lead.lifecycleScore ?? null);
     this.serverWeakestSignal.set(lead.weakestSignal ?? null);
     this.serverWeakestState.set(lead.weakestState ?? null);
     this.serverNextEvidenceSuggestions.set(lead.nextEvidenceSuggestions ?? []);
@@ -2056,6 +2081,18 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     this.leadData.getStatusHistory(leadId).subscribe({
       next: (history) => this.statusHistory.set(history),
       error: () => this.statusHistory.set([])
+    });
+
+    this.leadData.getAudit(leadId).subscribe({
+      next: (items) => {
+        const scoreEvents = (items ?? []).filter((item) => {
+          const field = (item.field ?? '').toLowerCase();
+          const action = (item.action ?? '').toLowerCase();
+          return field.includes('score') || field.includes('qualification') || field.includes('conversation') || action.includes('score');
+        });
+        this.scoreAuditEvents.set(scoreEvents);
+      },
+      error: () => this.scoreAuditEvents.set([])
     });
   }
 
@@ -3248,7 +3285,12 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   }
 
   protected computeAutoScore(): number {
-    return computeLeadScore(this.form, this.leadDataWeights, this.activeQualificationFactorConfigs()).finalLeadScore;
+    return computeLeadScore(
+      this.toScoreInputs(),
+      this.leadDataWeights,
+      this.activeQualificationFactorConfigs(),
+      this.lifecycleWeightsFromPolicy()
+    ).finalLeadScore;
   }
 
   private computeQualificationScore(): number | null {
@@ -3256,7 +3298,67 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   }
 
   private scoreSnapshot(): LeadScoreResult {
-    return computeLeadScore(this.form, this.leadDataWeights, this.activeQualificationFactorConfigs());
+    return computeLeadScore(
+      this.toScoreInputs(),
+      this.leadDataWeights,
+      this.activeQualificationFactorConfigs(),
+      this.lifecycleWeightsFromPolicy()
+    );
+  }
+
+  private preferredScoreSnapshot(): LeadScoreResult {
+    const lifecycle = this.lifecycleScore();
+    if (this.isEditMode() && lifecycle && !this.hasUncommittedChanges()) {
+      return {
+        buyerDataQualityScore100: lifecycle.leadDataQualityScore,
+        qualificationRawScore100: lifecycle.qualificationScore > 0 ? lifecycle.qualificationScore : null,
+        qualificationScore100: lifecycle.qualificationScore,
+        leadContributionScore100: lifecycle.leadDataQualityScore,
+        qualificationContributionScore100: lifecycle.qualificationScore,
+        conversationContributionScore100: lifecycle.conversationScore,
+        historyContributionScore100: lifecycle.historyExecutionScore,
+        finalLeadScore: lifecycle.overallScore
+      };
+    }
+
+    return this.scoreSnapshot();
+  }
+
+  private lifecycleWeightsFromPolicy(): { qualificationWeight: number; leadDataQualityWeight: number; conversationWeight: number; historyWeight: number } | null {
+    const configured = this.qualificationPolicyConfig()?.lifecycleScoreWeights;
+    if (!configured) {
+      return null;
+    }
+
+    return {
+      qualificationWeight: configured.qualificationWeight,
+      leadDataQualityWeight: configured.leadDataQualityWeight,
+      conversationWeight: configured.conversationWeight,
+      historyWeight: configured.historyWeight
+    };
+  }
+
+  private toScoreInputs(): LeadScoreInputs {
+    return {
+      firstName: this.form.firstName ?? null,
+      lastName: this.form.lastName ?? null,
+      email: this.form.email ?? null,
+      phone: this.form.phone ?? null,
+      companyName: this.form.companyName ?? null,
+      jobTitle: this.form.jobTitle ?? null,
+      source: this.form.source ?? null,
+      territory: this.form.territory ?? null,
+      budgetAvailability: this.form.budgetAvailability ?? null,
+      readinessToSpend: this.form.readinessToSpend ?? null,
+      buyingTimeline: this.form.buyingTimeline ?? null,
+      problemSeverity: this.form.problemSeverity ?? null,
+      economicBuyer: this.form.economicBuyer ?? null,
+      icpFit: this.form.icpFit ?? null,
+      conversationScore100: this.conversationSignalAvailable() ? this.conversationScore() : null,
+      firstTouchDueAtUtc: this.firstTouchDueAtUtc(),
+      firstTouchedAtUtc: this.firstTouchedAtUtc(),
+      status: this.form.status ?? null
+    };
   }
 
   private getBudgetScore(value?: string | null): number {
@@ -3446,12 +3548,12 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   protected qualificationStatusLabel(): string {
     const factorCount = this.countQualificationFactors();
     if (factorCount === 0) return 'Not started';
-    const qualificationScore = this.scoreSnapshot().qualificationScore100;
+    const qualificationScore = this.preferredScoreSnapshot().qualificationScore100;
     return `${qualificationScore} / 100`;
   }
 
   protected leadDataQualityScore(): number {
-    return this.scoreSnapshot().buyerDataQualityScore100;
+    return this.preferredScoreSnapshot().buyerDataQualityScore100;
   }
 
   protected overallScorePrimaryLabel(): string {
@@ -3460,7 +3562,7 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   }
 
   protected overallScoreBadgeValue(): number {
-    const value = this.form.score ?? this.computeAutoScore();
+    const value = this.preferredScoreSnapshot().finalLeadScore;
     return Number.isFinite(value) ? Math.max(0, Math.min(100, Math.round(value))) : 0;
   }
 
@@ -3477,13 +3579,13 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     if (factorCount === 0) {
       return 'Qualification Not started';
     }
-    return `Qualification ${this.scoreSnapshot().qualificationScore100} / 100`;
+    return `Qualification ${this.preferredScoreSnapshot().qualificationScore100} / 100`;
   }
 
   protected qualificationStatusHint(): string {
     const factorCount = this.countQualificationFactors();
     if (factorCount === 0) return 'No qualification factors selected yet.';
-    const qualificationScore = this.scoreSnapshot().qualificationScore100;
+    const qualificationScore = this.preferredScoreSnapshot().qualificationScore100;
     const coverage = this.truthCoveragePercent();
     return `Qualification in progress: ${qualificationScore}/100 with ${factorCount}/${this.activeQualificationFactorCount()} active factors and ${coverage}% evidence coverage.`;
   }
@@ -3720,29 +3822,113 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     return Math.max(0, Math.min(100, Math.round((group.score / group.maxScore) * 100)));
   }
 
+  protected cqvsRadarChartData(): { labels: string[]; datasets: unknown[] } {
+    const groups = this.cqvsGroupRows();
+    const dataPoints = groups.map((g) => this.cqvsGroupPercent(g));
+    const compactLabels = groups.map((g) => {
+      switch (g.code) {
+        case 'C':
+          return 'C - Fit';
+        case 'Q':
+          return 'Q - Qualify';
+        case 'V':
+          return 'V - Value';
+        case 'S':
+          return 'S - Stakeholder';
+        default:
+          return g.code;
+      }
+    });
+
+    return {
+      labels: compactLabels,
+      datasets: [
+        {
+          label: 'Score %',
+          data: dataPoints,
+          backgroundColor: 'rgba(102, 126, 234, 0.18)',
+          borderColor: '#667eea',
+          borderWidth: 2,
+          pointBackgroundColor: '#667eea',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 1.5,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        }
+      ]
+    };
+  }
+
+  readonly cqvsRadarChartOptions = {
+    responsive: true,
+    maintainAspectRatio: true,
+    layout: {
+      padding: {
+        top: 12,
+        right: 28,
+        bottom: 18,
+        left: 28
+      }
+    },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (ctx: { parsed: { r: number } }) => `${ctx.parsed.r}%`
+        }
+      }
+    },
+    scales: {
+      r: {
+        min: 0,
+        max: 100,
+        ticks: {
+          stepSize: 25,
+          color: '#9ca3af',
+          font: { size: 10 },
+          backdropColor: 'transparent'
+        },
+        grid: { color: 'rgba(156, 163, 175, 0.25)' },
+        angleLines: { color: 'rgba(156, 163, 175, 0.35)' },
+        pointLabels: {
+          color: '#374151',
+          font: { size: 10, weight: '600' }
+        }
+      }
+    }
+  };
+
   protected scoreFormulaHint(): string {
-    const snapshot = this.scoreSnapshot();
-    return `Overall ${snapshot.finalLeadScore}/100 = Lead data quality ${snapshot.buyerDataQualityScore100}/100 x 30% (${snapshot.leadContributionScore100}) + Qualification ${snapshot.qualificationScore100}/100 x 70% (${snapshot.qualificationContributionScore100}).`;
+    const snapshot = this.preferredScoreSnapshot();
+    const hasConversation = this.conversationSignalAvailable();
+    const conversationPart = hasConversation ? `, Conversation ${snapshot.conversationContributionScore100}/100` : '';
+    const weights = this.lifecycleWeightsFromPolicy() ?? {
+      qualificationWeight: 50,
+      leadDataQualityWeight: 20,
+      conversationWeight: 20,
+      historyWeight: 10
+    };
+    return `Overall ${snapshot.finalLeadScore}/100 = weighted lifecycle composite (Qualification ${weights.qualificationWeight}%, Lead Data Quality ${weights.leadDataQualityWeight}%, Conversation ${weights.conversationWeight}%${hasConversation ? '' : ' (excluded until signal exists)'}, History ${weights.historyWeight}%). CQVS Qualification = ${snapshot.qualificationScore100}/100${conversationPart}.`;
   }
 
   protected qualificationContributionTotal(): number {
-    return this.scoreSnapshot().qualificationScore100;
+    return this.preferredScoreSnapshot().qualificationScore100;
   }
 
   protected leadDataQualityTotal(): number {
-    return this.scoreSnapshot().buyerDataQualityScore100;
+    return this.preferredScoreSnapshot().buyerDataQualityScore100;
   }
 
-  protected leadDataQualityWeightedContribution(): number {
-    return this.scoreSnapshot().leadContributionScore100;
+  protected conversationContributionTotal(): number {
+    return this.preferredScoreSnapshot().conversationContributionScore100;
   }
 
-  protected qualificationWeightedContribution(): number {
-    return this.scoreSnapshot().qualificationContributionScore100;
+  protected historyExecutionTotal(): number {
+    return this.preferredScoreSnapshot().historyContributionScore100;
   }
 
   protected leadHeaderScoreValue(): number {
-    return this.scoreSnapshot().finalLeadScore;
+    return this.preferredScoreSnapshot().finalLeadScore;
   }
 
   protected leadHeaderScoreColor(): string {
@@ -4825,6 +5011,13 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     if (this.editingIdleTimer) {
       clearTimeout(this.editingIdleTimer);
       this.editingIdleTimer = null;
+    }
+  }
+
+  private clearCqvsRadarRenderTimer(): void {
+    if (this.cqvsRadarRenderTimer) {
+      clearTimeout(this.cqvsRadarRenderTimer);
+      this.cqvsRadarRenderTimer = null;
     }
   }
 

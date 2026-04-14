@@ -88,7 +88,25 @@ export interface Lead {
   conversationAiBuyingReadiness?: string | null;
   conversationAiSemanticIntent?: string | null;
   conversationAiToneJustification?: string | null;
+  lifecycleScore?: LeadLifecycleScore;
   conversionReadiness?: LeadConversionReadiness;
+}
+
+export interface LeadLifecycleScore {
+  overallScore: number;
+  qualificationScore: number;
+  leadDataQualityScore: number;
+  conversationScore: number;
+  conversationIncluded: boolean;
+  historyExecutionScore: number;
+  weights: LeadLifecycleScoreWeights;
+}
+
+export interface LeadLifecycleScoreWeights {
+  qualificationWeight: number;
+  leadDataQualityWeight: number;
+  conversationWeight: number;
+  historyWeight: number;
 }
 
 export interface LeadCustomQualificationFactorValue {
@@ -208,6 +226,20 @@ export interface LeadStatusHistoryItem {
   changedAtUtc: string;
   changedBy?: string;
   notes?: string;
+  reason?: string;
+}
+
+export interface LeadAuditEventItem {
+  id: string;
+  entityType: string;
+  entityId: string;
+  action: string;
+  field?: string | null;
+  oldValue?: string | null;
+  newValue?: string | null;
+  changedByUserId?: string | null;
+  changedByName?: string | null;
+  createdAtUtc: string;
 }
 
 export interface LeadCadenceTouch {

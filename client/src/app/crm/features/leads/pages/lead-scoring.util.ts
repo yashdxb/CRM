@@ -13,6 +13,10 @@ export interface LeadScoreInputs {
   problemSeverity?: string | null;
   economicBuyer?: string | null;
   icpFit?: string | null;
+  conversationScore100?: number | null;
+  firstTouchDueAtUtc?: string | null;
+  firstTouchedAtUtc?: string | null;
+  status?: string | null;
 }
 
 export interface LeadDataWeight {
@@ -38,12 +42,26 @@ export interface LeadScoreResult {
   qualificationScore100: number;
   leadContributionScore100: number;
   qualificationContributionScore100: number;
+  conversationContributionScore100: number;
+  historyContributionScore100: number;
   finalLeadScore: number;
 }
 
+export interface LeadLifecycleWeightConfig {
+  qualificationWeight: number;
+  leadDataQualityWeight: number;
+  conversationWeight: number;
+  historyWeight: number;
+}
+
 const clampScore = (value: number): number => Math.max(0, Math.min(100, value));
-const LEAD_DATA_QUALITY_WEIGHT = 0.3;
-const QUALIFICATION_WEIGHT = 0.7;
+
+const CQVS_GROUP_WEIGHT: Record<'C' | 'Q' | 'V' | 'S', number> = {
+  C: 25,
+  Q: 35,
+  V: 25,
+  S: 15
+};
 
 const toKey = (value?: string | null): string => (value ?? '').trim().toLowerCase();
 
@@ -55,6 +73,13 @@ const DEFAULT_LEAD_DATA_WEIGHTS: LeadDataWeight[] = [
   { key: 'jobTitle', weight: 12 },
   { key: 'source', weight: 8 }
 ];
+
+const DEFAULT_LIFECYCLE_WEIGHTS: LeadLifecycleWeightConfig = {
+  qualificationWeight: 50,
+  leadDataQualityWeight: 20,
+  conversationWeight: 20,
+  historyWeight: 10
+};
 
 const DEFAULT_QUALIFICATION_FACTORS: QualificationFactorConfig[] = [
   { key: 'budget', displayLabel: 'Budget availability', isActive: true, isRequired: true, order: 10, factorType: 'system', valueType: 'singleSelect', includeInScore: true, options: [] },
@@ -123,16 +148,17 @@ type QualificationFactorScoreConfig = {
   key: string;
   inputKey: keyof Pick<LeadScoreInputs, 'budgetAvailability' | 'readinessToSpend' | 'buyingTimeline' | 'problemSeverity' | 'economicBuyer' | 'icpFit'>;
   maxScore: number;
+  group: 'C' | 'Q' | 'V' | 'S';
   scores: Record<string, number>;
 };
 
 const QUALIFICATION_FACTOR_SCORE_CONFIG: QualificationFactorScoreConfig[] = [
-  { key: 'budget', inputKey: 'budgetAvailability', maxScore: 25, scores: budgetScores },
-  { key: 'readiness', inputKey: 'readinessToSpend', maxScore: 20, scores: readinessScores },
-  { key: 'timeline', inputKey: 'buyingTimeline', maxScore: 15, scores: timelineScores },
-  { key: 'problem', inputKey: 'problemSeverity', maxScore: 20, scores: problemScores },
-  { key: 'economicBuyer', inputKey: 'economicBuyer', maxScore: 10, scores: economicBuyerScores },
-  { key: 'icpFit', inputKey: 'icpFit', maxScore: 10, scores: icpScores }
+  { key: 'budget', inputKey: 'budgetAvailability', maxScore: 25, group: 'Q', scores: budgetScores },
+  { key: 'readiness', inputKey: 'readinessToSpend', maxScore: 20, group: 'Q', scores: readinessScores },
+  { key: 'timeline', inputKey: 'buyingTimeline', maxScore: 15, group: 'Q', scores: timelineScores },
+  { key: 'problem', inputKey: 'problemSeverity', maxScore: 20, group: 'V', scores: problemScores },
+  { key: 'economicBuyer', inputKey: 'economicBuyer', maxScore: 10, group: 'S', scores: economicBuyerScores },
+  { key: 'icpFit', inputKey: 'icpFit', maxScore: 10, group: 'C', scores: icpScores }
 ];
 
 export const qualificationFactorOptions = {
@@ -246,29 +272,78 @@ export function computeQualificationRawScore(
   const hasAnyMeaningfulFactor = factors.some((value) => isMeaningfulQualificationValue(value));
   if (!hasAnyMeaningfulFactor) return null;
 
-  const totalPossible = activeFactors.reduce((sum, factor) => sum + factor.maxScore, 0);
-  if (totalPossible <= 0) {
+  const groups: Array<'C' | 'Q' | 'V' | 'S'> = ['C', 'Q', 'V', 'S'];
+  const activeGroups = groups
+    .map((group) => {
+      const groupFactors = activeFactors.filter((factor) => factor.group === group);
+      if (!groupFactors.length) {
+        return null;
+      }
+
+      const groupMax = groupFactors.reduce((sum, factor) => sum + factor.maxScore, 0);
+      if (groupMax <= 0) {
+        return null;
+      }
+
+      const groupEarned = groupFactors.reduce((sum, factor) => {
+        return sum + (factor.scores[toKey(input[factor.inputKey])] ?? 0);
+      }, 0);
+
+      const groupPercent = clampScore(Math.round((groupEarned / groupMax) * 100));
+      return {
+        group,
+        baseWeight: CQVS_GROUP_WEIGHT[group],
+        groupPercent
+      };
+    })
+    .filter((item): item is { group: 'C' | 'Q' | 'V' | 'S'; baseWeight: number; groupPercent: number } => !!item);
+
+  if (!activeGroups.length) {
     return null;
   }
 
-  const earned = activeFactors.reduce((sum, factor) => {
-    return sum + (factor.scores[toKey(input[factor.inputKey])] ?? 0);
+  const activeWeightTotal = activeGroups.reduce((sum, group) => sum + group.baseWeight, 0);
+  if (activeWeightTotal <= 0) {
+    return null;
+  }
+
+  const weightedCqvs = activeGroups.reduce((sum, group) => {
+    return sum + (group.groupPercent * group.baseWeight);
   }, 0);
 
-  return clampScore(Math.round((earned / totalPossible) * 100));
+  return clampScore(Math.round(weightedCqvs / activeWeightTotal));
 }
 
 export function computeLeadScore(
   input: LeadScoreInputs,
   configuredLeadDataWeights?: ReadonlyArray<LeadDataWeight> | null,
-  configuredQualificationFactors?: ReadonlyArray<QualificationFactorConfig> | null
+  configuredQualificationFactors?: ReadonlyArray<QualificationFactorConfig> | null,
+  configuredLifecycleWeights?: Partial<LeadLifecycleWeightConfig> | null
 ): LeadScoreResult {
+  const lifecycleWeights = normalizeLifecycleWeights(configuredLifecycleWeights);
   const buyerDataQualityScore100 = computeLeadDataQualityScore(input, configuredLeadDataWeights);
   const qualificationRawScore100 = computeQualificationRawScore(input, configuredQualificationFactors);
   const qualificationScore100 = qualificationRawScore100 === null ? 0 : qualificationRawScore100;
-  const leadContributionScore100 = Math.round(buyerDataQualityScore100 * LEAD_DATA_QUALITY_WEIGHT);
-  const qualificationContributionScore100 = Math.round(qualificationScore100 * QUALIFICATION_WEIGHT);
-  const finalLeadScore = clampScore(leadContributionScore100 + qualificationContributionScore100);
+  const leadContributionScore100 = buyerDataQualityScore100;
+  const qualificationContributionScore100 = qualificationScore100;
+  const conversationContributionScore100 = normalizeOptionalScore(input.conversationScore100);
+  const historyContributionScore100 = computeHistoryExecutionScore(input);
+
+  const weightedParts: Array<{ score: number; weight: number }> = [
+    { score: qualificationContributionScore100, weight: lifecycleWeights.qualificationWeight },
+    { score: leadContributionScore100, weight: lifecycleWeights.leadDataQualityWeight },
+    { score: historyContributionScore100, weight: lifecycleWeights.historyWeight }
+  ];
+
+  if (conversationContributionScore100 !== null) {
+    weightedParts.push({ score: conversationContributionScore100, weight: lifecycleWeights.conversationWeight });
+  }
+
+  const activeWeightTotal = weightedParts.reduce((sum, item) => sum + item.weight, 0);
+  const finalLeadScore =
+    activeWeightTotal > 0
+      ? clampScore(Math.round(weightedParts.reduce((sum, item) => sum + item.score * item.weight, 0) / activeWeightTotal))
+      : 0;
 
   return {
     buyerDataQualityScore100,
@@ -276,7 +351,58 @@ export function computeLeadScore(
     qualificationScore100,
     leadContributionScore100,
     qualificationContributionScore100,
+    conversationContributionScore100: conversationContributionScore100 ?? 0,
+    historyContributionScore100,
     finalLeadScore
+  };
+}
+
+function normalizeOptionalScore(value?: number | null): number | null {
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    return null;
+  }
+
+  return clampScore(Math.round(value));
+}
+
+function computeHistoryExecutionScore(input: LeadScoreInputs): number {
+  const touched = !!input.firstTouchedAtUtc;
+  const dueRaw = input.firstTouchDueAtUtc;
+  const now = Date.now();
+
+  let slaScore = 40;
+  if (touched) {
+    slaScore = 100;
+  } else if (dueRaw) {
+    const dueAt = new Date(dueRaw);
+    if (!Number.isNaN(dueAt.getTime())) {
+      slaScore = dueAt.getTime() < now ? 20 : 60;
+    }
+  }
+
+  const normalizedStatus = (input.status ?? '').trim().toLowerCase();
+  const statusScoreMap: Record<string, number> = {
+    new: 20,
+    contacted: 40,
+    nurture: 50,
+    qualified: 80,
+    converted: 100,
+    lost: 30,
+    disqualified: 30
+  };
+  const progressionScore = statusScoreMap[normalizedStatus] ?? 25;
+
+  return clampScore(Math.round(slaScore * 0.6 + progressionScore * 0.4));
+}
+
+function normalizeLifecycleWeights(
+  configuredWeights?: Partial<LeadLifecycleWeightConfig> | null
+): LeadLifecycleWeightConfig {
+  return {
+    qualificationWeight: Math.max(0, Number(configuredWeights?.qualificationWeight ?? DEFAULT_LIFECYCLE_WEIGHTS.qualificationWeight)),
+    leadDataQualityWeight: Math.max(0, Number(configuredWeights?.leadDataQualityWeight ?? DEFAULT_LIFECYCLE_WEIGHTS.leadDataQualityWeight)),
+    conversationWeight: Math.max(0, Number(configuredWeights?.conversationWeight ?? DEFAULT_LIFECYCLE_WEIGHTS.conversationWeight)),
+    historyWeight: Math.max(0, Number(configuredWeights?.historyWeight ?? DEFAULT_LIFECYCLE_WEIGHTS.historyWeight))
   };
 }
 

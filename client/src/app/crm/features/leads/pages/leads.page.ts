@@ -1086,7 +1086,10 @@ export class LeadsPage {
 
   protected overallScoreHint(lead: Lead): string {
     const score = this.computeOverallScore(lead);
-    return `Overall ${score.finalLeadScore}/100 = Lead data quality ${score.buyerDataQualityScore100}/100 + Qualification ${score.qualificationScore100}/100 (weighted 30/70).`;
+    const conversationLabel = lead.conversationSignalAvailable
+      ? `Conversation ${score.conversationContributionScore100}/100 is included.`
+      : 'Conversation is excluded until signal is available.';
+    return `Overall ${score.finalLeadScore}/100 = weighted lifecycle composite (Qualification 50%, Lead Data Quality 20%, Conversation 20%, History 10%). CQVS Qualification ${score.qualificationScore100}/100. ${conversationLabel}`;
   }
 
   protected qualificationScoreHint(lead: Lead): string {
@@ -1441,6 +1444,20 @@ export class LeadsPage {
   }
 
   private computeOverallScore(lead: Lead): LeadScoreResult {
+    if (lead.lifecycleScore) {
+      const qualificationRawScore100 = lead.lifecycleScore.qualificationScore > 0 ? lead.lifecycleScore.qualificationScore : null;
+      return {
+        buyerDataQualityScore100: lead.lifecycleScore.leadDataQualityScore,
+        qualificationRawScore100,
+        qualificationScore100: lead.lifecycleScore.qualificationScore,
+        leadContributionScore100: lead.lifecycleScore.leadDataQualityScore,
+        qualificationContributionScore100: lead.lifecycleScore.qualificationScore,
+        conversationContributionScore100: lead.lifecycleScore.conversationScore,
+        historyContributionScore100: lead.lifecycleScore.historyExecutionScore,
+        finalLeadScore: lead.lifecycleScore.overallScore
+      };
+    }
+
     return computeLeadScore(this.toScoreInputs(lead), this.leadDataWeights(), this.qualificationFactors());
   }
 
@@ -1463,7 +1480,11 @@ export class LeadsPage {
       buyingTimeline: lead.buyingTimeline ?? null,
       problemSeverity: lead.problemSeverity ?? null,
       economicBuyer: lead.economicBuyer ?? null,
-      icpFit: lead.icpFit ?? null
+      icpFit: lead.icpFit ?? null,
+      conversationScore100: lead.conversationSignalAvailable ? (lead.conversationScore ?? null) : null,
+      firstTouchDueAtUtc: lead.firstTouchDueAtUtc ?? null,
+      firstTouchedAtUtc: lead.firstTouchedAtUtc ?? null,
+      status: lead.status
     };
   }
 }

@@ -73,8 +73,24 @@ public record LeadListItem(
     string? ConversationAiSemanticIntent,
     string? ConversationAiToneJustification,
     bool IsConverted,
+    LeadLifecycleScoreItem? LifecycleScore,
     LeadConversionReadinessItem? ConversionReadiness,
     DateTime? LastActivityAtUtc);
+
+public sealed record LeadLifecycleScoreItem(
+    int OverallScore,
+    int QualificationScore,
+    int LeadDataQualityScore,
+    int ConversationScore,
+    bool ConversationIncluded,
+    int HistoryExecutionScore,
+    LeadLifecycleScoreWeightsItem Weights);
+
+public sealed record LeadLifecycleScoreWeightsItem(
+    int QualificationWeight,
+    int LeadDataQualityWeight,
+    int ConversationWeight,
+    int HistoryWeight);
 
 public sealed record LeadConversionReadinessItem(
     int Score,

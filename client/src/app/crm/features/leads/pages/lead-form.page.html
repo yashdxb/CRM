@@ -976,348 +976,199 @@
 
               </p-tabpanel>
               <p-tabpanel value="qualification">
-          <section class="qualification-summary-card" aria-label="Qualification summary">
-            <div class="qualification-summary-card__header">
-              <div class="qualification-summary-card__title">
-                <i class="pi pi-chart-line" aria-hidden="true"></i>
+          <section class="qualification-scoring-shell" *ngIf="isEditMode()" aria-label="Qualification scoring">
+            <header class="qualification-scoring-shell__header">
+              <div class="qual-shell-title">
+                <span class="qual-shell-title__icon"><i class="pi pi-sparkles" aria-hidden="true"></i></span>
                 <div>
-                  <h2>{{ qualificationSectionTitle() }}</h2>
-                  <p>{{ qualificationGuidanceText() }}</p>
+                  <span class="qual-shell-title__eyebrow">Qualification Scoring</span>
+                  <h2>Overall CQVS Qualification Model</h2>
+                  <p>Understand readiness, focus on gaps, and move deals forward.</p>
                 </div>
               </div>
-              <div class="qualification-summary-card__chips">
-                <span class="summary-chip">Qualification {{ qualificationContributionTotal() }}/100</span>
-                <span class="summary-chip">Lead data {{ leadDataQualityTotal() }}/100</span>
-                <span class="summary-chip">Confidence {{ qualificationConfidenceDisplayLabel() }}</span>
-                <span class="summary-chip">Conversation {{ conversationScoreDisplayLabel() }}</span>
-                <span class="summary-chip summary-chip--ai" *ngIf="conversationAiDimensionScore() !== null">
-                  <i class="pi pi-sparkles" aria-hidden="true"></i> AI +{{ conversationAiDimensionScore() }}/20
-                </span>
-              </div>
-            </div>
-
-            <p class="status-error qualification-summary-card__error" *ngIf="qualificationInlineError()">{{ qualificationInlineError() }}</p>
-
-            <!-- Qualification progress indicator -->
-            <div class="qualification-progress-bar" *ngIf="activeQualificationFactorCount() > 0">
-              <div class="qualification-progress-bar__track">
-                <div class="qualification-progress-bar__fill" [style.width.%]="qualificationProgressPercent()" [attr.data-tone]="qualificationProgressRemaining() === 0 ? 'complete' : (qualificationProgressPercent() >= 50 ? 'progress' : 'early')"></div>
-              </div>
-              <span class="qualification-progress-bar__label" [attr.data-tone]="qualificationProgressRemaining() === 0 ? 'complete' : 'progress'">{{ qualificationProgressLabel() }}</span>
-            </div>
-
-            <div class="qualification-summary-card__metrics">
-              <article class="summary-metric summary-metric--primary">
-                <div class="summary-metric__icon">
-                  <i class="pi pi-chart-line" aria-hidden="true"></i>
-                </div>
-                <div class="summary-metric__content">
-                  <span class="summary-metric__label">Qualification Score</span>
-                  <div class="summary-metric__value-row">
-                    <strong class="summary-metric__value">{{ qualificationContributionTotal() }}</strong>
-                    <span class="summary-metric__suffix">/100</span>
-                  </div>
-                  <span class="summary-metric__hint">Current qualification strength</span>
-                </div>
-              </article>
-              <article class="summary-metric summary-metric--confidence" [attr.data-tone]="confidenceMetricTone()">
-                <div class="summary-metric__icon">
-                  <i class="pi pi-shield" aria-hidden="true"></i>
-                </div>
-                <div class="summary-metric__content">
-                  <span class="summary-metric__label">Confidence</span>
-                  <div class="summary-metric__value-row">
-                    <strong class="summary-metric__value">{{ qualificationConfidenceDisplayLabel() }}</strong>
-                  </div>
-                  <span class="summary-metric__hint">{{ qualificationConfidencePercent() }}% verified</span>
-                </div>
-              </article>
-              <article class="summary-metric summary-metric--coverage" [attr.data-tone]="coverageMetricTone()">
-                <div class="summary-metric__icon">
-                  <i class="pi" [ngClass]="coverageMetricIcon()" aria-hidden="true"></i>
-                </div>
-                <div class="summary-metric__content">
-                  <span class="summary-metric__label">Evidence Coverage</span>
-                  <div class="summary-metric__value-row">
-                    <strong class="summary-metric__value">{{ truthCoveragePercent() }}%</strong>
-                  </div>
-                  <span class="summary-metric__hint">{{ truthCoveragePercent() === 0 ? 'No evidence verified yet' : 'Truth coverage' }}</span>
-                </div>
-              </article>
-              <article class="summary-metric summary-metric--factors">
-                <div class="summary-metric__icon">
-                  <i class="pi pi-list-check" aria-hidden="true"></i>
-                </div>
-                <div class="summary-metric__content">
-                  <span class="summary-metric__label">Factors Selected</span>
-                  <div class="summary-metric__value-row">
-                    <strong class="summary-metric__value">{{ qualificationFactorsSelectedLabel() }}</strong>
-                  </div>
-                  <span class="summary-metric__hint">{{ qualificationProgressRemaining() > 0 ? qualificationProgressRemaining() + ' more needed' : 'Minimum met' }}</span>
-                </div>
-              </article>
-              <article class="summary-metric summary-metric--conversation" [attr.data-tone]="conversationMetricTone()">
-                <div class="summary-metric__icon">
-                  <i class="pi" [ngClass]="conversationMetricIcon()" aria-hidden="true"></i>
-                </div>
-                <div class="summary-metric__content">
-                  <span class="summary-metric__label">Conversation Score</span>
-                  <div class="summary-metric__value-row">
-                    <strong class="summary-metric__value">{{ conversationScoreDisplayLabel() }}</strong>
-                  </div>
-                  <span class="summary-metric__hint">{{ conversationScoreValueLabel() }}</span>
-                </div>
-              </article>
-            </div>
-
-            <div class="qualification-insight-grid">
-            <div class="qualification-feedback qualification-feedback--summary qualification-feedback--readiness" [attr.data-tone]="conversionReadinessTone()" *ngIf="conversionReadiness() as readiness">
-              <span class="feedback-title"><i class="pi pi-bolt" aria-hidden="true"></i> Conversion readiness</span>
-              <div class="readiness-score-row">
-                <div class="readiness-score-badge" [attr.data-tone]="conversionReadinessTone()">
-                  <strong>{{ conversionReadinessScoreLabel() }}</strong>
-                  <span>{{ conversionReadinessDisplayLabel() }}</span>
-                </div>
-                <span class="readiness-manager-chip" *ngIf="conversionReadinessManagerReview()">
-                  <i class="pi pi-user-edit" aria-hidden="true"></i>
-                  Manager review recommended
-                </span>
-              </div>
-              <p class="readiness-summary">{{ conversionReadinessSummary() }}</p>
-              <div class="readiness-primary-gap" *ngIf="conversionReadinessPrimaryGap() as gap">
-                <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
-                <div>
-                  <span class="readiness-primary-gap__label">Primary gap</span>
-                  <strong>{{ gap }}</strong>
-                </div>
-              </div>
-              <div class="feedback-suggestions" *ngIf="conversionReadinessReasons().length">
-                <span class="feedback-title">Why the lead is or is not conversion-ready</span>
-                <ul class="feedback-suggestions-list">
-                  <li *ngFor="let reason of conversionReadinessReasons()">{{ reason }}</li>
-                </ul>
-              </div>
-            </div>
-
-            <div class="qualification-feedback qualification-feedback--summary qualification-feedback--status" *ngIf="qualificationFeedback() as feedback">
-              <span class="feedback-title"><i class="pi pi-chart-line" aria-hidden="true"></i> Qualification status</span>
-              <div class="qualification-summary-card__focus" *ngIf="feedback.weakestSignal">
-                <span class="focus-pill">Priority gap</span>
-                <strong>{{ feedback.weakestSignal }}</strong>
-                <span class="focus-state">{{ feedback.weakestState }}</span>
-              </div>
-              <div class="feedback-metrics">
-                <span class="feedback-item feedback-item--confidence">
-                  <i class="pi pi-chart-line feedback-icon" aria-hidden="true"></i>
-                  Confidence:
-                  <p-tag
-                    [value]="feedback.confidenceLabel"
-                    [severity]="feedback.confidenceLabel === 'High' ? 'success' : feedback.confidenceLabel === 'Medium' ? 'info' : 'warn'"
-                  ></p-tag>
-                </span>
-                <span class="feedback-item feedback-item--truth" *ngIf="truthCoverage() !== null">
-                  <i class="pi pi-check-circle feedback-icon" aria-hidden="true"></i>
-                  Evidence coverage:
-                  <strong>{{ truthCoveragePercent() }}%</strong>
-                </span>
-                <span class="feedback-item feedback-item--assumptions" *ngIf="assumptionsOutstanding() !== null">
-                  <i class="pi pi-exclamation-circle feedback-icon" aria-hidden="true"></i>
-                  Assumptions outstanding:
-                  <strong>{{ assumptionsOutstandingLabel() }}</strong>
-                </span>
-                <span class="feedback-item feedback-item--weakest" *ngIf="feedback.weakestSignal">
-                  <i class="pi pi-bolt feedback-icon" aria-hidden="true"></i>
-                  Weakest signal:
-                  <strong>{{ feedback.weakestSignal }}</strong>
-                  <span class="feedback-state">({{ feedback.weakestState }})</span>
-                </span>
-              </div>
-              <div class="feedback-suggestions" *ngIf="nextEvidenceSuggestions().length">
-                <span class="feedback-title">Suggested next evidence</span>
-                <ul class="feedback-suggestions-list">
-                  <li *ngFor="let suggestion of nextEvidenceSuggestions()">{{ suggestion }}</li>
-                </ul>
-              </div>
-            </div>
-            </div>
-
-          </section>
-
-          <section class="conversation-intelligence-panel" *ngIf="isEditMode()">
-            <div class="conversation-intelligence-panel__header">
-              <div class="conversation-intelligence-panel__title">
-                <i class="pi pi-comments" aria-hidden="true"></i>
-                <div>
-                  <h3>Conversation Intelligence</h3>
-                  <p>Summary, signals, and next action from the lead's live email thread</p>
-                </div>
-              </div>
-              <div class="conversation-intelligence-panel__actions">
-                <div class="conversation-intelligence-panel__stats" *ngIf="emailEngagementStats() as stats">
-                  <span class="email-stat">
-                    <i class="pi pi-send" aria-hidden="true"></i>
-                    <strong>{{ stats.total }}</strong> emails
-                  </span>
-                  <span class="email-stat email-stat--open">
-                    <i class="pi pi-eye" aria-hidden="true"></i>
-                    <strong>{{ stats.openRate }}%</strong> opened
-                  </span>
-                  <span class="email-stat email-stat--date" *ngIf="stats.lastEmailDate">
-                    <i class="pi pi-clock" aria-hidden="true"></i>
-                    Last: {{ stats.lastEmailDate | date:'MMM d, y' }}
-                  </span>
-                </div>
+              <div class="qual-shell-actions">
                 <button
                   type="button"
-                  class="action-btn action-btn--refresh ai-summary-card__generate"
+                  class="action-btn action-btn--refresh qual-shell-actions__primary"
                   (click)="onGenerateConversationSummary()"
                   [disabled]="conversationAiSummaryLoading()"
                 >
                   <span class="action-btn__icon">
                     <i class="pi" [ngClass]="conversationAiSummaryLoading() ? 'pi-spin pi-spinner' : 'pi-sparkles'" aria-hidden="true"></i>
                   </span>
-                  <span>{{ conversationAiSummary() ? 'Refresh AI insight' : 'Generate AI insight' }}</span>
+                  <span>Generate AI Insights</span>
+                </button>
+                <button type="button" class="qual-menu-btn" aria-label="More qualification actions">
+                  <i class="pi pi-ellipsis-v" aria-hidden="true"></i>
                 </button>
               </div>
+            </header>
+
+            <div class="qual-stat-chips">
+              <article class="qual-stat-chip qual-stat-chip--violet">
+                <span class="qual-stat-chip__icon"><i class="pi pi-verified"></i></span>
+                <div class="qual-stat-chip__content">
+                  <span class="chip-label">Overall Score</span>
+                  <strong>{{ leadHeaderScoreValue() }} / 100</strong>
+                </div>
+              </article>
+              <article class="qual-stat-chip qual-stat-chip--blue">
+                <span class="qual-stat-chip__icon"><i class="pi pi-award"></i></span>
+                <div class="qual-stat-chip__content">
+                  <span class="chip-label">CQVS Qualification</span>
+                  <strong>{{ qualificationContributionTotal() }} / 100</strong>
+                </div>
+              </article>
+              <article class="qual-stat-chip qual-stat-chip--teal">
+                <span class="qual-stat-chip__icon"><i class="pi pi-shield"></i></span>
+                <div class="qual-stat-chip__content">
+                  <span class="chip-label">Lead Data Quality</span>
+                  <strong>{{ leadDataQualityTotal() }} / 100</strong>
+                </div>
+              </article>
+              <article class="qual-stat-chip qual-stat-chip--amber">
+                <span class="qual-stat-chip__icon"><i class="pi pi-comments"></i></span>
+                <div class="qual-stat-chip__content">
+                  <span class="chip-label">Conversation Score</span>
+                  <strong>{{ conversationContributionTotal() }} / 100</strong>
+                </div>
+              </article>
+              <article class="qual-stat-chip qual-stat-chip--slate">
+                <span class="qual-stat-chip__icon"><i class="pi pi-history"></i></span>
+                <div class="qual-stat-chip__content">
+                  <span class="chip-label">History Execution</span>
+                  <strong>{{ historyExecutionTotal() }} / 100</strong>
+                </div>
+              </article>
             </div>
 
-            <div class="conversation-intelligence-panel__overview">
-              <div class="conversation-intelligence-summary">
-                <div class="conversation-intelligence-summary__label">Summary</div>
-                <p>{{ conversationSummaryDisplay() }}</p>
-              </div>
-              <div class="conversation-intelligence-meta">
-                <div class="ai-summary-meta-item">
-                  <i class="pi pi-chart-line" aria-hidden="true"></i>
-                  <span class="ai-summary-meta-label">Conversation score</span>
-                  <strong>{{ conversationScoreValueLabel() }}</strong>
+            <section class="qual-hero-card">
+              <div class="qual-hero-card__confidence">
+                <div class="qual-hero-ring">
+                  <svg viewBox="0 0 36 36" aria-hidden="true">
+                    <path class="qual-gauge-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                    <path class="qual-gauge-fill" [style.stroke-dasharray]="qualificationConfidencePercent() + ', 100'" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                  </svg>
+                  <span class="qual-gauge-num">{{ qualificationConfidencePercent() }}</span>
                 </div>
-                <div class="ai-summary-meta-item">
-                  <i class="pi pi-bolt" aria-hidden="true"></i>
-                  <span class="ai-summary-meta-label">Band</span>
-                  <strong>{{ conversationScoreDisplayLabel() }}</strong>
-                </div>
-                <div class="ai-summary-meta-item" [ngClass]="sentimentClass(conversationSentimentDisplay())">
-                  <i class="pi" [ngClass]="sentimentIcon(conversationSentimentDisplay())" aria-hidden="true"></i>
-                  <span class="ai-summary-meta-label">Sentiment</span>
-                  <strong>{{ conversationSentimentDisplay() }}</strong>
-                </div>
-                <div class="ai-summary-meta-item ai-summary-meta-item--time" *ngIf="conversationScoreUpdatedLabel() as updatedLabel">
-                  <i class="pi pi-clock" aria-hidden="true"></i>
-                  <span>{{ updatedLabel }}</span>
+                <span class="qual-gauge-denom">/ 100</span>
+                <div class="qual-hero-copy">
+                  <span class="qual-hero-copy__label">Confidence</span>
+                    <strong>{{ qualificationConfidenceDisplayLabel() === 'Not available' ? 'Awaiting Qualification Inputs' : qualificationConfidenceDisplayLabel() }}</strong>
+                    <p>Start with budget, readiness, and timeline to unlock confidence and improve scoring quality.</p>
                 </div>
               </div>
-            </div>
+              <div class="qual-hero-card__middle">
+                <article class="hero-mid-block">
+                  <span class="hero-mid-block__label"><i class="pi pi-lightbulb" aria-hidden="true"></i> Quick Take</span>
+                  <p>{{ conversionReadinessSummary() || 'This lead needs more discovery.' }}</p>
+                </article>
+                <article class="hero-mid-block">
+                  <span class="hero-mid-block__label"><i class="pi pi-bullseye" aria-hidden="true"></i> Next Best Action</span>
+                  <strong>{{ conversationNextActionDisplay() || 'Ask about budget & timeline' }}</strong>
+                  <a class="hero-mid-block__link" href="javascript:void(0)">See all recommendations <i class="pi pi-arrow-right" aria-hidden="true"></i></a>
+                </article>
+              </div>
+              <aside class="qual-hero-card__tip">
+                <div class="qual-tip-bot"><i class="pi pi-comments" aria-hidden="true"></i></div>
+                <span class="qual-tip-pill">AI Tip</span>
+                <p>Leads that confirm budget early are 2.3x more likely to convert.</p>
+              </aside>
+            </section>
 
-            <div class="conversation-state-strip">
-              <span class="conversation-state-pill" [attr.data-tone]="conversationSignalStateTone()">{{ conversationSignalStateLabel() }}</span>
-              <span class="conversation-state-pill conversation-state-pill--detail" [attr.data-tone]="conversationSignalStateTone()">Tone: {{ conversationAiToneLabel() || 'Not detected' }}</span>
-              <span class="conversation-state-pill conversation-state-pill--detail" [attr.data-tone]="isHighBuyingIntentState() ? 'healthy' : conversationSignalStateTone()">Buying readiness: {{ conversationAiBuyingReadiness() || 'No readiness signal' }}</span>
-              <span class="conversation-state-pill conversation-state-pill--detail" [attr.data-tone]="isHighBuyingIntentState() ? 'healthy' : 'neutral'">Intent: {{ conversationAiSemanticIntent() || 'No clear intent' }}</span>
-            </div>
-
-            <div class="conversation-next-action-card conversation-next-action-card--pinned">
-              <div class="conversation-next-action-card__label">Recommended next action</div>
-              <p>{{ conversationNextActionDisplay() }}</p>
-            </div>
-
-            <!-- AI Tone & Intent Analysis -->
-            <div class="ai-tone-panel" *ngIf="conversationAiToneLabel() || conversationAiBuyingReadiness() || conversationAiSemanticIntent()">
-              <div class="ai-tone-panel__header">
-                <i class="pi pi-sparkles" aria-hidden="true"></i>
-                <span>AI Tone &amp; Intent Analysis</span>
-                <span class="ai-tone-panel__score">+{{ conversationAiDimensionScore() ?? 0 }}/20</span>
+            <div class="qual-cqvs-section">
+              <div class="qual-cqvs-radar">
+                <header class="qual-cqvs-radar__header">
+                  <span class="qual-cqvs-radar__title">
+                    <i class="pi pi-chart-scatter" aria-hidden="true"></i>
+                    CQVS Radar
+                  </span>
+                  <span class="qual-cqvs-radar__sub">Score % per pillar</span>
+                </header>
+                <p-chart *ngIf="showCqvsRadar()" type="radar" [data]="cqvsRadarChartData()" [options]="cqvsRadarChartOptions"></p-chart>
               </div>
-              <div class="ai-tone-panel__grid">
-                <div class="ai-tone-chip ai-tone-chip--tone">
-                  <span class="ai-tone-chip__label">Tone</span>
-                  <strong>{{ conversationAiToneLabel() }}</strong>
-                </div>
-                <div class="ai-tone-chip ai-tone-chip--buying">
-                  <span class="ai-tone-chip__label">Buying Readiness</span>
-                  <strong>{{ conversationAiBuyingReadiness() }}</strong>
-                </div>
-                <div class="ai-tone-chip ai-tone-chip--intent">
-                  <span class="ai-tone-chip__label">Semantic Intent</span>
-                  <strong>{{ conversationAiSemanticIntent() }}</strong>
-                </div>
-              </div>
-              <div class="ai-tone-panel__justification" *ngIf="conversationAiToneJustification()">
-                <i class="pi pi-info-circle" aria-hidden="true"></i>
-                <span>{{ conversationAiToneJustification() }}</span>
-              </div>
-            </div>
-
-            <div class="conversation-intelligence-grid">
-              <div class="conversation-signal-card" *ngIf="conversationPositiveSignals().length">
-                <div class="conversation-signal-card__label">What we know</div>
-                <div class="conversation-signal-card__chips">
-                  <span class="conversation-signal-chip conversation-signal-chip--positive" *ngFor="let signal of conversationPositiveSignals()">{{ signal }}</span>
-                </div>
-              </div>
-
-              <div class="conversation-signal-card" *ngIf="conversationRiskSignals().length">
-                <div class="conversation-signal-card__label">What is still missing</div>
-                <div class="conversation-signal-card__chips">
-                  <span class="conversation-signal-chip conversation-signal-chip--risk" *ngFor="let signal of conversationRiskSignals()">{{ signal }}</span>
-                </div>
-              </div>
-
-              <div class="conversation-signal-card" *ngIf="conversationNeutralSignals().length">
-                <div class="conversation-signal-card__label">Other detected signals</div>
-                <div class="conversation-signal-card__chips">
-                  <span class="conversation-signal-chip conversation-signal-chip--neutral" *ngFor="let signal of conversationNeutralSignals()">{{ signal }}</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="email-thread-list" *ngIf="leadEmails().length">
-              <div
-                class="email-thread-item"
-                *ngFor="let email of (leadEmailsExpanded() ? leadEmails() : leadEmails().slice(0, 5)); trackBy: trackEmailById"
-                [class.email-thread-item--inbound]="emailDirection(email) === 'inbound'"
-                [class.email-thread-item--outbound]="emailDirection(email) === 'outbound'"
-              >
-                <div class="email-thread-item__direction">
-                  <i class="pi" [ngClass]="emailDirection(email) === 'inbound' ? 'pi-arrow-down-left' : 'pi-arrow-up-right'" aria-hidden="true"></i>
-                </div>
-                <div class="email-thread-item__body">
-                  <div class="email-thread-item__meta">
-                    <span class="email-thread-item__sender">{{ email.senderName || email.toEmail }}</span>
-                    <span class="email-thread-item__date">{{ (email.sentAtUtc || email.createdAtUtc) | date:'MMM d, h:mm a' }}</span>
+              <div class="qual-cqvs-cards">
+                <article class="cqvs-group-card" *ngFor="let group of cqvsGroupRows()" [attr.data-cqvs]="group.code">
+                  <div class="cqvs-group-card__head">
+                    <span class="cqvs-code" [attr.data-cqvs]="group.code">{{ group.code }}</span>
+                    <div class="cqvs-group-card__title">
+                      <strong>{{ group.title }}</strong>
+                      <span>{{ group.description }}</span>
+                    </div>
                   </div>
-                  <span class="email-thread-item__subject">{{ email.subject }}</span>
-                </div>
-                <div class="email-thread-item__status">
-                  <span class="email-status-badge" [attr.data-status]="email.status.toLowerCase()">{{ email.status }}</span>
-                </div>
+                  <div class="cqvs-group-card__metrics">
+                    <span class="score-val">{{ group.score }} / {{ group.maxScore }}</span>
+                    <span class="weight-pill">{{ group.weight }}% Weight</span>
+                  </div>
+                  <div class="factor-rail compact">
+                    <span class="factor-rail__fill" [style.width.%]="cqvsGroupPercent(group)"></span>
+                  </div>
+                </article>
               </div>
             </div>
 
-            <div class="email-engagement-panel__empty" *ngIf="!leadEmailsLoading() && !leadEmails().length && !conversationAiSummary()">
-              <i class="pi pi-inbox" aria-hidden="true"></i>
-              <strong>No conversation signal yet</strong>
-              <span>Log outreach, replies, or meetings for this lead so the CRM can score engagement and recommend the next action.</span>
-              <button type="button" class="action-btn action-btn--add empty-state-cta" (click)="onGenerateConversationSummary()" [disabled]="conversationAiSummaryLoading()">
-                <span class="action-btn__icon"><i class="pi" [ngClass]="conversationAiSummaryLoading() ? 'pi-spin pi-spinner' : 'pi-sparkles'" aria-hidden="true"></i></span>
-                <span>Generate AI insight</span>
-              </button>
-            </div>
+            <section class="qual-breakdown-grid">
+              <div class="qual-breakdown-main">
+                <header class="qual-breakdown-main__header">CQVS Breakdown</header>
+                <p-table [value]="scoreBreakdownRows()" styleClass="score-breakdown-table score-breakdown-table--hero">
+                  <ng-template pTemplate="header">
+                    <tr>
+                      <th>CQVS Factor</th>
+                      <th>Weight</th>
+                      <th>Selected Value</th>
+                      <th>Confidence</th>
+                      <th>Evidence</th>
+                      <th>Contribution</th>
+                      <th>Score</th>
+                    </tr>
+                  </ng-template>
+                  <ng-template pTemplate="body" let-row>
+                    <tr>
+                      <td class="col-factor col-factor--with-cqvs">
+                        <span class="cqvs-badge" [attr.data-cqvs]="row.cqvs">{{ row.factor.slice(0, 1) }}</span>
+                        <span>{{ row.factor }}</span>
+                      </td>
+                      <td class="col-weight">{{ row.weight }}</td>
+                      <td class="col-selected">{{ row.selectedValue }}</td>
+                      <td class="col-confidence">
+                        <span class="confidence-badge" [attr.data-confidence]="row.confidence.toLowerCase()">{{ row.confidence }}</span>
+                      </td>
+                      <td class="col-evidence">{{ row.evidence }}</td>
+                      <td class="col-contribution">
+                        <div class="factor-rail compact">
+                          <span class="factor-rail__fill" [style.width.%]="scoreContributionPercent(row)"></span>
+                        </div>
+                        <span>{{ scoreContributionPercent(row) }}%</span>
+                      </td>
+                      <td class="col-score">{{ row.score }} / {{ row.maxScore }}</td>
+                    </tr>
+                  </ng-template>
+                </p-table>
+              </div>
+              <aside class="qual-risk-card">
+                <h4>Top Risks</h4>
+                <div class="qual-risk-list" *ngIf="riskFlags().length; else fallbackRisks">
+                  <div class="qual-risk-item" *ngFor="let flag of riskFlags().slice(0, 5)">
+                    <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+                    <span>{{ flag }}</span>
+                    <span class="qual-risk-item__action">Review factors</span>
+                  </div>
+                </div>
+                <ng-template #fallbackRisks>
+                  <div class="qual-risk-list">
+                    <div class="qual-risk-item"><i class="pi pi-exclamation-circle" aria-hidden="true"></i><span>No buying timeline</span><span class="qual-risk-item__action">Review factors</span></div>
+                    <div class="qual-risk-item"><i class="pi pi-exclamation-circle" aria-hidden="true"></i><span>Economic buyer not engaged</span><span class="qual-risk-item__action">Review factors</span></div>
+                    <div class="qual-risk-item"><i class="pi pi-exclamation-circle" aria-hidden="true"></i><span>Problem severity unclear</span><span class="qual-risk-item__action">Review factors</span></div>
+                    <div class="qual-risk-item"><i class="pi pi-exclamation-circle" aria-hidden="true"></i><span>Budget availability needs validation</span><span class="qual-risk-item__action">Review factors</span></div>
+                  </div>
+                </ng-template>
+              </aside>
+            </section>
 
-            <div class="email-engagement-panel__loading" *ngIf="leadEmailsLoading() && !leadEmails().length">
-              <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
-              <span>Loading emails…</span>
-            </div>
-
-            <button
-              type="button"
-              class="email-engagement-panel__toggle"
-              *ngIf="leadEmails().length > 5"
-              (click)="toggleEmailsExpanded()"
-            >
-              <i class="pi" [ngClass]="leadEmailsExpanded() ? 'pi-chevron-up' : 'pi-chevron-down'" aria-hidden="true"></i>
-              {{ leadEmailsExpanded() ? 'Show fewer' : 'Show all ' + leadEmailsTotalCount() + ' emails' }}
-            </button>
+            <footer class="qual-smart-insight">
+              <i class="pi pi-sparkles" aria-hidden="true"></i>
+              <span><strong>Smart Insight:</strong> {{ nextEvidenceSuggestions()[0] || 'Complete budget and timeline details first. Once captured, your qualification score and confidence will be calculated automatically.' }}</span>
+            </footer>
           </section>
 
           <p-accordion
@@ -1343,7 +1194,7 @@
               </p-accordion-header>
               <p-accordion-content>
                 <section class="form-section form-section--qualification form-section--accordion-body">
-                  <div class="form-grid">
+                  <div class="form-grid qualification-grid--factors">
               <div class="form-field full-row">
                 <div class="qualification-header">
                   <div>
@@ -1416,20 +1267,6 @@
                   </ng-template>
                 </p-select>
               </div>
-              <div class="form-field" *ngIf="isBrokeragePreset()">
-                <label for="lead-motivationUrgency">Motivation / urgency</label>
-                <p-select
-                  id="lead-motivationUrgency"
-                  name="motivationUrgency"
-                  [options]="motivationUrgencyOptions()"
-                  optionLabel="label"
-                  optionValue="value"
-                  placeholder="Select motivation"
-                  appendTo="body"
-                  class="w-full"
-                  [(ngModel)]="form.motivationUrgency"
-                ></p-select>
-              </div>
               <div class="form-field" *ngIf="isQualificationFactorActive('readiness')">
                 <label for="lead-readinessToSpend">{{ qualificationFactorLabel('readiness', 'Readiness to spend') }} <i class="pi pi-info-circle qual-info-icon" pTooltip="Confirmed = ready to purchase this quarter&#10;Likely = evaluating options&#10;Unknown = timeline unclear" tooltipPosition="top" [escape]="false"></i></label>
                 <p-select
@@ -1458,20 +1295,6 @@
                   </ng-template>
                 </p-select>
               </div>
-              <div class="form-field" *ngIf="isBrokeragePreset()">
-                <label for="lead-financingReadiness">Financing readiness</label>
-                <p-select
-                  id="lead-financingReadiness"
-                  name="financingReadiness"
-                  [options]="financingReadinessOptions()"
-                  optionLabel="label"
-                  optionValue="value"
-                  placeholder="Select financing readiness"
-                  appendTo="body"
-                  class="w-full"
-                  [(ngModel)]="form.financingReadiness"
-                ></p-select>
-              </div>
               <div class="form-field" *ngIf="isQualificationFactorActive('readiness')">
                 <label for="lead-readinessEvidence">Evidence source</label>
                 <p-select
@@ -1499,20 +1322,6 @@
                     </div>
                   </ng-template>
                 </p-select>
-              </div>
-              <div class="form-field" *ngIf="isBrokeragePreset()">
-                <label for="lead-preApprovalStatus">Pre-approval status</label>
-                <p-select
-                  id="lead-preApprovalStatus"
-                  name="preApprovalStatus"
-                  [options]="preApprovalStatusOptions()"
-                  optionLabel="label"
-                  optionValue="value"
-                  placeholder="Select pre-approval status"
-                  appendTo="body"
-                  class="w-full"
-                  [(ngModel)]="form.preApprovalStatus"
-                ></p-select>
               </div>
               <div class="form-field" *ngIf="isQualificationFactorActive('timeline')">
                 <label for="lead-buyingTimeline">{{ qualificationFactorLabel('timeline', 'Buying timeline') }} <i class="pi pi-info-circle qual-info-icon" pTooltip="Confirmed = decision date set&#10;Likely = within 6 months&#10;Unknown = no timeline shared" tooltipPosition="top" [escape]="false"></i></label>
@@ -1817,120 +1626,6 @@
                   </p-select>
                 </div>
               </ng-container>
-                  </div>
-                </section>
-              </p-accordion-content>
-            </p-accordion-panel>
-
-            <p-accordion-panel value="qualification-scoring">
-              <p-accordion-header>
-                <h2 class="section-title section-title--accordion section-title--accordion-summary">
-                  <i class="pi pi-calculator"></i>
-                  Scoring breakdown
-                  <span class="accordion-header-summary">
-                    <span class="accordion-header-badge accordion-header-badge--score" [attr.data-tone]="overallScoreBadgeTone()">
-                      Overall {{ overallScoreBadgeValue() }}/100
-                    </span>
-                    <span class="accordion-header-badge accordion-header-badge--meta" [attr.data-variant]="'cyan'">
-                      Confidence {{ qualificationConfidenceDisplayLabel() }}
-                    </span>
-                  </span>
-                </h2>
-              </p-accordion-header>
-              <p-accordion-content>
-                <section class="form-section form-section--qualification form-section--accordion-body">
-                  <div class="form-grid">
-              <div class="form-field full-row" *ngIf="isEditMode()">
-                <div class="score-breakdown">
-                  <div class="score-breakdown__header">
-                    <div class="score-breakdown__title">
-                      <span class="eyebrow">Scoring breakdown</span>
-                      <strong>Overall + CQVS qualification model</strong>
-                      <span class="score-formula">{{ scoreFormulaHint() }}</span>
-                    </div>
-                    <div class="score-breakdown__summary">
-                      <span class="total-pill">Lead data quality: {{ leadDataQualityTotal() }} / 100</span>
-                      <span class="total-pill">Qualification score: {{ qualificationContributionTotal() }} / 100</span>
-                      <span class="total-pill">Weighted: {{ leadDataQualityWeightedContribution() }} + {{ qualificationWeightedContribution() }}</span>
-                      <span class="confidence-pill">Confidence: {{ qualificationConfidenceDisplayLabel() }}</span>
-                    </div>
-                  </div>
-                  <div class="confidence-gauge-panel compact">
-                    <div class="confidence-gauge">
-                      <div class="confidence-gauge__label">Confidence</div>
-                      <p-knob
-                        [ngModel]="qualificationConfidencePercent()"
-                        [ngModelOptions]="{ standalone: true }"
-                        [readonly]="true"
-                        [size]="70"
-                        [strokeWidth]="9"
-                        [valueColor]="scoreKnobValueColor()"
-                        rangeColor="rgba(var(--apple-gray-4), 0.35)"
-                        textColor="rgba(var(--apple-secondary), 0.9)"
-                        styleClass="confidence-gauge__knob"
-                      ></p-knob>
-                    </div>
-                    <p class="hint-text compact" *ngIf="qualificationConfidenceHint()">{{ qualificationConfidenceHint() }}</p>
-                  </div>
-                  <div class="cqvs-group-grid">
-                    <article class="cqvs-group-card" *ngFor="let group of cqvsGroupRows()" [attr.data-cqvs]="group.code">
-                      <div class="cqvs-group-card__head">
-                          <span class="cqvs-code" [attr.data-cqvs]="group.code">{{ group.code }}</span>
-                        <div class="cqvs-group-card__title">
-                          <strong>{{ group.title }}</strong>
-                          <span>{{ group.description }}</span>
-                        </div>
-                      </div>
-                      <div class="cqvs-group-card__metrics">
-                        <span class="total-pill">Score {{ group.score }} / {{ group.maxScore }}</span>
-                        <span class="total-pill">Weight {{ group.weight }}%</span>
-                      </div>
-                      <div class="factor-rail compact">
-                        <span class="factor-rail__fill" [style.width.%]="cqvsGroupPercent(group)"></span>
-                      </div>
-                    </article>
-                  </div>
-                  <p-table [value]="scoreBreakdownRows()" styleClass="score-breakdown-table">
-                    <ng-template pTemplate="header">
-                      <tr>
-                        <th>CQVS</th>
-                        <th>Factor</th>
-                        <th>Weight</th>
-                        <th>Selected value</th>
-                        <th>Confidence</th>
-                        <th>Evidence</th>
-                        <th>Contribution</th>
-                        <th>Score</th>
-                      </tr>
-                    </ng-template>
-                    <ng-template pTemplate="body" let-row>
-                      <tr>
-                        <td class="col-cqvs">
-                            <span class="cqvs-badge" [attr.data-cqvs]="row.cqvs">{{ row.cqvs }}</span>
-                        </td>
-                        <td class="col-factor">{{ row.factor }}</td>
-                        <td class="col-weight">{{ row.weight }}</td>
-                        <td class="col-selected">{{ row.selectedValue }}</td>
-                        <td class="col-confidence">
-                          <span class="confidence-badge" [attr.data-confidence]="row.confidence.toLowerCase()">{{ row.confidence }}</span>
-                        </td>
-                        <td class="col-evidence">{{ row.evidence }}</td>
-                        <td class="col-contribution">
-                          <div class="factor-rail compact">
-                            <span class="factor-rail__fill" [style.width.%]="scoreContributionPercent(row)"></span>
-                          </div>
-                          <span>{{ scoreContributionPercent(row) }}%</span>
-                        </td>
-                        <td class="col-score">{{ row.score }} / {{ row.maxScore }}</td>
-                      </tr>
-                    </ng-template>
-                  </p-table>
-                  <div class="risk-flags" *ngIf="riskFlags().length">
-                    <span class="risk-label">Top risks</span>
-                    <span class="risk-flag" *ngFor="let flag of riskFlags()">{{ flag }}</span>
-                  </div>
-                </div>
-              </div>
                   </div>
                 </section>
               </p-accordion-content>
@@ -2328,6 +2023,35 @@
                   </div>
                   <ng-template #noHistory>
                     <div class="history-empty">No status changes recorded yet.</div>
+                  </ng-template>
+                </section>
+              </p-accordion-content>
+            </p-accordion-panel>
+            <p-accordion-panel value="history-score-audit">
+              <p-accordion-header>
+                <h2 class="section-title section-title--accordion">
+                  <i class="pi pi-chart-line"></i>
+                  Score change audit
+                </h2>
+              </p-accordion-header>
+              <p-accordion-content>
+                <section class="form-section form-section--accordion-body">
+                  <div class="history-list" *ngIf="scoreAuditEvents().length; else noScoreAudit">
+                    <div class="history-item" *ngFor="let entry of scoreAuditEvents()">
+                      <div class="history-header">
+                        <p-tag [value]="entry.field || entry.action"></p-tag>
+                        <span class="history-time">{{ entry.createdAtUtc | date:'medium' }}</span>
+                      </div>
+                      <div class="history-meta">
+                        <span>Changed by {{ entry.changedByName || 'system' }}</span>
+                      </div>
+                      <div class="history-notes" *ngIf="entry.oldValue || entry.newValue">
+                        {{ (entry.oldValue || 'empty') }} → {{ (entry.newValue || 'empty') }}
+                      </div>
+                    </div>
+                  </div>
+                  <ng-template #noScoreAudit>
+                    <div class="history-empty">No score changes recorded yet.</div>
                   </ng-template>
                 </section>
               </p-accordion-content>

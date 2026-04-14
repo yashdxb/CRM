@@ -70,8 +70,24 @@ public sealed record LeadListItemDto(
     string? ConversationAiSemanticIntent,
     string? ConversationAiToneJustification,
     bool IsConverted,
+    LeadLifecycleScoreDto LifecycleScore,
     LeadConversionReadinessDto ConversionReadiness,
     DateTime? LastActivityAtUtc);
+
+public sealed record LeadLifecycleScoreDto(
+    int OverallScore,
+    int QualificationScore,
+    int LeadDataQualityScore,
+    int ConversationScore,
+    bool ConversationIncluded,
+    int HistoryExecutionScore,
+    LeadLifecycleScoreWeightsDto Weights);
+
+public sealed record LeadLifecycleScoreWeightsDto(
+    int QualificationWeight,
+    int LeadDataQualityWeight,
+    int ConversationWeight,
+    int HistoryWeight);
 
 public sealed record LeadConversionReadinessDto(
     int Score,

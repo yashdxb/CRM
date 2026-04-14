@@ -538,6 +538,18 @@ public class LeadsController : ControllerBase
             dto.ConversationAiSemanticIntent,
             dto.ConversationAiToneJustification,
             dto.IsConverted,
+            new LeadLifecycleScoreItem(
+                dto.LifecycleScore.OverallScore,
+                dto.LifecycleScore.QualificationScore,
+                dto.LifecycleScore.LeadDataQualityScore,
+                dto.LifecycleScore.ConversationScore,
+                dto.LifecycleScore.ConversationIncluded,
+                dto.LifecycleScore.HistoryExecutionScore,
+                new LeadLifecycleScoreWeightsItem(
+                    dto.LifecycleScore.Weights.QualificationWeight,
+                    dto.LifecycleScore.Weights.LeadDataQualityWeight,
+                    dto.LifecycleScore.Weights.ConversationWeight,
+                    dto.LifecycleScore.Weights.HistoryWeight)),
             new LeadConversionReadinessItem(
                 dto.ConversionReadiness.Score,
                 dto.ConversionReadiness.Label,

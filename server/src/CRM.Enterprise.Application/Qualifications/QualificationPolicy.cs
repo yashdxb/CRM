@@ -15,7 +15,14 @@ public sealed record QualificationPolicy(
     IReadOnlyList<QualificationModifierRule> Modifiers,
     IReadOnlyList<QualificationExposureWeight> ExposureWeights,
     IReadOnlyList<QualificationLeadDataWeight> LeadDataWeights,
-    IReadOnlyList<string> EvidenceSources);
+    IReadOnlyList<string> EvidenceSources,
+    QualificationLifecycleScoreWeights? LifecycleScoreWeights = null);
+
+public sealed record QualificationLifecycleScoreWeights(
+    decimal QualificationWeight,
+    decimal LeadDataQualityWeight,
+    decimal ConversationWeight,
+    decimal HistoryWeight);
 
 public sealed record QualificationFactorDefinition(
     string Key,
@@ -152,7 +159,8 @@ public static class QualificationPolicyDefaults
                 new QualificationLeadDataWeight("jobTitle", 12),
                 new QualificationLeadDataWeight("source", 8)
             },
-            EvidenceSources: DefaultEvidenceSourcesCatalog);
+            EvidenceSources: DefaultEvidenceSourcesCatalog,
+            LifecycleScoreWeights: new QualificationLifecycleScoreWeights(50m, 20m, 20m, 10m));
     }
 
     public static QualificationPolicy Normalize(QualificationPolicy? policy)
@@ -167,6 +175,7 @@ public static class QualificationPolicyDefaults
         var modifiers = policy.Modifiers ?? baseline.Modifiers;
         var exposureWeights = policy.ExposureWeights ?? baseline.ExposureWeights;
         var leadDataWeights = NormalizeLeadDataWeights(policy.LeadDataWeights, baseline.LeadDataWeights);
+        var lifecycleScoreWeights = NormalizeLifecycleScoreWeights(policy.LifecycleScoreWeights, baseline.LifecycleScoreWeights);
 
         var evidenceSources = (policy.EvidenceSources ?? Array.Empty<string>())
             .Where(static value => !string.IsNullOrWhiteSpace(value))
@@ -207,8 +216,28 @@ public static class QualificationPolicyDefaults
             Modifiers = modifiers,
             ExposureWeights = exposureWeights,
             LeadDataWeights = leadDataWeights,
-            EvidenceSources = evidenceSources
+            EvidenceSources = evidenceSources,
+            LifecycleScoreWeights = lifecycleScoreWeights
         };
+    }
+
+    private static QualificationLifecycleScoreWeights NormalizeLifecycleScoreWeights(
+        QualificationLifecycleScoreWeights? input,
+        QualificationLifecycleScoreWeights? baseline)
+    {
+        var resolved = input ?? baseline ?? new QualificationLifecycleScoreWeights(50m, 20m, 20m, 10m);
+
+        var q = Math.Max(0m, resolved.QualificationWeight);
+        var d = Math.Max(0m, resolved.LeadDataQualityWeight);
+        var c = Math.Max(0m, resolved.ConversationWeight);
+        var h = Math.Max(0m, resolved.HistoryWeight);
+        var total = q + d + c + h;
+        if (total <= 0m)
+        {
+            return baseline ?? new QualificationLifecycleScoreWeights(50m, 20m, 20m, 10m);
+        }
+
+        return new QualificationLifecycleScoreWeights(q, d, c, h);
     }
 
     private static IReadOnlyList<QualificationLeadDataWeight> NormalizeLeadDataWeights(

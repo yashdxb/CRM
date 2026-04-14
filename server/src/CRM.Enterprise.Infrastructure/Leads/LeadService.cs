@@ -111,6 +111,7 @@ public sealed class LeadService : ILeadService
     {
         var page = Math.Max(request.Page, 1);
         var pageSize = Math.Clamp(request.PageSize, 1, 100);
+        var nowUtc = DateTime.UtcNow;
 
         var query = _dbContext.Leads
             .Include(l => l.Status)
@@ -145,183 +146,196 @@ public sealed class LeadService : ILeadService
             query = query.Where(l => l.Status != null && l.Status.Name == normalizedStatus);
         }
 
-        if (!string.IsNullOrWhiteSpace(request.ConversationView))
-        {
-            var view = request.ConversationView.Trim().ToLowerInvariant();
-            query = view switch
+        var scoredQuery = query
+            .Select(l => new
             {
-                "weak_signal" or "low_conversation_score" => query.Where(l => l.ConversationSignalAvailable && (l.ConversationScore ?? 0) < 50),
-                "no_signal" => query.Where(l => !l.ConversationSignalAvailable),
-                "negative_or_cautious_tone" => query.Where(l =>
-                    NegativeOrCautiousSentiments.Contains(l.ConversationAiSentiment ?? string.Empty)
-                    || NegativeOrCautiousTones.Contains(l.ConversationAiToneLabel ?? string.Empty)),
-                "high_buying_intent" => query.Where(l =>
-                    HighBuyingReadinessValues.Contains(l.ConversationAiBuyingReadiness ?? string.Empty)
-                    || HighBuyingIntentValues.Contains(l.ConversationAiSemanticIntent ?? string.Empty)),
-                "manager_review" => query.Where(l =>
-                    !l.ConversationSignalAvailable
-                    || (l.ConversationScore ?? 0) < 45
-                    || ((string.IsNullOrWhiteSpace(l.BudgetAvailability) ? 0 : 1)
-                        + (string.IsNullOrWhiteSpace(l.ReadinessToSpend) ? 0 : 1)
-                        + (string.IsNullOrWhiteSpace(l.BuyingTimeline) ? 0 : 1)
-                        + (string.IsNullOrWhiteSpace(l.ProblemSeverity) ? 0 : 1)
-                        + (string.IsNullOrWhiteSpace(l.EconomicBuyer) ? 0 : 1)
-                        + (string.IsNullOrWhiteSpace(l.IcpFit) ? 0 : 1)) < 4),
-                "at_risk" => query.Where(l =>
-                    (l.Score < 60)
-                    || ((!l.ConversationSignalAvailable || (l.ConversationScore ?? 0) < 45)
-                        && ((string.IsNullOrWhiteSpace(l.BudgetAvailability) ? 0 : 1)
-                            + (string.IsNullOrWhiteSpace(l.ReadinessToSpend) ? 0 : 1)
-                            + (string.IsNullOrWhiteSpace(l.BuyingTimeline) ? 0 : 1)
-                            + (string.IsNullOrWhiteSpace(l.ProblemSeverity) ? 0 : 1)
-                            + (string.IsNullOrWhiteSpace(l.EconomicBuyer) ? 0 : 1)
-                            + (string.IsNullOrWhiteSpace(l.IcpFit) ? 0 : 1)) < 3)),
-                "ready_to_convert" => query.Where(l =>
-                    l.ConversationSignalAvailable
-                    && (l.ConversationScore ?? 0) >= 75
-                    && l.Score >= 70
-                    && ((string.IsNullOrWhiteSpace(l.BudgetAvailability) ? 0 : 1)
-                        + (string.IsNullOrWhiteSpace(l.ReadinessToSpend) ? 0 : 1)
-                        + (string.IsNullOrWhiteSpace(l.BuyingTimeline) ? 0 : 1)
-                        + (string.IsNullOrWhiteSpace(l.ProblemSeverity) ? 0 : 1)
-                        + (string.IsNullOrWhiteSpace(l.EconomicBuyer) ? 0 : 1)
-                        + (string.IsNullOrWhiteSpace(l.IcpFit) ? 0 : 1)) >= 5),
-                "coaching_queue" => query.Where(l =>
-                    (!l.ConversationSignalAvailable || (l.ConversationScore ?? 0) < 50)
-                    && (
-                        l.Score >= 70
-                        || (
-                            (l.BudgetAvailability ?? string.Empty) != string.Empty
-                            || (l.ReadinessToSpend ?? string.Empty) != string.Empty
-                            || (l.BuyingTimeline ?? string.Empty) != string.Empty
-                            || (l.ProblemSeverity ?? string.Empty) != string.Empty
-                            || (l.EconomicBuyer ?? string.Empty) != string.Empty
-                            || (l.IcpFit ?? string.Empty) != string.Empty
-                        )
-                    )),
-                "engaged_but_unqualified" => query.Where(l =>
-                    l.ConversationSignalAvailable
-                    && (l.ConversationScore ?? 0) >= 70
-                    && (
-                        string.IsNullOrWhiteSpace(l.BudgetAvailability)
-                        || string.IsNullOrWhiteSpace(l.ReadinessToSpend)
-                        || string.IsNullOrWhiteSpace(l.BuyingTimeline)
-                        || string.IsNullOrWhiteSpace(l.ProblemSeverity)
-                        || string.IsNullOrWhiteSpace(l.EconomicBuyer)
-                        || string.IsNullOrWhiteSpace(l.IcpFit)
-                    )),
-                _ => query
-            };
-        }
-
-        var total = await query.CountAsync(cancellationToken);
-
-        var sortedQuery = (request.SortBy ?? "newest").Trim().ToLowerInvariant() switch
-        {
-            "lead_score_desc" => query.OrderByDescending(l => l.Score).ThenByDescending(l => l.CreatedAtUtc),
-            "conversation_desc" => query
-                .OrderByDescending(l => l.ConversationSignalAvailable)
-                .ThenByDescending(l => l.ConversationScore ?? -1)
-                .ThenByDescending(l => l.CreatedAtUtc),
-            "conversation_asc" => query
-                .OrderByDescending(l => l.ConversationSignalAvailable)
-                .ThenBy(l => l.ConversationScore ?? int.MaxValue)
-                .ThenByDescending(l => l.CreatedAtUtc),
-            "readiness_desc" => query
-                .OrderByDescending(l =>
-                    ((l.ConversationSignalAvailable ? (l.ConversationScore ?? 35) : 35) * 4)
-                    + (((string.IsNullOrWhiteSpace(l.BudgetAvailability) ? 0 : 1)
-                        + (string.IsNullOrWhiteSpace(l.ReadinessToSpend) ? 0 : 1)
-                        + (string.IsNullOrWhiteSpace(l.BuyingTimeline) ? 0 : 1)
-                        + (string.IsNullOrWhiteSpace(l.ProblemSeverity) ? 0 : 1)
-                        + (string.IsNullOrWhiteSpace(l.EconomicBuyer) ? 0 : 1)
-                        + (string.IsNullOrWhiteSpace(l.IcpFit) ? 0 : 1)) * 10)
-                    + l.Score)
-                .ThenByDescending(l => l.CreatedAtUtc),
-            "qualification_desc" => query
-                .OrderByDescending(l =>
+                Lead = l,
+                QualificationSignalCount =
                     (string.IsNullOrWhiteSpace(l.BudgetAvailability) ? 0 : 1)
                     + (string.IsNullOrWhiteSpace(l.ReadinessToSpend) ? 0 : 1)
                     + (string.IsNullOrWhiteSpace(l.BuyingTimeline) ? 0 : 1)
                     + (string.IsNullOrWhiteSpace(l.ProblemSeverity) ? 0 : 1)
                     + (string.IsNullOrWhiteSpace(l.EconomicBuyer) ? 0 : 1)
-                    + (string.IsNullOrWhiteSpace(l.IcpFit) ? 0 : 1))
-                .ThenByDescending(l => l.Score)
-                .ThenByDescending(l => l.CreatedAtUtc),
-            _ => query.OrderByDescending(l => l.CreatedAtUtc)
+                    + (string.IsNullOrWhiteSpace(l.IcpFit) ? 0 : 1),
+                LeadDataQualityScore =
+                    ((!string.IsNullOrWhiteSpace(l.FirstName) && !string.IsNullOrWhiteSpace(l.LastName)) ? 16 : 0)
+                    + (!string.IsNullOrWhiteSpace(l.Email) ? 24 : 0)
+                    + (!string.IsNullOrWhiteSpace(l.Phone) ? 24 : 0)
+                    + (!string.IsNullOrWhiteSpace(l.CompanyName) ? 16 : 0)
+                    + (!string.IsNullOrWhiteSpace(l.JobTitle) ? 12 : 0)
+                    + (!string.IsNullOrWhiteSpace(l.Source) ? 8 : 0),
+                HistorySlaScore = l.FirstTouchedAtUtc.HasValue
+                    ? 100
+                    : (l.FirstTouchDueAtUtc.HasValue
+                        ? (l.FirstTouchDueAtUtc.Value < nowUtc ? 20 : 60)
+                        : 40),
+                StatusProgressionScore = l.Status != null
+                    ? (l.Status.Name == LeadLifecycle.New ? 20
+                        : l.Status.Name == LeadLifecycle.Contacted ? 40
+                        : l.Status.Name == LeadLifecycle.Nurture ? 50
+                        : l.Status.Name == LeadLifecycle.Qualified ? 80
+                        : l.Status.Name == LeadLifecycle.Converted ? 100
+                        : (l.Status.Name == LeadLifecycle.Lost || l.Status.Name == LeadLifecycle.Disqualified ? 30 : 25))
+                    : 25,
+                ConversationIncluded = l.ConversationSignalAvailable && l.ConversationScore.HasValue,
+                ConversationScoreForLifecycle = l.ConversationSignalAvailable ? (l.ConversationScore ?? 0) : 0
+            })
+            .Select(x => new
+            {
+                x.Lead,
+                x.QualificationSignalCount,
+                LifecycleOverallScore = (
+                    (((x.QualificationSignalCount * 100) / 6) * 50)
+                    + (x.LeadDataQualityScore * 20)
+                    + ((((x.HistorySlaScore * 6) + (x.StatusProgressionScore * 4)) / 10) * 10)
+                    + (x.ConversationIncluded ? (x.ConversationScoreForLifecycle * 20) : 0)
+                ) / (80 + (x.ConversationIncluded ? 20 : 0))
+            });
+
+        if (!string.IsNullOrWhiteSpace(request.ConversationView))
+        {
+            var view = request.ConversationView.Trim().ToLowerInvariant();
+            scoredQuery = view switch
+            {
+                "weak_signal" or "low_conversation_score" => scoredQuery.Where(x => x.Lead.ConversationSignalAvailable && (x.Lead.ConversationScore ?? 0) < 50),
+                "no_signal" => scoredQuery.Where(x => !x.Lead.ConversationSignalAvailable),
+                "negative_or_cautious_tone" => scoredQuery.Where(x =>
+                    NegativeOrCautiousSentiments.Contains(x.Lead.ConversationAiSentiment ?? string.Empty)
+                    || NegativeOrCautiousTones.Contains(x.Lead.ConversationAiToneLabel ?? string.Empty)),
+                "high_buying_intent" => scoredQuery.Where(x =>
+                    HighBuyingReadinessValues.Contains(x.Lead.ConversationAiBuyingReadiness ?? string.Empty)
+                    || HighBuyingIntentValues.Contains(x.Lead.ConversationAiSemanticIntent ?? string.Empty)),
+                "manager_review" => scoredQuery.Where(x =>
+                    !x.Lead.ConversationSignalAvailable
+                    || (x.Lead.ConversationScore ?? 0) < 45
+                    || x.QualificationSignalCount < 4),
+                "at_risk" => scoredQuery.Where(x =>
+                    (x.LifecycleOverallScore < 60)
+                    || ((!x.Lead.ConversationSignalAvailable || (x.Lead.ConversationScore ?? 0) < 45)
+                        && x.QualificationSignalCount < 3)),
+                "ready_to_convert" => scoredQuery.Where(x =>
+                    x.Lead.ConversationSignalAvailable
+                    && (x.Lead.ConversationScore ?? 0) >= 75
+                    && x.LifecycleOverallScore >= 70
+                    && x.QualificationSignalCount >= 5),
+                "coaching_queue" => scoredQuery.Where(x =>
+                    (!x.Lead.ConversationSignalAvailable || (x.Lead.ConversationScore ?? 0) < 50)
+                    && (
+                        x.LifecycleOverallScore >= 70
+                        || x.QualificationSignalCount > 0
+                    )),
+                "engaged_but_unqualified" => scoredQuery.Where(x =>
+                    x.Lead.ConversationSignalAvailable
+                    && (x.Lead.ConversationScore ?? 0) >= 70
+                    && (
+                        string.IsNullOrWhiteSpace(x.Lead.BudgetAvailability)
+                        || string.IsNullOrWhiteSpace(x.Lead.ReadinessToSpend)
+                        || string.IsNullOrWhiteSpace(x.Lead.BuyingTimeline)
+                        || string.IsNullOrWhiteSpace(x.Lead.ProblemSeverity)
+                        || string.IsNullOrWhiteSpace(x.Lead.EconomicBuyer)
+                        || string.IsNullOrWhiteSpace(x.Lead.IcpFit)
+                    )),
+                _ => scoredQuery
+            };
+        }
+
+        var total = await scoredQuery.CountAsync(cancellationToken);
+
+        var sortedQuery = (request.SortBy ?? "newest").Trim().ToLowerInvariant() switch
+        {
+            "lead_score_desc" => scoredQuery.OrderByDescending(x => x.LifecycleOverallScore).ThenByDescending(x => x.Lead.CreatedAtUtc),
+            "conversation_desc" => scoredQuery
+                .OrderByDescending(x => x.Lead.ConversationSignalAvailable)
+                .ThenByDescending(x => x.Lead.ConversationScore ?? -1)
+                .ThenByDescending(x => x.Lead.CreatedAtUtc),
+            "conversation_asc" => scoredQuery
+                .OrderByDescending(x => x.Lead.ConversationSignalAvailable)
+                .ThenBy(x => x.Lead.ConversationScore ?? int.MaxValue)
+                .ThenByDescending(x => x.Lead.CreatedAtUtc),
+            "readiness_desc" => scoredQuery
+                .OrderByDescending(x =>
+                    ((x.Lead.ConversationSignalAvailable ? (x.Lead.ConversationScore ?? 35) : 35) * 4)
+                    + (x.QualificationSignalCount * 10)
+                    + x.LifecycleOverallScore)
+                .ThenByDescending(x => x.Lead.CreatedAtUtc),
+            "qualification_desc" => scoredQuery
+                .OrderByDescending(x => x.QualificationSignalCount)
+                .ThenByDescending(x => x.LifecycleOverallScore)
+                .ThenByDescending(x => x.Lead.CreatedAtUtc),
+            _ => scoredQuery.OrderByDescending(x => x.Lead.CreatedAtUtc)
         };
 
         var leads = await sortedQuery
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(l => new
+            .Select(x => new
             {
-                l.Id,
-                l.LeadNumber,
-                l.FirstName,
-                l.LastName,
-                l.CompanyName,
-                l.LeadSummary,
-                Status = l.Status != null ? l.Status.Name : "New",
-                l.Email,
-                l.Phone,
-                l.PhoneTypeId,
-                l.OwnerId,
-                l.Score,
-                l.CreatedAtUtc,
-                l.Source,
-                l.RoutingReason,
-                l.Territory,
-                l.JobTitle,
-                l.AccountId,
-                l.ContactId,
-                l.ConvertedOpportunityId,
-                l.DisqualificationReasonId,
-                l.LossReasonId,
-                l.LossCompetitor,
-                l.LossNotes,
-                l.NurtureFollowUpAtUtc,
-                l.QualifiedNotes,
-                l.BuyerType,
-                l.MotivationUrgency,
-                l.FinancingReadiness,
-                l.PreApprovalStatus,
-                l.PreferredArea,
-                l.PreferredPropertyType,
-                l.BudgetBand,
-                l.FirstTouchDueAtUtc,
-                l.FirstTouchedAtUtc,
-                l.BudgetAvailability,
-                l.BudgetEvidence,
-                l.ReadinessToSpend,
-                l.ReadinessEvidence,
-                l.BuyingTimeline,
-                l.TimelineEvidence,
-                l.ProblemSeverity,
-                l.ProblemEvidence,
-                l.EconomicBuyer,
-                l.EconomicBuyerEvidence,
-                l.IcpFit,
-                l.IcpFitEvidence,
-                l.CustomQualificationFactorsJson,
-                l.BudgetValidatedAtUtc,
-                l.ReadinessValidatedAtUtc,
-                l.BuyingTimelineValidatedAtUtc,
-                l.ProblemSeverityValidatedAtUtc,
-                l.EconomicBuyerValidatedAtUtc,
-                l.IcpFitValidatedAtUtc,
-                l.ConversationScore,
-                l.ConversationScoreLabel,
-                l.ConversationScoreReasonsJson,
-                l.ConversationScoreUpdatedAtUtc,
-                l.ConversationSignalAvailable,
-                l.ConversationAiDimensionScore,
-                l.ConversationAiToneLabel,
-                l.ConversationAiSentiment,
-                l.ConversationAiBuyingReadiness,
-                l.ConversationAiSemanticIntent,
-                l.ConversationAiToneJustification,
-                LastActivityAtUtc = l.Activities.Any() ? l.Activities.Max(a => a.CreatedAtUtc) : (DateTime?)null
+                x.Lead.Id,
+                x.Lead.LeadNumber,
+                x.Lead.FirstName,
+                x.Lead.LastName,
+                x.Lead.CompanyName,
+                x.Lead.LeadSummary,
+                Status = x.Lead.Status != null ? x.Lead.Status.Name : "New",
+                x.Lead.Email,
+                x.Lead.Phone,
+                x.Lead.PhoneTypeId,
+                x.Lead.OwnerId,
+                Score = x.LifecycleOverallScore,
+                x.Lead.CreatedAtUtc,
+                x.Lead.Source,
+                x.Lead.RoutingReason,
+                x.Lead.Territory,
+                x.Lead.JobTitle,
+                x.Lead.AccountId,
+                x.Lead.ContactId,
+                x.Lead.ConvertedOpportunityId,
+                x.Lead.DisqualificationReasonId,
+                x.Lead.LossReasonId,
+                x.Lead.LossCompetitor,
+                x.Lead.LossNotes,
+                x.Lead.NurtureFollowUpAtUtc,
+                x.Lead.QualifiedNotes,
+                x.Lead.BuyerType,
+                x.Lead.MotivationUrgency,
+                x.Lead.FinancingReadiness,
+                x.Lead.PreApprovalStatus,
+                x.Lead.PreferredArea,
+                x.Lead.PreferredPropertyType,
+                x.Lead.BudgetBand,
+                x.Lead.FirstTouchDueAtUtc,
+                x.Lead.FirstTouchedAtUtc,
+                x.Lead.BudgetAvailability,
+                x.Lead.BudgetEvidence,
+                x.Lead.ReadinessToSpend,
+                x.Lead.ReadinessEvidence,
+                x.Lead.BuyingTimeline,
+                x.Lead.TimelineEvidence,
+                x.Lead.ProblemSeverity,
+                x.Lead.ProblemEvidence,
+                x.Lead.EconomicBuyer,
+                x.Lead.EconomicBuyerEvidence,
+                x.Lead.IcpFit,
+                x.Lead.IcpFitEvidence,
+                x.Lead.CustomQualificationFactorsJson,
+                x.Lead.BudgetValidatedAtUtc,
+                x.Lead.ReadinessValidatedAtUtc,
+                x.Lead.BuyingTimelineValidatedAtUtc,
+                x.Lead.ProblemSeverityValidatedAtUtc,
+                x.Lead.EconomicBuyerValidatedAtUtc,
+                x.Lead.IcpFitValidatedAtUtc,
+                x.Lead.ConversationScore,
+                x.Lead.ConversationScoreLabel,
+                x.Lead.ConversationScoreReasonsJson,
+                x.Lead.ConversationScoreUpdatedAtUtc,
+                x.Lead.ConversationSignalAvailable,
+                x.Lead.ConversationAiDimensionScore,
+                x.Lead.ConversationAiToneLabel,
+                x.Lead.ConversationAiSentiment,
+                x.Lead.ConversationAiBuyingReadiness,
+                x.Lead.ConversationAiSemanticIntent,
+                x.Lead.ConversationAiToneJustification,
+                LastActivityAtUtc = x.Lead.Activities.Any() ? x.Lead.Activities.Max(a => a.CreatedAtUtc) : (DateTime?)null
             })
             .ToListAsync(cancellationToken);
 
@@ -358,6 +372,22 @@ public sealed class LeadService : ILeadService
             var conversationReasons = LeadConversationScoreService.ParseReasons(l.ConversationScoreReasonsJson);
             var readiness = BuildConversionReadiness(insights, l.ConversationScore, l.ConversationScoreLabel, conversationReasons, l.ConversationSignalAvailable);
             var customFactors = ParseCustomQualificationFactors(l.CustomQualificationFactorsJson);
+            var lifecycleScore = BuildLifecycleScore(
+                insights,
+                l.ConversationScore,
+                l.ConversationSignalAvailable,
+                l.Status,
+                l.FirstName,
+                l.LastName,
+                l.Email,
+                l.Phone,
+                l.CompanyName,
+                l.JobTitle,
+                l.Source,
+                l.FirstTouchDueAtUtc,
+                l.FirstTouchedAtUtc,
+                l.LastActivityAtUtc,
+                qualificationPolicy);
 
             return new LeadListItemDto(
                 l.Id,
@@ -429,6 +459,7 @@ public sealed class LeadService : ILeadService
                 l.ConversationAiSemanticIntent,
                 l.ConversationAiToneJustification,
                 l.ConvertedOpportunityId.HasValue,
+                lifecycleScore,
                 readiness,
                 l.LastActivityAtUtc);
         });
@@ -480,6 +511,27 @@ public sealed class LeadService : ILeadService
             ParseCustomQualificationFactors(lead.CustomQualificationFactorsJson));
         var detailReadiness = BuildConversionReadiness(detailInsights, lead.ConversationScore, lead.ConversationScoreLabel, detailConversation.Reasons, lead.ConversationSignalAvailable);
         var detailCustomFactors = ParseCustomQualificationFactors(lead.CustomQualificationFactorsJson);
+        var detailLastActivityAtUtc = await _dbContext.Activities
+            .Where(a => a.RelatedEntityId == lead.Id)
+            .OrderByDescending(a => a.CreatedAtUtc)
+            .Select(a => (DateTime?)a.CreatedAtUtc)
+            .FirstOrDefaultAsync(cancellationToken);
+        var detailLifecycleScore = BuildLifecycleScore(
+            detailInsights,
+            lead.ConversationScore,
+            lead.ConversationSignalAvailable,
+            lead.Status?.Name,
+            lead.FirstName,
+            lead.LastName,
+            lead.Email,
+            lead.Phone,
+            lead.CompanyName,
+            lead.JobTitle,
+            lead.Source,
+            lead.FirstTouchDueAtUtc,
+            lead.FirstTouchedAtUtc,
+            detailLastActivityAtUtc,
+            qualificationPolicy);
 
         return new LeadListItemDto(
             lead.Id,
@@ -551,12 +603,9 @@ public sealed class LeadService : ILeadService
             lead.ConversationAiSemanticIntent,
             lead.ConversationAiToneJustification,
             lead.IsConverted,
+            detailLifecycleScore,
             detailReadiness,
-            await _dbContext.Activities
-                .Where(a => a.RelatedEntityId == lead.Id)
-                .OrderByDescending(a => a.CreatedAtUtc)
-                .Select(a => (DateTime?)a.CreatedAtUtc)
-                .FirstOrDefaultAsync(cancellationToken));
+            detailLastActivityAtUtc);
     }
 
     public async Task<LeadDispositionReportDto> GetDispositionReportAsync(CancellationToken cancellationToken = default)
@@ -1122,6 +1171,22 @@ public sealed class LeadService : ILeadService
             request.CustomQualificationFactors);
         var createReadiness = BuildConversionReadiness(createInsights, lead.ConversationScore, lead.ConversationScoreLabel, createConversation.Reasons, lead.ConversationSignalAvailable);
         var createCustomFactors = ParseCustomQualificationFactors(lead.CustomQualificationFactorsJson);
+        var createLifecycleScore = BuildLifecycleScore(
+            createInsights,
+            lead.ConversationScore,
+            lead.ConversationSignalAvailable,
+            resolvedStatusName,
+            lead.FirstName,
+            lead.LastName,
+            lead.Email,
+            lead.Phone,
+            lead.CompanyName,
+            lead.JobTitle,
+            lead.Source,
+            lead.FirstTouchDueAtUtc,
+            lead.FirstTouchedAtUtc,
+            null,
+            qualificationPolicy);
 
         var dto = new LeadListItemDto(
             lead.Id,
@@ -1193,6 +1258,7 @@ public sealed class LeadService : ILeadService
             lead.ConversationAiSemanticIntent,
             lead.ConversationAiToneJustification,
             lead.IsConverted,
+            createLifecycleScore,
             createReadiness,
             null);
 
@@ -2810,33 +2876,51 @@ public sealed class LeadService : ILeadService
 
     private static int ResolveLeadScore(LeadUpsertRequest request, QualificationPolicy? policy = null, int? currentScore = null)
     {
-        if (TryComputeQualificationScore(request, policy, out var qualificationScore))
-        {
-            return qualificationScore;
-        }
-
         var autoScore = request.AutoScore ?? true;
         if (!autoScore)
         {
             return Math.Clamp(request.Score, 0, 100);
         }
 
-        var score = 20;
-        if (!string.IsNullOrWhiteSpace(request.Email)) score += 20;
-        if (!string.IsNullOrWhiteSpace(request.Phone)) score += 15;
-        if (!string.IsNullOrWhiteSpace(request.CompanyName)) score += 10;
-        if (!string.IsNullOrWhiteSpace(request.JobTitle)) score += 10;
-        if (!string.IsNullOrWhiteSpace(request.Source)) score += 10;
-        if (!string.IsNullOrWhiteSpace(request.Territory)) score += 5;
-        if (request.AccountId.HasValue) score += 5;
-        if (request.ContactId.HasValue) score += 5;
+        var qualificationScore = TryComputeQualificationScore(request, policy, out var computedQualification)
+            ? computedQualification
+            : 0;
 
-        if (score == 20 && currentScore.HasValue && currentScore.Value > 0)
+        var dataQualityScore = ComputeLeadDataQualityScore(
+            request.FirstName,
+            request.LastName,
+            request.Email,
+            request.Phone,
+            request.CompanyName,
+            request.JobTitle,
+            request.Source,
+            policy);
+
+        var historyScore = ComputeHistoryExecutionScore(
+            request.Status,
+            firstTouchDueAtUtc: null,
+            firstTouchedAtUtc: null,
+            lastActivityAtUtc: null);
+
+        var weights = ResolveLifecycleWeights(policy);
+        var weightedTotal =
+            (qualificationScore * weights.QualificationWeight)
+            + (dataQualityScore * weights.LeadDataQualityWeight)
+            + (historyScore * weights.HistoryWeight);
+        var totalWeight = weights.QualificationWeight + weights.LeadDataQualityWeight + weights.HistoryWeight;
+
+        if (totalWeight <= 0 && currentScore.HasValue && currentScore.Value > 0)
         {
             return currentScore.Value;
         }
 
-        return Math.Clamp(score, 0, 100);
+        if (totalWeight <= 0)
+        {
+            return 0;
+        }
+
+        var lifecycleScore = (int)Math.Round(weightedTotal / (decimal)totalWeight, MidpointRounding.AwayFromZero);
+        return Math.Clamp(lifecycleScore, 0, 100);
     }
 
     private static bool TryComputeQualificationScore(LeadUpsertRequest request, QualificationPolicy? policy, out int score)
@@ -3218,6 +3302,54 @@ public sealed class LeadService : ILeadService
         };
     }
 
+    private static int ComputeLeadDataQualityScore(
+        string? firstName,
+        string? lastName,
+        string? email,
+        string? phone,
+        string? companyName,
+        string? jobTitle,
+        string? source,
+        QualificationPolicy? policy)
+    {
+        var configured = policy?.LeadDataWeights ?? Array.Empty<QualificationLeadDataWeight>();
+        decimal WeightFor(string key, decimal fallback)
+            => configured.FirstOrDefault(item => string.Equals(item.Key, key, StringComparison.OrdinalIgnoreCase))?.Weight ?? fallback;
+
+        var hasSignal =
+            !string.IsNullOrWhiteSpace(firstName)
+            || !string.IsNullOrWhiteSpace(lastName)
+            || !string.IsNullOrWhiteSpace(email)
+            || !string.IsNullOrWhiteSpace(phone)
+            || !string.IsNullOrWhiteSpace(companyName)
+            || !string.IsNullOrWhiteSpace(jobTitle)
+            || !string.IsNullOrWhiteSpace(source);
+
+        if (!hasSignal)
+        {
+            return 0;
+        }
+
+        var weights = new[]
+        {
+            new { Key = "firstNameLastName", Weight = WeightFor("firstNameLastName", 16m), Enabled = !string.IsNullOrWhiteSpace(firstName) && !string.IsNullOrWhiteSpace(lastName) },
+            new { Key = "email", Weight = WeightFor("email", 24m), Enabled = !string.IsNullOrWhiteSpace(email) },
+            new { Key = "phone", Weight = WeightFor("phone", 24m), Enabled = !string.IsNullOrWhiteSpace(phone) },
+            new { Key = "companyName", Weight = WeightFor("companyName", 16m), Enabled = !string.IsNullOrWhiteSpace(companyName) },
+            new { Key = "jobTitle", Weight = WeightFor("jobTitle", 12m), Enabled = !string.IsNullOrWhiteSpace(jobTitle) },
+            new { Key = "source", Weight = WeightFor("source", 8m), Enabled = !string.IsNullOrWhiteSpace(source) }
+        };
+
+        var total = weights.Sum(item => Math.Max(0m, item.Weight));
+        if (total <= 0m)
+        {
+            return 0;
+        }
+
+        var earned = weights.Where(item => item.Enabled).Sum(item => Math.Max(0m, item.Weight));
+        return Math.Clamp((int)Math.Round((earned / total) * 100m, MidpointRounding.AwayFromZero), 0, 100);
+    }
+
     private static QualificationInsights BuildQualificationInsights(
         string? budgetAvailability,
         string? budgetEvidence,
@@ -3387,6 +3519,190 @@ public sealed class LeadService : ILeadService
             nextEvidenceSuggestions,
             breakdown,
             dedupedFlags);
+    }
+
+    private static readonly LeadLifecycleScoreWeightsDto DefaultLifecycleWeights = new(
+        QualificationWeight: 50,
+        LeadDataQualityWeight: 20,
+        ConversationWeight: 20,
+        HistoryWeight: 10);
+
+    private static LeadLifecycleScoreDto BuildLifecycleScore(
+        QualificationInsights insights,
+        int? conversationScore,
+        bool conversationSignalAvailable,
+        string? status,
+        string? firstName,
+        string? lastName,
+        string? email,
+        string? phone,
+        string? companyName,
+        string? jobTitle,
+        string? source,
+        DateTime? firstTouchDueAtUtc,
+        DateTime? firstTouchedAtUtc,
+        DateTime? lastActivityAtUtc,
+        QualificationPolicy? policy)
+    {
+        var weights = ResolveLifecycleWeights(policy);
+        var qualificationScore = ComputeQualificationScoreFromBreakdown(insights.Breakdown);
+        var leadDataQualityScore = ComputeLeadDataQualityScore(firstName, lastName, email, phone, companyName, jobTitle, source);
+        var historyExecutionScore = ComputeHistoryExecutionScore(status, firstTouchDueAtUtc, firstTouchedAtUtc, lastActivityAtUtc);
+
+        var conversationIncluded = conversationSignalAvailable && conversationScore.HasValue;
+        var normalizedConversationScore = conversationIncluded ? Math.Clamp(conversationScore!.Value, 0, 100) : 0;
+
+        var weightedTotal =
+            (qualificationScore * weights.QualificationWeight)
+            + (leadDataQualityScore * weights.LeadDataQualityWeight)
+            + (historyExecutionScore * weights.HistoryWeight);
+
+        var totalWeight = weights.QualificationWeight
+            + weights.LeadDataQualityWeight
+            + weights.HistoryWeight;
+
+        if (conversationIncluded)
+        {
+            weightedTotal += normalizedConversationScore * weights.ConversationWeight;
+            totalWeight += weights.ConversationWeight;
+        }
+
+        var overallScore = totalWeight > 0
+            ? Math.Clamp((int)Math.Round(weightedTotal / (decimal)totalWeight, MidpointRounding.AwayFromZero), 0, 100)
+            : 0;
+
+        return new LeadLifecycleScoreDto(
+            OverallScore: overallScore,
+            QualificationScore: qualificationScore,
+            LeadDataQualityScore: leadDataQualityScore,
+            ConversationScore: normalizedConversationScore,
+            ConversationIncluded: conversationIncluded,
+            HistoryExecutionScore: historyExecutionScore,
+            Weights: weights);
+    }
+
+    private static LeadLifecycleScoreWeightsDto ResolveLifecycleWeights(QualificationPolicy? policy)
+    {
+        var configured = policy?.LifecycleScoreWeights;
+        if (configured is null)
+        {
+            return DefaultLifecycleWeights;
+        }
+
+        var qualification = Math.Max(0, (int)Math.Round(configured.QualificationWeight, MidpointRounding.AwayFromZero));
+        var dataQuality = Math.Max(0, (int)Math.Round(configured.LeadDataQualityWeight, MidpointRounding.AwayFromZero));
+        var conversation = Math.Max(0, (int)Math.Round(configured.ConversationWeight, MidpointRounding.AwayFromZero));
+        var history = Math.Max(0, (int)Math.Round(configured.HistoryWeight, MidpointRounding.AwayFromZero));
+        if (qualification + dataQuality + conversation + history <= 0)
+        {
+            return DefaultLifecycleWeights;
+        }
+
+        return new LeadLifecycleScoreWeightsDto(qualification, dataQuality, conversation, history);
+    }
+
+    private static int ComputeQualificationScoreFromBreakdown(IReadOnlyList<LeadScoreBreakdownItem> breakdown)
+    {
+        if (breakdown.Count == 0)
+        {
+            return 0;
+        }
+
+        var max = breakdown.Sum(item => item.MaxScore);
+        if (max <= 0)
+        {
+            return 0;
+        }
+
+        var score = breakdown.Sum(item => item.Score);
+        return Math.Clamp((int)Math.Round((score / (decimal)max) * 100m, MidpointRounding.AwayFromZero), 0, 100);
+    }
+
+    private static int ComputeLeadDataQualityScore(
+        string? firstName,
+        string? lastName,
+        string? email,
+        string? phone,
+        string? companyName,
+        string? jobTitle,
+        string? source)
+    {
+        var hasSignal =
+            !string.IsNullOrWhiteSpace(firstName)
+            || !string.IsNullOrWhiteSpace(lastName)
+            || !string.IsNullOrWhiteSpace(email)
+            || !string.IsNullOrWhiteSpace(phone)
+            || !string.IsNullOrWhiteSpace(companyName)
+            || !string.IsNullOrWhiteSpace(jobTitle)
+            || !string.IsNullOrWhiteSpace(source);
+
+        if (!hasSignal)
+        {
+            return 0;
+        }
+
+        var weighted = 0;
+        if (!string.IsNullOrWhiteSpace(firstName) && !string.IsNullOrWhiteSpace(lastName)) weighted += 16;
+        if (!string.IsNullOrWhiteSpace(email)) weighted += 24;
+        if (!string.IsNullOrWhiteSpace(phone)) weighted += 24;
+        if (!string.IsNullOrWhiteSpace(companyName)) weighted += 16;
+        if (!string.IsNullOrWhiteSpace(jobTitle)) weighted += 12;
+        if (!string.IsNullOrWhiteSpace(source)) weighted += 8;
+
+        return Math.Clamp(weighted, 0, 100);
+    }
+
+    private static int ComputeHistoryExecutionScore(
+        string? status,
+        DateTime? firstTouchDueAtUtc,
+        DateTime? firstTouchedAtUtc,
+        DateTime? lastActivityAtUtc)
+    {
+        var now = DateTime.UtcNow;
+
+        var slaScore = 40;
+        if (firstTouchedAtUtc.HasValue)
+        {
+            slaScore = 100;
+        }
+        else if (firstTouchDueAtUtc.HasValue)
+        {
+            slaScore = firstTouchDueAtUtc.Value < now ? 20 : 60;
+        }
+
+        var progressionScore = status?.Trim().ToLowerInvariant() switch
+        {
+            "new" => 20,
+            "contacted" => 40,
+            "nurture" => 50,
+            "qualified" => 80,
+            "converted" => 100,
+            "lost" => 30,
+            "disqualified" => 30,
+            _ => 25
+        };
+
+        var activityFreshnessScore = 25;
+        if (lastActivityAtUtc.HasValue)
+        {
+            var days = (now - lastActivityAtUtc.Value).TotalDays;
+            activityFreshnessScore = days switch
+            {
+                <= 7 => 100,
+                <= 14 => 75,
+                <= 30 => 50,
+                _ => 20
+            };
+        }
+
+        return Math.Clamp(
+            (int)Math.Round(
+                (slaScore * 0.45m)
+                + (progressionScore * 0.35m)
+                + (activityFreshnessScore * 0.20m),
+                MidpointRounding.AwayFromZero),
+            0,
+            100);
     }
 
     private static LeadConversionReadinessDto BuildConversionReadiness(

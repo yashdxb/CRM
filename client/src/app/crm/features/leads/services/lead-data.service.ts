@@ -5,6 +5,7 @@ import { CsvImportJob } from '../../../../shared/models/csv-import.model';
 import { EmailSearchResponse } from '../../emails/models/email.model';
 import { QualificationPolicy } from '../../settings/models/workspace-settings.model';
 import {
+  LeadAuditEventItem,
   Lead,
   LeadAssignmentStrategy,
   LeadCustomQualificationFactorValue,
@@ -107,6 +108,10 @@ export class LeadDataService {
 
   getStatusHistory(id: string) {
     return this.http.get<LeadStatusHistoryItem[]>(`${this.baseUrl}/api/leads/${id}/status-history`);
+  }
+
+  getAudit(id: string) {
+    return this.http.get<LeadAuditEventItem[]>(`${this.baseUrl}/api/leads/${id}/audit`);
   }
 
   getCadenceTouches(id: string) {

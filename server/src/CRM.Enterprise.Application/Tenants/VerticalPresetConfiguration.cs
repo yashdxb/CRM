@@ -59,37 +59,39 @@ public static class VerticalPresetDefaults
         }
 
         var fallback = Create(config.PresetId);
+        var vocabulary = config.Vocabulary ?? fallback.Vocabulary;
+        var brokerageCatalog = config.BrokerageLeadProfileCatalog ?? fallback.BrokerageLeadProfileCatalog;
         return config with
         {
-            Vocabulary = config.Vocabulary with
+            Vocabulary = vocabulary with
             {
-                LeadQualificationLabel = string.IsNullOrWhiteSpace(config.Vocabulary.LeadQualificationLabel)
+                LeadQualificationLabel = string.IsNullOrWhiteSpace(vocabulary.LeadQualificationLabel)
                     ? fallback.Vocabulary.LeadQualificationLabel
-                    : config.Vocabulary.LeadQualificationLabel,
-                OpportunitySingularLabel = string.IsNullOrWhiteSpace(config.Vocabulary.OpportunitySingularLabel)
+                    : vocabulary.LeadQualificationLabel,
+                OpportunitySingularLabel = string.IsNullOrWhiteSpace(vocabulary.OpportunitySingularLabel)
                     ? fallback.Vocabulary.OpportunitySingularLabel
-                    : config.Vocabulary.OpportunitySingularLabel,
-                OpportunityPluralLabel = string.IsNullOrWhiteSpace(config.Vocabulary.OpportunityPluralLabel)
+                    : vocabulary.OpportunitySingularLabel,
+                OpportunityPluralLabel = string.IsNullOrWhiteSpace(vocabulary.OpportunityPluralLabel)
                     ? fallback.Vocabulary.OpportunityPluralLabel
-                    : config.Vocabulary.OpportunityPluralLabel,
-                PipelineLabel = string.IsNullOrWhiteSpace(config.Vocabulary.PipelineLabel)
+                    : vocabulary.OpportunityPluralLabel,
+                PipelineLabel = string.IsNullOrWhiteSpace(vocabulary.PipelineLabel)
                     ? fallback.Vocabulary.PipelineLabel
-                    : config.Vocabulary.PipelineLabel,
-                QualificationGuidance = string.IsNullOrWhiteSpace(config.Vocabulary.QualificationGuidance)
+                    : vocabulary.PipelineLabel,
+                QualificationGuidance = string.IsNullOrWhiteSpace(vocabulary.QualificationGuidance)
                     ? fallback.Vocabulary.QualificationGuidance
-                    : config.Vocabulary.QualificationGuidance
+                    : vocabulary.QualificationGuidance
             },
             BrokerageLeadProfileCatalog = new BrokerageLeadProfileCatalog(
-                config.BrokerageLeadProfileCatalog.BuyerTypes.Count == 0 ? fallback.BrokerageLeadProfileCatalog.BuyerTypes : config.BrokerageLeadProfileCatalog.BuyerTypes,
-                config.BrokerageLeadProfileCatalog.MotivationUrgencies.Count == 0 ? fallback.BrokerageLeadProfileCatalog.MotivationUrgencies : config.BrokerageLeadProfileCatalog.MotivationUrgencies,
-                config.BrokerageLeadProfileCatalog.FinancingReadinessOptions.Count == 0 ? fallback.BrokerageLeadProfileCatalog.FinancingReadinessOptions : config.BrokerageLeadProfileCatalog.FinancingReadinessOptions,
-                config.BrokerageLeadProfileCatalog.PreApprovalStatuses.Count == 0 ? fallback.BrokerageLeadProfileCatalog.PreApprovalStatuses : config.BrokerageLeadProfileCatalog.PreApprovalStatuses,
-                config.BrokerageLeadProfileCatalog.PreferredAreas.Count == 0 ? fallback.BrokerageLeadProfileCatalog.PreferredAreas : config.BrokerageLeadProfileCatalog.PreferredAreas,
-                config.BrokerageLeadProfileCatalog.PropertyTypes.Count == 0 ? fallback.BrokerageLeadProfileCatalog.PropertyTypes : config.BrokerageLeadProfileCatalog.PropertyTypes,
-                config.BrokerageLeadProfileCatalog.BudgetBands.Count == 0 ? fallback.BrokerageLeadProfileCatalog.BudgetBands : config.BrokerageLeadProfileCatalog.BudgetBands),
-            DashboardPackDefaults = config.DashboardPackDefaults.Count == 0 ? fallback.DashboardPackDefaults : config.DashboardPackDefaults,
-            ReportLibraryHighlights = config.ReportLibraryHighlights.Count == 0 ? fallback.ReportLibraryHighlights : config.ReportLibraryHighlights,
-            WorkflowTemplateHighlights = config.WorkflowTemplateHighlights.Count == 0 ? fallback.WorkflowTemplateHighlights : config.WorkflowTemplateHighlights
+                brokerageCatalog.BuyerTypes is null || brokerageCatalog.BuyerTypes.Count == 0 ? fallback.BrokerageLeadProfileCatalog.BuyerTypes : brokerageCatalog.BuyerTypes,
+                brokerageCatalog.MotivationUrgencies is null || brokerageCatalog.MotivationUrgencies.Count == 0 ? fallback.BrokerageLeadProfileCatalog.MotivationUrgencies : brokerageCatalog.MotivationUrgencies,
+                brokerageCatalog.FinancingReadinessOptions is null || brokerageCatalog.FinancingReadinessOptions.Count == 0 ? fallback.BrokerageLeadProfileCatalog.FinancingReadinessOptions : brokerageCatalog.FinancingReadinessOptions,
+                brokerageCatalog.PreApprovalStatuses is null || brokerageCatalog.PreApprovalStatuses.Count == 0 ? fallback.BrokerageLeadProfileCatalog.PreApprovalStatuses : brokerageCatalog.PreApprovalStatuses,
+                brokerageCatalog.PreferredAreas is null || brokerageCatalog.PreferredAreas.Count == 0 ? fallback.BrokerageLeadProfileCatalog.PreferredAreas : brokerageCatalog.PreferredAreas,
+                brokerageCatalog.PropertyTypes is null || brokerageCatalog.PropertyTypes.Count == 0 ? fallback.BrokerageLeadProfileCatalog.PropertyTypes : brokerageCatalog.PropertyTypes,
+                brokerageCatalog.BudgetBands is null || brokerageCatalog.BudgetBands.Count == 0 ? fallback.BrokerageLeadProfileCatalog.BudgetBands : brokerageCatalog.BudgetBands),
+            DashboardPackDefaults = config.DashboardPackDefaults is null || config.DashboardPackDefaults.Count == 0 ? fallback.DashboardPackDefaults : config.DashboardPackDefaults,
+            ReportLibraryHighlights = config.ReportLibraryHighlights is null || config.ReportLibraryHighlights.Count == 0 ? fallback.ReportLibraryHighlights : config.ReportLibraryHighlights,
+            WorkflowTemplateHighlights = config.WorkflowTemplateHighlights is null || config.WorkflowTemplateHighlights.Count == 0 ? fallback.WorkflowTemplateHighlights : config.WorkflowTemplateHighlights
         };
     }
 
