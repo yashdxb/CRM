@@ -2056,6 +2056,74 @@
                 </section>
               </p-accordion-content>
             </p-accordion-panel>
+            <p-accordion-panel value="history-related-emails">
+              <p-accordion-header>
+                <h2 class="section-title section-title--accordion">
+                  <i class="pi pi-envelope"></i>
+                  Related emails
+                </h2>
+              </p-accordion-header>
+              <p-accordion-content>
+                <section class="form-section form-section--accordion-body">
+                  <div class="history-meta">
+                    <span>Conversation Score {{ conversationContributionTotal() }} / 100</span>
+                    <span>Sentiment {{ conversationSentimentDisplay() }}</span>
+                    <span *ngIf="conversationAiSemanticIntent()">Intent {{ conversationAiSemanticIntent() }}</span>
+                  </div>
+                  <div class="history-notes">
+                    {{ conversationSummaryDisplay() }}
+                  </div>
+
+                  <div class="history-meta" *ngIf="emailEngagementStats() as stats">
+                    <span>Total {{ stats.total }} · Open rate {{ stats.openRate }}%</span>
+                    <span *ngIf="stats.lastEmailDate">Last email {{ stats.lastEmailDate | date:'medium' }}</span>
+                  </div>
+
+                  <div class="history-empty" *ngIf="leadEmailsLoading()">Loading related emails...</div>
+
+                  <ng-container *ngIf="!leadEmailsLoading()">
+                    <div class="history-list" *ngIf="leadEmails().length; else noRelatedEmails">
+                      <div class="history-item" *ngFor="let email of leadEmailsToDisplay(); trackBy: trackEmailById">
+                        <div class="history-header">
+                          <button
+                            type="button"
+                            class="action-btn action-btn--settings"
+                            (click)="toggleLeadEmailDetails(email.id)"
+                          >
+                            <span class="action-btn__icon">
+                              <i class="pi" [ngClass]="isLeadEmailExpanded(email.id) ? 'pi-chevron-down' : 'pi-chevron-right'"></i>
+                            </span>
+                            <span>{{ email.subject }}</span>
+                          </button>
+                        </div>
+                        <div class="history-meta" *ngIf="isLeadEmailExpanded(email.id)">
+                          <p-tag [value]="email.status"></p-tag>
+                          <span class="history-time">{{ (email.sentAtUtc || email.createdAtUtc) | date:'medium' }}</span>
+                          <span>
+                            {{ emailDirection(email) === 'inbound' ? 'Inbound' : 'Outbound' }}
+                            · {{ email.toName || email.toEmail }}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      class="action-btn action-btn--settings"
+                      *ngIf="leadEmails().length > 5"
+                      (click)="toggleEmailsExpanded()"
+                    >
+                      <span class="action-btn__icon"><i class="pi" [ngClass]="leadEmailsExpanded() ? 'pi-angle-up' : 'pi-angle-down'"></i></span>
+                      <span>{{ leadEmailsExpanded() ? 'Show less' : 'Show all related emails' }}</span>
+                    </button>
+                  </ng-container>
+
+                  <ng-template #noRelatedEmails>
+                    <div class="history-empty">No emails linked to this lead yet.</div>
+                  </ng-template>
+                </section>
+              </p-accordion-content>
+            </p-accordion-panel>
           </p-accordion>
 
               </p-tabpanel>

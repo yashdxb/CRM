@@ -392,6 +392,7 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   protected leadEmails = signal<EmailListItem[]>([]);
   protected leadEmailsLoading = signal(false);
   protected leadEmailsExpanded = signal(false);
+  protected expandedLeadEmailIds = signal<string[]>([]);
   protected leadEmailsTotalCount = signal(0);
   protected conversationAiSummary = signal<LeadConversationSummaryResponse | null>(null);
   protected conversationAiSummaryLoading = signal(false);
@@ -2164,6 +2165,25 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
 
   protected toggleEmailsExpanded() {
     this.leadEmailsExpanded.update(v => !v);
+  }
+
+  protected toggleLeadEmailDetails(emailId: string): void {
+    this.expandedLeadEmailIds.update((ids) =>
+      ids.includes(emailId) ? ids.filter((id) => id !== emailId) : [...ids, emailId]
+    );
+  }
+
+  protected isLeadEmailExpanded(emailId: string): boolean {
+    return this.expandedLeadEmailIds().includes(emailId);
+  }
+
+  protected leadEmailsToDisplay(): EmailListItem[] {
+    const emails = this.leadEmails();
+    if (this.leadEmailsExpanded()) {
+      return emails;
+    }
+
+    return emails.slice(0, 5);
   }
 
   protected trackEmailById(_index: number, email: EmailListItem): string {

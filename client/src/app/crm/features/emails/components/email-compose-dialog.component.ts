@@ -9,7 +9,7 @@ import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
 import { EditorModule } from 'primeng/editor';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
-import { distinctUntilChanged, finalize, switchMap } from 'rxjs';
+import { Observable, distinctUntilChanged, finalize, map, switchMap } from 'rxjs';
 
 import { EmailDataService } from '../services/email-data.service';
 import { ComposeMode, CrmRecordLookupItem, EmailRelationType, EmailTemplateListItem, MailboxEmail, SendEmailRequest } from '../models/email.model';
@@ -22,6 +22,11 @@ interface RelatedEntityOption {
   label: string;
   value: EmailRelationType;
   icon: string;
+}
+
+interface SendEmailResult {
+  success: boolean;
+  error?: string | null;
 }
 
 @Component({
@@ -857,32 +862,49 @@ export class EmailComposeDialogComponent implements OnInit, OnChanges {
       relatedEntityId: formValue.relatedEntityId ?? undefined
     };
 
-    this.emailConnectionService.getConnections().pipe(
-      switchMap((response) => {
-        const primaryConnection = response.items.find((item) => item.isActive && item.isPrimary)
-          ?? response.items.find((item) => item.isActive);
+    const hasRelatedEntity = !!request.relatedEntityType && !!request.relatedEntityId;
 
-        if (!primaryConnection) {
-          throw new Error('Connect an active mailbox account before sending email.');
-        }
+    const send$: Observable<SendEmailResult> = hasRelatedEntity
+      ? this.emailService.send({
+          ...request,
+          sendImmediately: true,
+          enableTracking: true
+        }).pipe(
+          map((): SendEmailResult => ({ success: true }))
+        )
+      : this.emailConnectionService.getConnections().pipe(
+          switchMap((response) => {
+            const primaryConnection = response.items.find((item) => item.isActive && item.isPrimary)
+              ?? response.items.find((item) => item.isActive);
 
-        const parseAddressList = (value?: string) =>
-          (value ?? '')
-            .split(',')
-            .map((entry) => entry.trim())
-            .filter((entry) => entry.length > 0);
+            if (!primaryConnection) {
+              throw new Error('Connect an active mailbox account before sending email.');
+            }
 
-        return this.mailboxService.sendEmail(primaryConnection.id, {
-          to: [request.toEmail],
-          cc: parseAddressList(request.ccEmails),
-          bcc: parseAddressList(request.bccEmails),
-          subject: request.subject ?? '',
-          htmlBody: request.htmlBody ?? ''
-        });
-      }),
+            const parseAddressList = (value?: string) =>
+              (value ?? '')
+                .split(',')
+                .map((entry) => entry.trim())
+                .filter((entry) => entry.length > 0);
+
+            return this.mailboxService.sendEmail(primaryConnection.id, {
+              to: [request.toEmail],
+              cc: parseAddressList(request.ccEmails),
+              bcc: parseAddressList(request.bccEmails),
+              subject: request.subject ?? '',
+              htmlBody: request.htmlBody ?? ''
+            });
+          }),
+          map((response): SendEmailResult => ({
+            success: response.success,
+            error: response.error
+          }))
+        );
+
+    send$.pipe(
       finalize(() => this.sending.set(false))
     ).subscribe({
-      next: (response) => {
+      next: (response: SendEmailResult) => {
         if (!response.success) {
           this.toast.show('error', response.error ?? 'Failed to send email');
           return;
@@ -892,8 +914,9 @@ export class EmailComposeDialogComponent implements OnInit, OnChanges {
         this.sent.emit();
         this.close();
       },
-      error: (err) => {
-        this.toast.show('error', err?.error?.message ?? err?.message ?? 'Failed to send email');
+      error: (err: unknown) => {
+        const maybeHttpError = err as { error?: { message?: string }; message?: string };
+        this.toast.show('error', maybeHttpError.error?.message ?? maybeHttpError.message ?? 'Failed to send email');
       }
     });
   }
