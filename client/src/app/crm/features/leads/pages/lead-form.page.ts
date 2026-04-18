@@ -155,6 +155,30 @@ interface CqvsGroupRow {
   maxScore: number;
 }
 
+interface QualificationFactorCard {
+  key: string;
+  label: string;
+  helperText: string;
+  required: boolean;
+  customText: boolean;
+  includeInScore: boolean;
+  value: string | null;
+  evidence: string | null;
+  valueOptions: OptionItem[];
+  evidenceOptions: OptionItem[];
+}
+
+interface LeadOperationalHistoryItem {
+  id: string;
+  type: 'status' | 'score' | 'email';
+  title: string;
+  subtitle: string;
+  detail?: string | null;
+  occurredAtUtc: string;
+  icon: string;
+  tone: 'info' | 'success' | 'warn' | 'danger' | 'neutral';
+}
+
 const CQVS_GROUP_DEFINITIONS: Array<{
   code: 'C' | 'Q' | 'V' | 'S';
   title: string;
@@ -253,6 +277,7 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   protected activityAccordionOpenPanels = signal<string[]>(['activity-main']);
   protected documentsAccordionOpenPanels = signal<string[]>(['documents-main']);
   protected historyAccordionOpenPanels = signal<string[]>(['history-main']);
+  protected qualificationEvidenceExpanded = signal<string[]>([]);
   protected readonly statusOptions: StatusOption[] = LEAD_STATUSES.map((status) => ({
     label: status,
     value: status,
@@ -453,6 +478,12 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   private leaveAfterDraftSave = false;
   private cqvsRadarRenderTimer: ReturnType<typeof setTimeout> | null = null;
   protected showCqvsRadar = signal(false);
+  private statusOptionsForViewCache: { key: string; value: StatusOption[] } | null = null;
+  private draftSplitButtonItemsCache: { key: string; value: MenuItem[] } | null = null;
+  private qualificationFactorCardsCache: { key: string; value: QualificationFactorCard[] } | null = null;
+  private scoreBreakdownRowsCache: { key: string; value: ScoreBreakdownRow[] } | null = null;
+  private cqvsGroupRowsCache: { key: string; value: CqvsGroupRow[] } | null = null;
+  private mergedHistoryItemsCache: { key: string; value: LeadOperationalHistoryItem[] } | null = null;
 
   ngOnInit() {
     this.editingId = this.route.snapshot.paramMap.get('id');
@@ -685,6 +716,11 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
           ? [String(value)]
         : [];
 
+    const current = this.currentAccordionPanels(section);
+    if (this.sameStringArray(current, normalized)) {
+      return;
+    }
+
     switch (section) {
       case 'overview':
         this.overviewAccordionOpenPanels.set(normalized);
@@ -704,6 +740,31 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     }
 
     this.persistAccordionState();
+  }
+
+  private currentAccordionPanels(
+    section: 'overview' | 'qualification' | 'activity' | 'documents' | 'history'
+  ): string[] {
+    switch (section) {
+      case 'overview':
+        return this.overviewAccordionOpenPanels();
+      case 'qualification':
+        return this.qualificationAccordionOpenPanels();
+      case 'activity':
+        return this.activityAccordionOpenPanels();
+      case 'documents':
+        return this.documentsAccordionOpenPanels();
+      case 'history':
+        return this.historyAccordionOpenPanels();
+    }
+  }
+
+  private sameStringArray(left: string[], right: string[]): boolean {
+    if (left.length !== right.length) {
+      return false;
+    }
+
+    return left.every((value, index) => value === right[index]);
   }
 
   protected setActiveTab(tab: 'overview' | 'qualification' | 'activity' | 'history' | 'documents') {
@@ -785,8 +846,17 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   }
 
   protected qualificationTabBadge(): string | null {
-    const count = this.riskFlags().length;
-    return count ? `${count} risk` : null;
+    const blockers = this.qualificationReadinessBlockers();
+    if (!this.isEditMode()) {
+      return null;
+    }
+    if (!blockers.length && this.countQualificationFactors() > 0) {
+      return 'Ready';
+    }
+    if (!blockers.length) {
+      return null;
+    }
+    return `${blockers.length} blocker${blockers.length === 1 ? '' : 's'}`;
   }
 
   protected activityTabBadge(): string | null {
@@ -851,19 +921,37 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   }
 
   protected statusOptionsForView(): StatusOption[] {
-    if (this.hasAdministrationManagePermission()) {
-      return this.statusOptions.map((option) => ({ ...option, disabled: false }));
+    const key = [
+      this.hasAdministrationManagePermission() ? 'admin' : 'standard',
+      this.isEditMode() ? 'edit' : 'create',
+      this.form.status ?? '',
+      this.firstTouchedAtUtc() ?? '',
+      this.truthCoveragePercent(),
+      this.minimumEvidenceCoveragePercent(),
+      this.requiresEvidenceBeforeQualified() ? 'evidence-required' : 'evidence-optional',
+      this.countQualificationFactors(),
+      this.statusHistory().map((entry) => `${entry.status}:${entry.changedAtUtc}`).join('|'),
+      this.recentLeadActivities().map((activity) => `${activity.id}:${activity.status}:${activity.completedDateUtc ?? ''}`).join('|')
+    ].join('::');
+
+    if (this.statusOptionsForViewCache?.key === key) {
+      return this.statusOptionsForViewCache.value;
     }
-    if (!this.isEditMode()) {
-      return this.statusOptions.map((option) => ({
-        ...option,
-        disabled: option.value !== 'New'
-      }));
-    }
-    return this.statusOptions.map((option) => ({
-      ...option,
-      disabled: this.isStatusSelectionDisabled(option.value)
-    }));
+
+    const value = this.hasAdministrationManagePermission()
+      ? this.statusOptions.map((option) => ({ ...option, disabled: false }))
+      : !this.isEditMode()
+        ? this.statusOptions.map((option) => ({
+            ...option,
+            disabled: option.value !== 'New'
+          }))
+        : this.statusOptions.map((option) => ({
+            ...option,
+            disabled: this.isStatusSelectionDisabled(option.value)
+          }));
+
+    this.statusOptionsForViewCache = { key, value };
+    return value;
   }
 
   protected statusPolicyHint(): string | null {
@@ -1584,14 +1672,17 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   }
 
   protected draftSplitButtonItems(): MenuItem[] {
-    const items: MenuItem[] = [];
-
     const drafts = this.recentDrafts();
-    items.push({
+    const key = drafts.map((draft) => `${draft.id}:${draft.updatedAtUtc}:${draft.title}:${draft.subtitle ?? ''}`).join('|');
+    if (this.draftSplitButtonItemsCache?.key === key) {
+      return this.draftSplitButtonItemsCache.value;
+    }
+
+    const items: MenuItem[] = [{
       label: 'Saved drafts',
       disabled: true,
       styleClass: 'crm-draft-menu-heading'
-    });
+    }];
 
     if (!drafts.length) {
       items.push({
@@ -1599,6 +1690,7 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
         disabled: true,
         styleClass: 'crm-draft-menu-empty'
       });
+      this.draftSplitButtonItemsCache = { key, value: items };
       return items;
     }
 
@@ -1617,6 +1709,7 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
       command: () => this.openDraftLibrary()
     });
 
+    this.draftSplitButtonItemsCache = { key, value: items };
     return items;
   }
 
@@ -1988,12 +2081,13 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   }
 
   private prefillFromLead(lead: Lead) {
-    const [firstName, ...rest] = lead.name.split(' ');
+    const displayName = (lead.name ?? '').trim();
+    const [firstName, ...rest] = displayName.length ? displayName.split(/\s+/) : [''];
     this.leadNumber.set(lead.leadNumber ?? null);
     this.form = {
       firstName,
       lastName: rest.join(' '),
-      companyName: lead.company,
+      companyName: lead.company ?? '',
       email: lead.email,
       phone: lead.phone,
       phoneTypeId: lead.phoneTypeId ?? undefined,
@@ -2328,6 +2422,32 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     }
 
     return 'Log activity';
+  }
+
+  protected openQuickActivity(type: Activity['type']): void {
+    if (!this.editingId) {
+      return;
+    }
+
+    const fullName = this.leadDisplayName();
+    const subject =
+      type === 'Call'
+        ? `Call: ${fullName}`
+        : type === 'Email'
+          ? `Email follow-up: ${fullName}`
+          : type === 'Meeting'
+            ? `Meeting: ${fullName}`
+            : `Follow-up task: ${fullName}`;
+
+    this.router.navigate(['/app/activities/new'], {
+      queryParams: {
+        relatedType: 'Lead',
+        relatedId: this.editingId,
+        subject,
+        type,
+        leadFirstTouchDueAtUtc: this.firstTouchDueAtUtc() ?? undefined
+      }
+    });
   }
 
   protected lastLeadActivitySummary(): string {
@@ -2947,6 +3067,19 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     return `Used ${this.attachments().length} / ${this.supportingDocumentMaxCount()}`;
   }
 
+  protected attachmentSizeLabel(size: number | null | undefined): string {
+    const normalized = typeof size === 'number' ? size : 0;
+    if (normalized <= 0) {
+      return '0 B';
+    }
+
+    const units = ['B', 'KB', 'MB', 'GB'];
+    const exponent = Math.min(Math.floor(Math.log(normalized) / Math.log(1024)), units.length - 1);
+    const value = normalized / (1024 ** exponent);
+    const digits = exponent === 0 ? 0 : value >= 10 ? 0 : 1;
+    return `${value.toFixed(digits)} ${units[exponent]}`;
+  }
+
   private defaultSupportingDocumentPolicy(): SupportingDocumentPolicy {
     return {
       maxDocumentsPerRecord: 10,
@@ -3556,6 +3689,10 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     return 'Low';
   }
 
+  protected qualificationConfidenceMetricLabel(): string {
+    return this.qualificationConfidence() !== null ? 'Confidence' : 'Coverage estimate';
+  }
+
   protected qualificationConfidenceHint(): string | null {
     if (!this.hasQualificationFactors()) {
       return null;
@@ -3703,6 +3840,213 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     return remaining > 0 ? `${remaining} more to qualify` : null;
   }
 
+  protected qualificationReadinessState(): 'ready' | 'needs-evidence' | 'not-ready' | 'qualified' {
+    if (this.form.status === 'Qualified') {
+      return 'qualified';
+    }
+    if (this.countQualificationFactors() < this.minimumRequiredQualificationFactors()) {
+      return 'not-ready';
+    }
+    if (this.requiresEvidenceBeforeQualified() && this.truthCoveragePercent() < this.minimumEvidenceCoveragePercent()) {
+      return 'needs-evidence';
+    }
+    return 'ready';
+  }
+
+  protected qualificationReadinessTitle(): string {
+    switch (this.qualificationReadinessState()) {
+      case 'qualified':
+        return 'Qualified';
+      case 'ready':
+        return 'Ready to qualify';
+      case 'needs-evidence':
+        return 'Needs evidence';
+      default:
+        return 'Not ready';
+    }
+  }
+
+  protected qualificationReadinessDescription(): string {
+    const state = this.qualificationReadinessState();
+    if (state === 'qualified') {
+      return 'This lead already meets the qualification state. Review factors and supporting evidence before conversion.';
+    }
+    if (state === 'ready') {
+      return 'Core qualification inputs are complete and evidence coverage meets the current policy threshold.';
+    }
+    if (state === 'needs-evidence') {
+      return `Qualification inputs are present, but evidence coverage is below the ${this.minimumEvidenceCoveragePercent()}% policy threshold.`;
+    }
+    return 'Capture the core qualification signals first so the CRM can assess readiness accurately.';
+  }
+
+  protected qualificationReadinessBlockers(): string[] {
+    const blockers: string[] = [];
+    const missingFactors = this.minimumRequiredQualificationFactors() - this.countQualificationFactors();
+    if (missingFactors > 0) {
+      blockers.push(`Capture ${missingFactors} more qualification factor${missingFactors === 1 ? '' : 's'}.`);
+    }
+    if (this.requiresEvidenceBeforeQualified() && this.truthCoveragePercent() < this.minimumEvidenceCoveragePercent()) {
+      blockers.push(`Increase evidence coverage to at least ${this.minimumEvidenceCoveragePercent()}%.`);
+    }
+    const weakest = this.qualificationFeedback()?.weakestSignal;
+    if (!blockers.length && weakest) {
+      blockers.push(`Strengthen the weakest signal: ${weakest}.`);
+    }
+    return blockers;
+  }
+
+  protected qualificationFactorCards(): QualificationFactorCard[] {
+    const activeFactors = this.activeQualificationFactors();
+    const key = activeFactors
+      .map((factor) => [
+        factor.key,
+        factor.displayLabel,
+        factor.isRequired ? 'required' : 'optional',
+        factor.valueType,
+        factor.includeInScore ? 'score' : 'no-score',
+        this.formValueForFactor(factor.key) ?? '',
+        this.evidenceValueForFactor(factor.key) ?? '',
+        this.evidenceOptionsForFactor(factor.key).map((option) => `${option.value}:${option.tone}:${option.icon}`).join(','),
+        this.optionsForFactor(factor.key).map((option) => `${option.value}:${option.tone}:${option.icon}`).join(',')
+      ].join('~'))
+      .join('|');
+
+    if (this.qualificationFactorCardsCache?.key === key) {
+      return this.qualificationFactorCardsCache.value;
+    }
+
+    const value = activeFactors.map((factor) => ({
+      key: factor.key,
+      label: factor.displayLabel,
+      helperText: this.qualificationFactorHelperText(factor.key),
+      required: factor.isRequired,
+      customText: factor.valueType === 'text',
+      includeInScore: factor.includeInScore,
+      value: this.formValueForFactor(factor.key),
+      evidence: this.evidenceValueForFactor(factor.key),
+      valueOptions: this.optionsForFactor(factor.key),
+      evidenceOptions: this.evidenceOptionsForFactor(factor.key)
+    }));
+
+    this.qualificationFactorCardsCache = { key, value };
+    return value;
+  }
+
+  protected isEvidenceExpanded(key: string): boolean {
+    return this.qualificationEvidenceExpanded().includes(key);
+  }
+
+  protected toggleEvidenceExpanded(key: string): void {
+    this.qualificationEvidenceExpanded.update((keys) =>
+      keys.includes(key) ? keys.filter((item) => item !== key) : [...keys, key]
+    );
+  }
+
+  protected shouldShowEvidenceField(key: string): boolean {
+    const value = this.formValueForFactor(key);
+    if (this.isEvidenceDisabled(value)) {
+      return false;
+    }
+
+    const evidence = (this.evidenceValueForFactor(key) ?? '').trim();
+    return this.isEvidenceExpanded(key) || (evidence.length > 0 && evidence !== 'No evidence yet');
+  }
+
+  protected evidenceSummaryLabel(key: string): string {
+    const evidence = (this.evidenceValueForFactor(key) ?? '').trim();
+    if (!evidence || evidence === 'No evidence yet') {
+      return this.requiresEvidenceBeforeQualified() ? 'Evidence required' : 'No evidence added';
+    }
+    return evidence;
+  }
+
+  protected qualificationStatusChipTone(key: string): 'none' | 'low' | 'medium' | 'high' {
+    const state = this.getFactorState(
+      this.qualificationFactorLabel(key, key),
+      this.formValueForFactor(key),
+      this.optionsForFactor(key)
+    ).state;
+    switch (state) {
+      case 'Verified':
+        return 'high';
+      case 'Assumed':
+        return 'medium';
+      case 'Invalid':
+        return 'low';
+      default:
+        return 'none';
+    }
+  }
+
+  protected qualificationStatusChipLabel(key: string): string {
+    return this.getFactorState(
+      this.qualificationFactorLabel(key, key),
+      this.formValueForFactor(key),
+      this.optionsForFactor(key)
+    ).state;
+  }
+
+  protected mergedHistoryItems(): LeadOperationalHistoryItem[] {
+    const key = [
+      this.statusHistory().map((entry) => `${entry.id}:${entry.status}:${entry.changedAtUtc}:${entry.changedBy ?? ''}`).join('|'),
+      this.scoreAuditEvents().map((entry) => `${entry.id}:${entry.action}:${entry.createdAtUtc}:${entry.field ?? ''}`).join('|'),
+      this.leadEmails().map((email) => `${email.id}:${email.status}:${email.sentAtUtc ?? email.createdAtUtc}`).join('|')
+    ].join('::');
+
+    if (this.mergedHistoryItemsCache?.key === key) {
+      return this.mergedHistoryItemsCache.value;
+    }
+
+    const statusItems = this.statusHistory().map<LeadOperationalHistoryItem>((entry) => ({
+      id: `status-${entry.id}`,
+      type: 'status',
+      title: `Status changed to ${entry.status}`,
+      subtitle: `Changed by ${entry.changedBy || 'system'}`,
+      detail: entry.notes || entry.reason || null,
+      occurredAtUtc: entry.changedAtUtc,
+      icon: this.statusIcon((entry.status as LeadStatus) ?? 'New'),
+      tone: entry.status === 'Qualified' || entry.status === 'Converted'
+        ? 'success'
+        : entry.status === 'Lost' || entry.status === 'Disqualified'
+          ? 'danger'
+          : 'info'
+    }));
+
+    const auditItems = this.scoreAuditEvents().map<LeadOperationalHistoryItem>((entry) => ({
+      id: `audit-${entry.id}`,
+      type: 'score',
+      title: entry.field ? `${entry.field} updated` : entry.action,
+      subtitle: `Changed by ${entry.changedByName || 'system'}`,
+      detail: entry.oldValue || entry.newValue ? `${entry.oldValue || 'empty'} → ${entry.newValue || 'empty'}` : null,
+      occurredAtUtc: entry.createdAtUtc,
+      icon: 'pi-chart-line',
+      tone: 'warn'
+    }));
+
+    const emailItems = this.leadEmails().map<LeadOperationalHistoryItem>((email) => ({
+      id: `email-${email.id}`,
+      type: 'email',
+      title: email.subject,
+      subtitle: `${this.emailDirection(email) === 'inbound' ? 'Inbound' : 'Outbound'} email • ${email.status}`,
+      detail: email.toName || email.toEmail || null,
+      occurredAtUtc: email.sentAtUtc || email.createdAtUtc,
+      icon: 'pi-envelope',
+      tone: email.status === 'Failed' || email.status === 'Bounced'
+        ? 'danger'
+        : email.status === 'Opened' || email.status === 'Clicked'
+          ? 'success'
+          : 'info'
+    }));
+
+    const value = [...statusItems, ...auditItems, ...emailItems]
+      .filter((item) => !!item.occurredAtUtc)
+      .sort((a, b) => new Date(b.occurredAtUtc).getTime() - new Date(a.occurredAtUtc).getTime());
+
+    this.mergedHistoryItemsCache = { key, value };
+    return value;
+  }
+
   protected qualifiedNotesBadgeLabel(): string {
     const notes = this.form.qualifiedNotes?.trim() ?? '';
     return notes ? `${Math.min(notes.length, 999)} chars` : 'No notes';
@@ -3752,8 +4096,28 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   }
 
   protected scoreBreakdownRows(): ScoreBreakdownRow[] {
+    const key = [
+      this.scoreBreakdown().map((item) => `${item.factor}:${item.score}:${item.maxScore}`).join('|'),
+      this.form.budgetAvailability ?? '',
+      this.form.budgetEvidence ?? '',
+      this.form.readinessToSpend ?? '',
+      this.form.readinessEvidence ?? '',
+      this.form.buyingTimeline ?? '',
+      this.form.timelineEvidence ?? '',
+      this.form.problemSeverity ?? '',
+      this.form.problemEvidence ?? '',
+      this.form.economicBuyer ?? '',
+      this.form.economicBuyerEvidence ?? '',
+      this.form.icpFit ?? '',
+      this.form.icpFitEvidence ?? ''
+    ].join('::');
+
+    if (this.scoreBreakdownRowsCache?.key === key) {
+      return this.scoreBreakdownRowsCache.value;
+    }
+
     const scoreByFactor = new Map(this.scoreBreakdown().map((item) => [item.factor, item] as const));
-    return [
+    const value: ScoreBreakdownRow[] = [
       {
         cqvs: 'Q',
         factor: 'Budget',
@@ -3815,12 +4179,20 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
         maxScore: scoreByFactor.get('ICP Fit')?.maxScore ?? 10
       }
     ];
+
+    this.scoreBreakdownRowsCache = { key, value };
+    return value;
   }
 
   protected cqvsGroupRows(): CqvsGroupRow[] {
     const factorRows = this.scoreBreakdownRows();
+    const key = factorRows.map((row) => `${row.factor}:${row.score}:${row.maxScore}`).join('|');
+    if (this.cqvsGroupRowsCache?.key === key) {
+      return this.cqvsGroupRowsCache.value;
+    }
+
     const byFactor = new Map(factorRows.map((row) => [row.factor, row] as const));
-    return CQVS_GROUP_DEFINITIONS.map((group) => {
+    const value = CQVS_GROUP_DEFINITIONS.map((group) => {
       const groupRows = group.factors
         .map((factor) => byFactor.get(factor))
         .filter((row): row is ScoreBreakdownRow => !!row);
@@ -3835,6 +4207,9 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
         maxScore
       };
     });
+
+    this.cqvsGroupRowsCache = { key, value };
+    return value;
   }
 
   protected cqvsGroupPercent(group: CqvsGroupRow): number {
@@ -4161,7 +4536,26 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     }
   }
 
-  private setEvidenceValueForFactor(key: string, value: string): void {
+  private evidenceValueForFactor(key: string): string | null {
+    switch (key) {
+      case 'budget':
+        return this.form.budgetEvidence ?? null;
+      case 'readiness':
+        return this.form.readinessEvidence ?? null;
+      case 'timeline':
+        return this.form.timelineEvidence ?? null;
+      case 'problem':
+        return this.form.problemEvidence ?? null;
+      case 'economicBuyer':
+        return this.form.economicBuyerEvidence ?? null;
+      case 'icpFit':
+        return this.form.icpFitEvidence ?? null;
+      default:
+        return this.customFactorEvidence(key);
+    }
+  }
+
+  protected setEvidenceValueForFactor(key: string, value: string): void {
     switch (key) {
       case 'budget':
         this.form.budgetEvidence = value;
@@ -4340,6 +4734,25 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
       icon: this.resolveCustomFactorOptionIcon(option),
       tone: this.resolveCustomFactorOptionTone(option)
     }));
+  }
+
+  private qualificationFactorHelperText(key: string): string {
+    switch (key) {
+      case 'budget':
+        return 'Confirm spending capacity and whether budget is explicitly documented.';
+      case 'readiness':
+        return 'Capture how actively the lead is planning to move this purchase forward.';
+      case 'timeline':
+        return 'Document the target decision window or expected buying horizon.';
+      case 'problem':
+        return 'Measure how urgent and painful the underlying business problem is.';
+      case 'economicBuyer':
+        return 'Confirm who controls budget and whether they are actively engaged.';
+      case 'icpFit':
+        return 'Assess alignment to the ideal customer profile and target use case.';
+      default:
+        return 'Capture the qualification signal and attach supporting evidence where available.';
+    }
   }
 
   private isUnknownValue(value?: string | null): boolean {
