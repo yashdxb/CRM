@@ -747,6 +747,7 @@ export class ActivityFormPage implements OnInit {
     const relatedType = this.route.snapshot.queryParamMap.get('relatedType') as UpsertActivityRequest['relatedEntityType'];
     const relatedId = this.route.snapshot.queryParamMap.get('relatedId') ?? undefined;
     const subject = this.route.snapshot.queryParamMap.get('subject') ?? undefined;
+    const type = this.route.snapshot.queryParamMap.get('type') as ActivityType | null;
     const leadFirstTouchDueAtUtc = this.route.snapshot.queryParamMap.get('leadFirstTouchDueAtUtc');
 
     if (relatedType) {
@@ -762,6 +763,10 @@ export class ActivityFormPage implements OnInit {
 
     if (subject && !this.form.subject) {
       this.form.subject = subject;
+    }
+
+    if (type && this.typeOptions.some((option) => option.value === type)) {
+      this.form.type = type;
     }
 
     this.leadFirstTouchDueAtUtc = this.parseOptionalDate(leadFirstTouchDueAtUtc);

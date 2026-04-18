@@ -611,7 +611,7 @@ export class LeadsPage {
   }
 
   protected onEdit(row: Lead) {
-    this.router.navigate(['/app/leads', row.id, 'edit'], { state: { lead: row } });
+    this.router.navigate(['/app/leads', row.id, 'edit']);
   }
 
   protected onRowClick(row: Lead, event: MouseEvent): void {
@@ -644,7 +644,7 @@ export class LeadsPage {
   }
 
   protected onConvert(row: Lead) {
-    this.router.navigate(['/app/leads', row.id, 'convert'], { state: { lead: row } });
+    this.router.navigate(['/app/leads', row.id, 'convert']);
   }
 
   protected onDelete(row: Lead) {

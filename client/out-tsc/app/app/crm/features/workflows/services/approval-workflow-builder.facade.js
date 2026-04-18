@@ -1,0 +1,938 @@
+import { inject, Injectable, signal } from '@angular/core';
+import { catchError, forkJoin, map, of, tap } from 'rxjs';
+import { WorkflowDefinitionService } from './workflow-definition.service';
+import { UserAdminDataService } from '../../settings/services/user-admin-data.service';
+import * as i0 from "@angular/core";
+export class ApprovalWorkflowBuilderFacade {
+    workflowDefinitions = inject(WorkflowDefinitionService);
+    userAdmin = inject(UserAdminDataService);
+    metadataLoading = signal(true, ...(ngDevMode ? [{ debugName: "metadataLoading" }] : []));
+    moduleOptions = signal([], ...(ngDevMode ? [{ debugName: "moduleOptions" }] : []));
+    triggerOptions = signal([], ...(ngDevMode ? [{ debugName: "triggerOptions" }] : []));
+    roleApproverOptions = signal([], ...(ngDevMode ? [{ debugName: "roleApproverOptions" }] : []));
+    userApproverOptions = signal([], ...(ngDevMode ? [{ debugName: "userApproverOptions" }] : []));
+    securityLevelApproverOptions = signal([], ...(ngDevMode ? [{ debugName: "securityLevelApproverOptions" }] : []));
+    approverTypeOptions = signal([], ...(ngDevMode ? [{ debugName: "approverTypeOptions" }] : []));
+    combinatorOptions = [
+        { label: 'AND', value: 'AND' },
+        { label: 'OR', value: 'OR' }
+    ];
+    stepTypeTagSeverity = {
+        Sequential: 'info',
+        Final: 'success'
+    };
+    draft = signal(this.createDemoWorkflow(), ...(ngDevMode ? [{ debugName: "draft" }] : []));
+    status = signal(this.draft().status, ...(ngDevMode ? [{ debugName: "status" }] : []));
+    lastSavedAt = signal(new Date().toISOString(), ...(ngDevMode ? [{ debugName: "lastSavedAt" }] : []));
+    currentStatus = this.status.asReadonly();
+    lastSavedAtUtc = this.lastSavedAt.asReadonly();
+    loadDraft() {
+        return clone(this.draft());
+    }
+    loadMetadata(definition) {
+        this.metadataLoading.set(true);
+        return forkJoin({
+            metadata: this.workflowDefinitions.getScopeMetadata().pipe(catchError(() => of({
+                modules: [],
+                pipelines: [],
+                stages: [],
+                triggers: []
+            }))),
+            roles: this.userAdmin.getRoles().pipe(catchError(() => of([]))),
+            users: this.userAdmin.lookupActive(undefined, 200).pipe(catchError(() => of([]))),
+            securityLevels: this.userAdmin.getSecurityLevels().pipe(catchError(() => of([])))
+        }).pipe(tap(({ metadata, roles, users, securityLevels }) => {
+            this.moduleOptions.set(mergeOptions(metadata.modules ?? [], [definition.module]).map((option) => ({
+                ...option,
+                label: normalizeModuleLabel(option.label || option.value)
+            })));
+            this.triggerOptions.set(mergeOptions(metadata.triggers ?? [], [definition.triggerType]));
+            const roleOptions = mergeOptions(roles.map((role) => ({ label: role.name, value: role.name })), collectApproverSelectors(definition, 'Role'));
+            const userOptions = mergeOptions(users.map((user) => ({
+                label: user.fullName ? `${user.fullName} (${user.email})` : user.email,
+                value: user.fullName || user.email
+            })), collectApproverSelectors(definition, 'Named User'));
+            const securityOptions = mergeOptions(securityLevels.map((level) => ({ label: `${level.name} (L${level.rank})`, value: level.name })), collectApproverSelectors(definition, 'Security Level'));
+            this.roleApproverOptions.set(roleOptions);
+            this.userApproverOptions.set(userOptions);
+            this.securityLevelApproverOptions.set(securityOptions);
+            const typeOptions = new Map();
+            for (const type of uniqueStrings(collectApproverTypes(definition))) {
+                const count = type === 'Role' ? roleOptions.length :
+                    type === 'Named User' ? userOptions.length :
+                        type === 'Security Level' ? securityOptions.length :
+                            0;
+                typeOptions.set(type, { label: type, value: type, count });
+            }
+            this.approverTypeOptions.set([...typeOptions.values()]);
+            this.metadataLoading.set(false);
+        }), map(() => void 0));
+    }
+    saveDraft(definition) {
+        const next = clone({ ...definition, status: 'Draft', isActive: false });
+        this.draft.set(next);
+        this.status.set('Draft');
+        this.lastSavedAt.set(new Date().toISOString());
+        return next;
+    }
+    publish(definition) {
+        const next = clone({ ...definition, status: 'Active', isActive: true });
+        this.draft.set(next);
+        this.status.set('Active');
+        this.lastSavedAt.set(new Date().toISOString());
+        return next;
+    }
+    buildConditionFieldOptions(definition) {
+        return mergeOptions(uniqueStrings([
+            ...definition.conditionGroups.flatMap((group) => group.rules.map((rule) => rule.field)),
+            ...Object.keys(definition.testScenario ?? {})
+        ]).map((value) => ({ label: labelizeField(value), value })), []);
+    }
+    buildConditionOperatorOptions(definition) {
+        return uniqueStrings(definition.conditionGroups.flatMap((group) => group.rules.map((rule) => rule.operator))).map((value) => ({
+            label: labelizeOperator(value),
+            value
+        }));
+    }
+    buildEscalationRuleOptions(definition) {
+        return uniqueStrings(collectEscalationRules(definition)).map((value) => ({ label: value, value }));
+    }
+    buildCompletionRuleOptions(definition) {
+        return uniqueStrings(collectCompletionRules(definition)).map((value) => ({
+            label: value,
+            value: value
+        }));
+    }
+    buildCompletionModeOptions(definition) {
+        return uniqueStrings(definition.steps.filter((item) => item.kind === 'parallel-group').map((item) => item.completionMode)).map((value) => ({
+            label: value,
+            value: value
+        }));
+    }
+    buildOutcomeActionOptions(definition) {
+        return uniqueStrings(definition.outcomes.map((outcome) => outcome.action)).map((value) => ({ label: value, value }));
+    }
+    approverOptionsFor(type, definition) {
+        if (type === 'Named User') {
+            return mergeOptions(this.userApproverOptions(), collectApproverSelectors(definition, type));
+        }
+        if (type === 'Security Level') {
+            return mergeOptions(this.securityLevelApproverOptions(), collectApproverSelectors(definition, type));
+        }
+        if (type === 'Role') {
+            return mergeOptions(this.roleApproverOptions(), collectApproverSelectors(definition, type));
+        }
+        return mergeOptions([], collectApproverSelectors(definition, type));
+    }
+    buildSummary(definition) {
+        const totalSteps = definition.steps.reduce((count, item) => {
+            if (item.kind === 'parallel-group') {
+                return count + item.approvers.length;
+            }
+            return count + 1;
+        }, 0);
+        const parallelGroups = definition.steps.filter((item) => item.kind === 'parallel-group').length;
+        const estimatedPath = definition.steps
+            .map((item, index) => item.kind === 'parallel-group'
+            ? `P${index + 1}: ${item.completionMode === 'All must approve' ? 'All parallel approvers' : 'Any parallel approver'}`
+            : `S${index + 1}: ${item.title}`)
+            .join(' → ');
+        return {
+            module: definition.module,
+            trigger: definition.triggerType,
+            totalSteps,
+            parallelGroups,
+            estimatedApprovalPath: estimatedPath,
+            slaSummary: this.buildSlaSummary(definition)
+        };
+    }
+    buildLogicPreview(definition) {
+        const conditions = definition.conditionGroups
+            .map((group) => group.rules
+            .map((rule, index) => {
+            const prefix = index === 0 ? '' : `${rule.combinator.toLowerCase()} `;
+            return `${prefix}${this.labelForField(rule.field)} ${this.labelForOperator(rule.operator)} ${rule.value}`;
+        })
+            .join(' '))
+            .filter(Boolean)
+            .join(' and ');
+        const flow = definition.steps
+            .map((item) => {
+            if (item.kind === 'parallel-group') {
+                const approvers = item.approvers.map((approver) => approver.approverSelector).join(' and ');
+                return `run parallel approval from ${approvers}. Continue when ${item.completionMode.toLowerCase()}.`;
+            }
+            return `send approval to ${item.approverSelector}.`;
+        })
+            .join(' Then ');
+        const approveAction = definition.outcomes.find((item) => item.event === 'approve')?.action ?? 'continue workflow';
+        return `If ${conditions || 'workflow conditions are met'}, ${flow} On success, ${approveAction.toLowerCase()}.`;
+    }
+    buildValidation(definition) {
+        const items = [];
+        const orders = new Set();
+        definition.conditionGroups.forEach((group, groupIndex) => {
+            if (group.rules.length === 0) {
+                items.push({
+                    severity: 'warn',
+                    title: `Condition group ${groupIndex + 1} is empty`,
+                    detail: 'Add at least one rule or remove the unused group.'
+                });
+            }
+            group.rules.forEach((rule) => {
+                if (rule.value === '' || rule.value === null || rule.value === undefined) {
+                    items.push({
+                        severity: 'error',
+                        title: `Missing value for ${this.labelForField(rule.field)}`,
+                        detail: 'Every active condition needs a comparison value.'
+                    });
+                }
+            });
+        });
+        definition.steps.forEach((item, index) => {
+            if (orders.has(index + 1)) {
+                items.push({
+                    severity: 'error',
+                    title: 'Duplicate step order detected',
+                    detail: 'Each step card must hold a unique position in the approval path.'
+                });
+            }
+            orders.add(index + 1);
+            if (item.kind === 'parallel-group') {
+                if (item.requiredApprovals < 1 || item.requiredApprovals > item.approvers.length) {
+                    items.push({
+                        severity: 'error',
+                        title: 'Invalid parallel approval threshold',
+                        detail: 'Required approvals must be between 1 and the number of approvers in the group.'
+                    });
+                }
+                item.approvers.forEach((approver) => this.validateStep(approver, items));
+            }
+            else {
+                this.validateStep(item, items);
+            }
+        });
+        if (!definition.steps.some((item) => item.kind === 'step' && item.stepType === 'Final')) {
+            items.push({
+                severity: 'warn',
+                title: 'No final approval step configured',
+                detail: 'Add a final approver to make the exit point explicit.'
+            });
+        }
+        if (!definition.outcomes.some((outcome) => outcome.event === 'timeout' && outcome.action)) {
+            items.push({
+                severity: 'error',
+                title: 'No timeout action configured',
+                detail: 'Set what should happen when an approval breaches its SLA.'
+            });
+        }
+        if (items.length === 0) {
+            items.push({
+                severity: 'success',
+                title: 'Workflow is ready to publish',
+                detail: 'All required approvers, actions, and SLA settings are configured.'
+            });
+        }
+        return items;
+    }
+    evaluateScenario(definition, scenario) {
+        const matches = definition.conditionGroups.every((group) => this.evaluateGroup(group, scenario));
+        return {
+            matches,
+            badge: matches ? 'Would trigger' : 'Would not trigger',
+            detail: matches
+                ? 'This sample record satisfies the workflow entry criteria.'
+                : 'The sample values do not satisfy every required workflow condition.'
+        };
+    }
+    validateStep(step, items) {
+        if (!step.approverSelector) {
+            items.push({
+                severity: 'error',
+                title: `Missing approver on ${step.title}`,
+                detail: 'Choose a role, user, or dynamic approver target before publishing.'
+            });
+        }
+        if (step.slaHours <= 0) {
+            items.push({
+                severity: 'warn',
+                title: `${step.title} has no SLA`,
+                detail: 'Use SLA hours to drive escalation and operational visibility.'
+            });
+        }
+        if (step.escalationRule === 'No escalation' && step.slaHours <= 24) {
+            items.push({
+                severity: 'warn',
+                title: `${step.title} has no escalation`,
+                detail: 'Short SLA steps usually need a clear escalation route.'
+            });
+        }
+    }
+    buildSlaSummary(definition) {
+        const hours = definition.steps.reduce((total, item) => {
+            if (item.kind === 'parallel-group') {
+                const longestGroupStep = item.approvers.reduce((max, step) => Math.max(max, step.slaHours), 0);
+                return total + longestGroupStep;
+            }
+            return total + item.slaHours;
+        }, 0);
+        return `${hours}h across the longest approval path`;
+    }
+    labelForField(field) {
+        return labelizeField(field);
+    }
+    labelForOperator(operator) {
+        return labelizeOperator(operator).toLowerCase();
+    }
+    evaluateGroup(group, scenario) {
+        if (group.rules.length === 0) {
+            return true;
+        }
+        const evaluations = group.rules.map((rule) => this.evaluateRule(rule, scenario));
+        return group.combinator === 'AND' ? evaluations.every(Boolean) : evaluations.some(Boolean);
+    }
+    evaluateRule(rule, scenario) {
+        const fieldValue = scenario[rule.field];
+        const compareValue = typeof fieldValue === 'number' ? Number(rule.value ?? 0) : String(rule.value ?? '');
+        switch (rule.operator) {
+            case '>':
+                return Number(fieldValue ?? 0) > Number(compareValue);
+            case '>=':
+                return Number(fieldValue ?? 0) >= Number(compareValue);
+            case '=':
+                return String(fieldValue ?? '').toLowerCase() === String(compareValue).toLowerCase();
+            case '!=':
+                return String(fieldValue ?? '').toLowerCase() !== String(compareValue).toLowerCase();
+            case 'contains':
+                return String(fieldValue ?? '').toLowerCase().includes(String(compareValue).toLowerCase());
+            default:
+                return false;
+        }
+    }
+    getTemplateCatalog() {
+        return [
+            {
+                id: 'high-discount-approval',
+                name: 'High Discount Approval',
+                description: 'Route strategic discount exceptions through sales leadership, finance, legal, and executive approval.',
+                icon: 'pi-percentage',
+                category: 'approval',
+                module: 'Opportunity',
+                previewSteps: ['Sales Manager', 'Finance & Legal (parallel)', 'Director final']
+            },
+            {
+                id: 'new-inquiry-followup-sla',
+                name: 'New Inquiry Follow-Up SLA',
+                description: 'Ensure every new lead inquiry receives a response within the configured SLA window.',
+                icon: 'pi-clock',
+                category: 'follow-up',
+                module: 'Lead',
+                previewSteps: ['Auto-assign agent', 'SLA check (8h)', 'Manager escalation']
+            },
+            {
+                id: 'showing-followup',
+                name: 'Showing Follow-Up',
+                description: 'Trigger a follow-up task after a property showing to capture buyer feedback and next steps.',
+                icon: 'pi-home',
+                category: 'follow-up',
+                module: 'Activity',
+                previewSteps: ['Post-showing task', 'Feedback capture (24h)', 'Agent review']
+            },
+            {
+                id: 'low-readiness-review',
+                name: 'Low Readiness Review',
+                description: 'Flag deals with low readiness scores for manager review before they advance to negotiation.',
+                icon: 'pi-exclamation-triangle',
+                category: 'review',
+                module: 'Opportunity',
+                previewSteps: ['Readiness check', 'Manager review', 'Go/No-go decision']
+            },
+            {
+                id: 'price-drop-escalation',
+                name: 'Price Drop Escalation',
+                description: 'Escalate pricing changes beyond a threshold to leadership for approval before the listing is updated.',
+                icon: 'pi-arrow-down',
+                category: 'escalation',
+                module: 'Opportunity',
+                previewSteps: ['Price delta check', 'Manager approval', 'Director override']
+            }
+        ];
+    }
+    createFromTemplate(templateId) {
+        switch (templateId) {
+            case 'new-inquiry-followup-sla':
+                return this.createInquiryFollowUpTemplate();
+            case 'showing-followup':
+                return this.createShowingFollowUpTemplate();
+            case 'low-readiness-review':
+                return this.createLowReadinessReviewTemplate();
+            case 'price-drop-escalation':
+                return this.createPriceDropEscalationTemplate();
+            case 'high-discount-approval':
+            default:
+                return this.createDemoWorkflow();
+        }
+    }
+    runSimulation(definition, scenario) {
+        const conditionMatch = definition.conditionGroups.every((group) => this.evaluateGroup(group, scenario));
+        const traversedNodes = [];
+        // Evaluate conditions
+        definition.conditionGroups.forEach((group, index) => {
+            const groupMatch = this.evaluateGroup(group, scenario);
+            traversedNodes.push({
+                id: group.id,
+                title: group.label || `Condition Group ${index + 1}`,
+                kind: 'condition',
+                status: groupMatch ? 'passed' : 'skipped',
+                detail: groupMatch
+                    ? `All rules in "${group.label || 'Group ' + (index + 1)}" satisfied`
+                    : `Rules not met — workflow would not trigger`
+            });
+        });
+        if (!conditionMatch) {
+            return {
+                triggered: false,
+                badge: 'Would not trigger',
+                detail: 'The sample values do not satisfy the workflow entry criteria.',
+                traversedNodes,
+                estimatedDuration: '—',
+                finalOutcome: 'No action'
+            };
+        }
+        // Simulate step traversal
+        let totalHours = 0;
+        for (const step of definition.steps) {
+            if (step.kind === 'parallel-group') {
+                const longestSla = step.approvers.reduce((max, approver) => Math.max(max, approver.slaHours), 0);
+                totalHours += longestSla;
+                traversedNodes.push({
+                    id: step.id,
+                    title: step.title,
+                    kind: 'parallel-group',
+                    status: 'passed',
+                    detail: `${step.approvers.length} parallel approvers (${step.completionMode}), longest SLA: ${longestSla}h`
+                });
+                for (const approver of step.approvers) {
+                    traversedNodes.push({
+                        id: approver.id,
+                        title: approver.title,
+                        kind: 'step',
+                        status: 'passed',
+                        detail: `${approver.approverType}: ${approver.approverSelector} — SLA: ${approver.slaHours}h`
+                    });
+                }
+            }
+            else {
+                totalHours += step.slaHours;
+                traversedNodes.push({
+                    id: step.id,
+                    title: step.title,
+                    kind: 'step',
+                    status: 'passed',
+                    detail: `${step.approverType}: ${step.approverSelector} — SLA: ${step.slaHours}h`
+                });
+            }
+        }
+        // Add outcome node
+        const approveOutcome = definition.outcomes.find((o) => o.event === 'approve');
+        traversedNodes.push({
+            id: 'outcome-approve',
+            title: approveOutcome?.action ?? 'Approve',
+            kind: 'outcome',
+            status: 'pending',
+            detail: approveOutcome?.config ?? 'Workflow completes with approval.'
+        });
+        return {
+            triggered: true,
+            badge: 'Would trigger',
+            detail: 'This sample record satisfies all workflow conditions and would traverse the full approval path.',
+            traversedNodes,
+            estimatedDuration: `${totalHours}h`,
+            finalOutcome: approveOutcome?.action ?? 'Approve'
+        };
+    }
+    createInquiryFollowUpTemplate() {
+        return {
+            id: `inquiry-followup-${Date.now()}`,
+            name: 'New Inquiry Follow-Up SLA',
+            processName: 'Lead Response SLA Enforcement',
+            requesterLabel: 'System',
+            module: 'Lead',
+            triggerType: 'On Create',
+            version: 'v1.0',
+            isActive: false,
+            status: 'Draft',
+            description: 'Ensure every new lead inquiry receives agent contact within an 8-hour SLA window, with automatic manager escalation on breach.',
+            conditionGroups: [
+                {
+                    id: 'inquiry-source',
+                    label: 'Lead Source Check',
+                    combinator: 'AND',
+                    rules: [
+                        { id: 'source-rule', field: 'dealType', operator: '!=', value: 'Referral', combinator: 'AND' }
+                    ]
+                }
+            ],
+            steps: [
+                this.createStep({
+                    id: 'agent-response',
+                    title: 'Agent first response',
+                    stepType: 'Sequential',
+                    approverType: 'Role',
+                    approverSelector: 'Sales Agent',
+                    slaHours: 8,
+                    escalationRule: 'Escalates in 8h',
+                    completionRule: 'Required',
+                    notes: 'Agent must make first contact with the inquiry within the SLA window.'
+                }),
+                this.createStep({
+                    id: 'manager-escalation',
+                    title: 'Manager escalation review',
+                    stepType: 'Final',
+                    approverType: 'Role',
+                    approverSelector: 'Sales Manager',
+                    slaHours: 4,
+                    escalationRule: 'Escalates in 12h',
+                    completionRule: 'Required',
+                    notes: 'If SLA breached, manager reviews and reassigns or follows up directly.'
+                })
+            ],
+            outcomes: [
+                { event: 'approve', action: 'Mark Contacted', config: 'Set lead status to Contacted and log first-touch activity.' },
+                { event: 'reject', action: 'Reassign Lead', config: 'Reassign to another agent and reset SLA timer.' },
+                { event: 'timeout', action: 'Escalate to Director', config: 'Create escalation task for director attention.' }
+            ],
+            testScenario: { discountPercent: 0, dealValue: 25000, region: 'Dubai', dealType: 'Inbound' }
+        };
+    }
+    createShowingFollowUpTemplate() {
+        return {
+            id: `showing-followup-${Date.now()}`,
+            name: 'Showing Follow-Up',
+            processName: 'Post-Showing Feedback Capture',
+            requesterLabel: 'System',
+            module: 'Activity',
+            triggerType: 'On Complete',
+            version: 'v1.0',
+            isActive: false,
+            status: 'Draft',
+            description: 'After each property showing, create a follow-up task to collect buyer feedback and determine next steps within 24 hours.',
+            conditionGroups: [
+                {
+                    id: 'showing-type',
+                    label: 'Showing Completed',
+                    combinator: 'AND',
+                    rules: [
+                        { id: 'type-rule', field: 'dealType', operator: '=', value: 'Showing', combinator: 'AND' }
+                    ]
+                }
+            ],
+            steps: [
+                this.createStep({
+                    id: 'feedback-capture',
+                    title: 'Capture buyer feedback',
+                    stepType: 'Sequential',
+                    approverType: 'Role',
+                    approverSelector: 'Sales Agent',
+                    slaHours: 24,
+                    escalationRule: 'Escalates in 24h',
+                    completionRule: 'Required',
+                    notes: 'Agent records buyer interest level, objections, and next-step preference.'
+                }),
+                this.createStep({
+                    id: 'agent-review',
+                    title: 'Agent review and next steps',
+                    stepType: 'Final',
+                    approverType: 'Role',
+                    approverSelector: 'Sales Manager',
+                    slaHours: 12,
+                    escalationRule: 'No escalation',
+                    completionRule: 'Required',
+                    notes: 'Manager reviews feedback and approves the proposed next action (second showing, offer, or close).'
+                })
+            ],
+            outcomes: [
+                { event: 'approve', action: 'Schedule Next Step', config: 'Create follow-up activity based on agent recommendation.' },
+                { event: 'reject', action: 'Archive Showing', config: 'Mark showing as no further action and archive feedback.' },
+                { event: 'timeout', action: 'Escalate to Manager', config: 'Create escalation task for overdue follow-up.' }
+            ],
+            testScenario: { discountPercent: 0, dealValue: 500000, region: 'Dubai', dealType: 'Showing' }
+        };
+    }
+    createLowReadinessReviewTemplate() {
+        return {
+            id: `low-readiness-${Date.now()}`,
+            name: 'Low Readiness Review',
+            processName: 'Deal Readiness Gate',
+            requesterLabel: 'Opportunity Owner',
+            module: 'Opportunity',
+            triggerType: 'On Stage Change',
+            version: 'v1.0',
+            isActive: false,
+            status: 'Draft',
+            description: 'Flag deals with low readiness scores for mandatory manager review before they can advance to the negotiation stage.',
+            conditionGroups: [
+                {
+                    id: 'readiness-check',
+                    label: 'Low Readiness Score',
+                    combinator: 'AND',
+                    rules: [
+                        { id: 'score-rule', field: 'discountPercent', operator: '>', value: 0, combinator: 'AND' },
+                        { id: 'value-rule', field: 'dealValue', operator: '>=', value: 100000, combinator: 'AND' }
+                    ]
+                }
+            ],
+            steps: [
+                this.createStep({
+                    id: 'manager-review',
+                    title: 'Manager readiness review',
+                    stepType: 'Sequential',
+                    approverType: 'Role',
+                    approverSelector: 'Sales Manager',
+                    slaHours: 12,
+                    escalationRule: 'Escalates in 24h',
+                    completionRule: 'Required',
+                    notes: 'Manager reviews deal readiness checklist and confirms the deal is prepared for negotiation.'
+                }),
+                this.createStep({
+                    id: 'go-no-go',
+                    title: 'Go/No-go decision',
+                    stepType: 'Final',
+                    approverType: 'Role',
+                    approverSelector: 'Director',
+                    slaHours: 8,
+                    escalationRule: 'Escalates in 24h',
+                    completionRule: 'Required',
+                    notes: 'Director confirms final go/no-go for stage advancement.'
+                })
+            ],
+            outcomes: [
+                { event: 'approve', action: 'Advance Stage', config: 'Allow stage advancement to Negotiation.' },
+                { event: 'reject', action: 'Hold Stage', config: 'Block stage change and notify opportunity owner with improvement checklist.' },
+                { event: 'timeout', action: 'Escalate to VP', config: 'Create escalation task for VP review.' }
+            ],
+            testScenario: { discountPercent: 5, dealValue: 150000, region: 'Abu Dhabi', dealType: 'New Business' }
+        };
+    }
+    createPriceDropEscalationTemplate() {
+        return {
+            id: `price-drop-${Date.now()}`,
+            name: 'Price Drop Escalation',
+            processName: 'Pricing Change Governance',
+            requesterLabel: 'Listing Agent',
+            module: 'Opportunity',
+            triggerType: 'On Submit',
+            version: 'v1.0',
+            isActive: false,
+            status: 'Draft',
+            description: 'Escalate pricing reductions beyond a configured threshold to management for approval before the change takes effect.',
+            conditionGroups: [
+                {
+                    id: 'price-delta',
+                    label: 'Price Reduction Check',
+                    combinator: 'AND',
+                    rules: [
+                        { id: 'delta-rule', field: 'discountPercent', operator: '>', value: 5, combinator: 'AND' },
+                        { id: 'value-rule', field: 'dealValue', operator: '>=', value: 200000, combinator: 'AND' }
+                    ]
+                }
+            ],
+            steps: [
+                this.createStep({
+                    id: 'manager-approval',
+                    title: 'Manager price approval',
+                    stepType: 'Sequential',
+                    approverType: 'Role',
+                    approverSelector: 'Sales Manager',
+                    slaHours: 12,
+                    escalationRule: 'Escalates in 24h',
+                    completionRule: 'Required',
+                    notes: 'Manager validates the business justification for the price reduction.'
+                }),
+                this.createStep({
+                    id: 'director-override',
+                    title: 'Director override approval',
+                    stepType: 'Final',
+                    approverType: 'Role',
+                    approverSelector: 'Director',
+                    slaHours: 24,
+                    escalationRule: 'Escalates in 48h',
+                    completionRule: 'Required',
+                    notes: 'Director final sign-off for significant pricing changes.'
+                })
+            ],
+            outcomes: [
+                { event: 'approve', action: 'Apply Price Change', config: 'Update listing price and notify stakeholders.' },
+                { event: 'reject', action: 'Revert Price', config: 'Block price change and notify listing agent with explanation.' },
+                { event: 'timeout', action: 'Escalate to VP Sales', config: 'Create escalation task for VP review of stalled pricing decision.' }
+            ],
+            testScenario: { discountPercent: 8, dealValue: 350000, region: 'Sharjah', dealType: 'Resale' }
+        };
+    }
+    createDemoWorkflow() {
+        return {
+            id: 'high-discount-approval',
+            name: 'High Discount Approval',
+            processName: 'Discount Exception Governance',
+            requesterLabel: 'Opportunity Owner',
+            module: 'Opportunity',
+            triggerType: 'On Submit',
+            version: 'v2.3',
+            isActive: false,
+            status: 'Draft',
+            description: 'Route strategic discount exceptions through sales leadership, finance, legal, and final executive approval before the opportunity can be marked approved.',
+            conditionGroups: [
+                {
+                    id: 'discount-group',
+                    label: 'Commercial Risk',
+                    combinator: 'AND',
+                    rules: [
+                        {
+                            id: 'discount-rule',
+                            field: 'discountPercent',
+                            operator: '>',
+                            value: 10,
+                            combinator: 'AND'
+                        },
+                        {
+                            id: 'value-rule',
+                            field: 'dealValue',
+                            operator: '>=',
+                            value: 50000,
+                            combinator: 'AND'
+                        }
+                    ]
+                }
+            ],
+            steps: [
+                this.createStep({
+                    id: 'sales-manager-step',
+                    title: 'Sales Manager approval',
+                    stepType: 'Sequential',
+                    approverType: 'Role',
+                    approverSelector: 'Sales Manager',
+                    slaHours: 8,
+                    escalationRule: 'Escalates in 24h',
+                    completionRule: 'Required',
+                    notes: 'Manager confirms discount strategy, close plan, and deal quality.'
+                }),
+                this.createParallelGroup({
+                    id: 'parallel-finance-legal',
+                    title: 'Finance & Legal review',
+                    completionMode: 'All must approve',
+                    requiredApprovals: 2,
+                    approvers: [
+                        this.createStep({
+                            id: 'finance-manager-step',
+                            title: 'Finance Manager approval',
+                            stepType: 'Sequential',
+                            approverType: 'Role',
+                            approverSelector: 'Finance Manager',
+                            slaHours: 12,
+                            escalationRule: 'Escalates in 24h',
+                            completionRule: 'Required',
+                            notes: 'Validate margin, pricing envelope, and payment terms.'
+                        }),
+                        this.createStep({
+                            id: 'legal-reviewer-step',
+                            title: 'Legal Reviewer approval',
+                            stepType: 'Sequential',
+                            approverType: 'Role',
+                            approverSelector: 'Legal Reviewer',
+                            slaHours: 12,
+                            escalationRule: 'Escalates in 24h',
+                            completionRule: 'Required',
+                            notes: 'Validate redlines, non-standard clauses, and risk language.'
+                        })
+                    ]
+                }),
+                this.createStep({
+                    id: 'director-step',
+                    title: 'Director final approval',
+                    stepType: 'Final',
+                    approverType: 'Role',
+                    approverSelector: 'Director',
+                    slaHours: 24,
+                    escalationRule: 'Escalates in 48h',
+                    completionRule: 'Required',
+                    notes: 'Final commercial sign-off before the opportunity is approved.'
+                })
+            ],
+            outcomes: [
+                { event: 'approve', action: 'Mark Approved', config: 'Set approval status to Approved and unlock quote progression.' },
+                { event: 'reject', action: 'Mark Rejected', config: 'Set approval status to Rejected and notify the owner with comments.' },
+                { event: 'timeout', action: 'Escalate to VP Sales', config: 'Create escalation task and notify VP Sales plus opportunity owner.' }
+            ],
+            testScenario: {
+                discountPercent: 14,
+                dealValue: 85000,
+                region: 'Canada',
+                dealType: 'Expansion'
+            }
+        };
+    }
+    createStep(input) {
+        return {
+            id: input.id,
+            kind: 'step',
+            title: input.title,
+            stepType: input.stepType,
+            approverType: input.approverType,
+            approverSelector: input.approverSelector,
+            slaHours: input.slaHours,
+            escalationRule: input.escalationRule,
+            completionRule: input.completionRule,
+            advanced: {
+                reminderHours: 4,
+                escalationContact: 'VP Sales',
+                requireDecisionComment: true,
+                allowDelegateApproval: false,
+                notes: input.notes
+            }
+        };
+    }
+    createParallelGroup(input) {
+        return {
+            id: input.id,
+            kind: 'parallel-group',
+            title: input.title,
+            completionMode: input.completionMode,
+            requiredApprovals: input.requiredApprovals,
+            approvers: input.approvers
+        };
+    }
+    static ɵfac = function ApprovalWorkflowBuilderFacade_Factory(__ngFactoryType__) { return new (__ngFactoryType__ || ApprovalWorkflowBuilderFacade)(); };
+    static ɵprov = /*@__PURE__*/ i0.ɵɵdefineInjectable({ token: ApprovalWorkflowBuilderFacade, factory: ApprovalWorkflowBuilderFacade.ɵfac });
+}
+(() => { (typeof ngDevMode === "undefined" || ngDevMode) && i0.ɵsetClassMetadata(ApprovalWorkflowBuilderFacade, [{
+        type: Injectable
+    }], null, null); })();
+function clone(value) {
+    return JSON.parse(JSON.stringify(value));
+}
+function uniqueStrings(values) {
+    return [...new Set(values.map((value) => value?.trim()).filter((value) => Boolean(value)))];
+}
+function mergeOptions(options, currentValues) {
+    const map = new Map();
+    for (const option of options) {
+        if (option.value) {
+            map.set(option.value, option);
+        }
+    }
+    for (const value of currentValues) {
+        if (value && !map.has(value)) {
+            map.set(value, { label: labelizeField(value), value });
+        }
+    }
+    return [...map.values()].sort((a, b) => a.label.localeCompare(b.label));
+}
+function labelizeField(value) {
+    return value
+        .replace(/([a-z])([A-Z])/g, '$1 $2')
+        .replace(/[_-]+/g, ' ')
+        .replace(/\b\w/g, (match) => match.toUpperCase())
+        .trim();
+}
+function labelizeOperator(value) {
+    switch (value) {
+        case '>':
+            return 'Greater than';
+        case '>=':
+            return 'Greater than or equal';
+        case '=':
+            return 'Equals';
+        case '!=':
+            return 'Not equals';
+        case 'contains':
+            return 'Contains';
+        default:
+            return labelizeField(value);
+    }
+}
+function normalizeModuleLabel(value) {
+    const normalized = value.trim().toLowerCase();
+    switch (normalized) {
+        case 'lead':
+        case 'leads':
+            return 'Leads';
+        case 'opportunity':
+        case 'opportunities':
+        case 'deal':
+        case 'deals':
+            return 'Deals';
+        case 'customer':
+        case 'customers':
+        case 'account':
+        case 'accounts':
+            return 'Customers';
+        case 'contact':
+        case 'contacts':
+            return 'Contacts';
+        case 'activity':
+        case 'activities':
+            return 'Activities';
+        case 'campaign':
+        case 'campaigns':
+        case 'marketing':
+            return 'Marketing';
+        case 'property':
+        case 'properties':
+            return 'Properties';
+        default:
+            return labelizeField(value);
+    }
+}
+function collectApproverSelectors(definition, approverType) {
+    const selectors = [];
+    for (const step of definition.steps) {
+        if (step.kind === 'parallel-group') {
+            for (const approver of step.approvers) {
+                if (approver.approverType === approverType) {
+                    selectors.push(approver.approverSelector);
+                }
+            }
+            continue;
+        }
+        if (step.approverType === approverType) {
+            selectors.push(step.approverSelector);
+        }
+    }
+    return uniqueStrings(selectors);
+}
+function collectApproverTypes(definition) {
+    const values = [];
+    for (const step of definition.steps) {
+        if (step.kind === 'parallel-group') {
+            values.push(...step.approvers.map((approver) => approver.approverType));
+        }
+        else {
+            values.push(step.approverType);
+        }
+    }
+    return values;
+}
+function collectEscalationRules(definition) {
+    const values = [];
+    for (const step of definition.steps) {
+        if (step.kind === 'parallel-group') {
+            values.push(...step.approvers.map((approver) => approver.escalationRule));
+        }
+        else {
+            values.push(step.escalationRule);
+        }
+    }
+    return values;
+}
+function collectCompletionRules(definition) {
+    const values = [];
+    for (const step of definition.steps) {
+        if (step.kind === 'parallel-group') {
+            values.push(...step.approvers.map((approver) => approver.completionRule));
+        }
+        else {
+            values.push(step.completionRule);
+        }
+    }
+    return values;
+}
