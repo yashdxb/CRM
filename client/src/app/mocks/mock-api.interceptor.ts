@@ -612,7 +612,7 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
 
   if (req.method === 'POST' && path === '/api/helpdesk/cases') {
     const now = new Date().toISOString();
-    const id = `hd-${Date.now()}`;
+    const id = `mock-case-${Date.now()}`;
     const body = req.body as Record<string, unknown>;
     return respond({
       id,

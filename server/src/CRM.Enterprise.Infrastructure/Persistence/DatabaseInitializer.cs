@@ -3008,8 +3008,8 @@ public class DatabaseInitializer : IDatabaseInitializer
     }
 
     /// <summary>
-    /// Production-safe: ensures Sales Rep and Sales Manager roles have the HelpDesk View
-    /// and HelpDesk Manage permissions so that sales reps can create and manage helpdesk tickets.
+    /// Production-safe: ensures Sales Rep and Sales Manager roles have the Help Desk View
+    /// and Help Desk Manage permissions so that sales reps can create and manage helpdesk tickets.
     /// Additive only — adds missing permissions without removing existing ones.
     /// </summary>
     private async Task EnsureSalesRoleHelpdeskPermissionsAsync(CancellationToken cancellationToken)
