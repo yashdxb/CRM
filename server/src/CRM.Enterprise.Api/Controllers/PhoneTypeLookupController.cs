@@ -3,12 +3,14 @@ using CRM.Enterprise.Application.Lookups;
 using CRM.Enterprise.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 
 namespace CRM.Enterprise.Api.Controllers;
 
 [Authorize(Policy = Permissions.Policies.AdministrationView)]
 [ApiController]
 [Route("api/lookups/phone-types")]
+[OutputCache(PolicyName = "TenantLookup")]
 public class PhoneTypeLookupController : ControllerBase
 {
     private readonly IPhoneTypeLookupService _svc;

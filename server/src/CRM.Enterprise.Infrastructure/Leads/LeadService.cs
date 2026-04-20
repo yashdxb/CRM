@@ -114,7 +114,6 @@ public sealed class LeadService : ILeadService
         var nowUtc = DateTime.UtcNow;
 
         var query = _dbContext.Leads
-            .Include(l => l.Status)
             .AsNoTracking()
             .Where(l => !l.IsDeleted);
 
@@ -127,13 +126,13 @@ public sealed class LeadService : ILeadService
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
-            var term = request.Search.ToLower();
+            var term = $"%{request.Search.Trim()}%";
             query = query.Where(l =>
-                l.LeadNumber.ToLower().Contains(term) ||
-                (l.FirstName + " " + l.LastName).ToLower().Contains(term) ||
-                (l.Email ?? string.Empty).ToLower().Contains(term) ||
-                (l.Phone ?? string.Empty).ToLower().Contains(term) ||
-                (l.CompanyName ?? string.Empty).ToLower().Contains(term));
+                EF.Functions.Like(l.LeadNumber, term) ||
+                EF.Functions.Like((l.FirstName ?? string.Empty) + " " + (l.LastName ?? string.Empty), term) ||
+                (!string.IsNullOrEmpty(l.Email) && EF.Functions.Like(l.Email, term)) ||
+                (!string.IsNullOrEmpty(l.Phone) && EF.Functions.Like(l.Phone, term)) ||
+                (!string.IsNullOrEmpty(l.CompanyName) && EF.Functions.Like(l.CompanyName, term)));
         }
 
         if (!string.IsNullOrWhiteSpace(request.Status))

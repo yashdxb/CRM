@@ -180,8 +180,6 @@ public sealed class OpportunityService : IOpportunityService
         var pageSize = Math.Clamp(request.PageSize, 1, 100);
 
         var query = _dbContext.Opportunities
-            .Include(o => o.Account)
-            .Include(o => o.Stage)
             .AsNoTracking()
             .Where(o => !o.IsDeleted);
 
@@ -194,10 +192,10 @@ public sealed class OpportunityService : IOpportunityService
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
-            var term = request.Search.ToLower();
+            var term = $"%{request.Search.Trim()}%";
             query = query.Where(o =>
-                o.Name.ToLower().Contains(term) ||
-                (o.Account != null && o.Account.Name.ToLower().Contains(term)));
+                EF.Functions.Like(o.Name, term) ||
+                (o.Account != null && EF.Functions.Like(o.Account.Name, term)));
         }
 
         if (!string.IsNullOrWhiteSpace(request.Stage))

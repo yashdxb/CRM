@@ -23,8 +23,6 @@ public sealed class CustomerService : ICustomerService
         var pageSize = Math.Clamp(request.PageSize, 1, 100);
 
         var query = _dbContext.Accounts
-            .Include(a => a.Contacts)
-            .Include(a => a.ParentAccount)
             .AsNoTracking()
             .Where(a => !a.IsDeleted);
 
@@ -37,11 +35,11 @@ public sealed class CustomerService : ICustomerService
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
-            var term = request.Search.ToLower();
+            var term = $"%{request.Search.Trim()}%";
             query = query.Where(a =>
-                a.Name.ToLower().Contains(term) ||
-                (a.Phone ?? string.Empty).ToLower().Contains(term) ||
-                a.Contacts.Any(c => (c.Email ?? string.Empty).ToLower().Contains(term)));
+                EF.Functions.Like(a.Name, term) ||
+                (!string.IsNullOrEmpty(a.Phone) && EF.Functions.Like(a.Phone, term)) ||
+                a.Contacts.Any(c => !string.IsNullOrEmpty(c.Email) && EF.Functions.Like(c.Email, term)));
         }
 
         if (!string.IsNullOrWhiteSpace(request.Status))
@@ -154,17 +152,36 @@ public sealed class CustomerService : ICustomerService
     public async Task<CustomerListItemDto?> GetAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var account = await _dbContext.Accounts
-            .Include(a => a.Contacts)
-            .Include(a => a.ParentAccount)
-            .FirstOrDefaultAsync(a => a.Id == id && !a.IsDeleted, cancellationToken);
+            .AsNoTracking()
+            .Where(a => a.Id == id && !a.IsDeleted)
+            .Select(a => new
+            {
+                a.Id,
+                a.Name,
+                Email = a.Contacts.Select(c => c.Email).FirstOrDefault(email => !string.IsNullOrEmpty(email)),
+                a.Phone,
+                Status = a.LifecycleStage ?? "Customer",
+                a.OwnerId,
+                a.ParentAccountId,
+                ParentAccountName = a.ParentAccount != null ? a.ParentAccount.Name : null,
+                a.CreatedAtUtc,
+                a.Industry,
+                a.Territory,
+                a.ActivityScore,
+                a.Website,
+                a.AccountNumber,
+                a.AnnualRevenue,
+                a.NumberOfEmployees,
+                a.AccountType,
+                a.Rating,
+                a.AccountSource
+            })
+            .FirstOrDefaultAsync(cancellationToken);
 
         if (account is null)
         {
             return null;
         }
-
-        account.LastViewedAtUtc = DateTime.UtcNow;
-        await _dbContext.SaveChangesAsync(cancellationToken);
 
         var ownerName = await _dbContext.Users
             .Where(u => u.Id == account.OwnerId)
@@ -175,13 +192,13 @@ public sealed class CustomerService : ICustomerService
             account.Id,
             account.Name,
             account.Name,
-            account.Contacts.Select(c => c.Email).FirstOrDefault(email => !string.IsNullOrEmpty(email)),
+            account.Email,
             account.Phone,
-            account.LifecycleStage ?? "Customer",
+            account.Status,
             account.OwnerId,
             ownerName,
             account.ParentAccountId,
-            account.ParentAccount?.Name,
+            account.ParentAccountName,
             account.CreatedAtUtc,
             account.Industry,
             account.Territory,

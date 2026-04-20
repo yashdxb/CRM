@@ -41,6 +41,13 @@ if (builder.Environment.IsDevelopment())
 }
 
 builder.Services.AddMemoryCache();
+builder.Services.AddOutputCache(options =>
+{
+    options.AddPolicy("TenantLookup", policy => policy
+        .Expire(TimeSpan.FromMinutes(10))
+        .SetVaryByQuery("*")
+        .SetVaryByHeader("X-Tenant-Key", "Authorization"));
+});
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddSingleton<ICrmRealtimePublisher, SignalRCrmRealtimePublisher>();
@@ -316,6 +323,7 @@ app.UseWhen(
     branch => branch.UseHttpsRedirection());
 app.UseRouting();
 app.UseCors(CorsPolicyName);
+app.UseOutputCache();
 app.UseAuthentication();
 app.UseMiddleware<TenantResolutionMiddleware>();
 app.UseAuthorization();
