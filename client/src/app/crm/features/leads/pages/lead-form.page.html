@@ -1148,15 +1148,26 @@
               <p-accordion-content>
                 <section class="form-section form-section--qualification form-section--accordion-body">
                   <div class="qualification-factor-grid">
-                    <article class="qualification-factor-card" *ngFor="let factor of qualificationFactorCards()">
+                    <article
+                      class="qualification-factor-card"
+                      *ngFor="let factor of qualificationFactorCards()"
+                      [attr.data-theme]="qualificationFactorTheme(factor.key)"
+                      [attr.data-state]="qualificationStatusChipTone(factor.key)"
+                    >
                       <header class="qualification-factor-card__header">
-                        <div>
+                        <div class="qualification-factor-card__hero">
+                          <span class="qualification-factor-card__icon" [attr.data-theme]="qualificationFactorTheme(factor.key)">
+                            <i class="pi" [ngClass]="qualificationFactorIcon(factor.key)"></i>
+                          </span>
+                          <div class="qualification-factor-card__hero-copy">
+                            <span class="qualification-factor-card__eyebrow">{{ qualificationFactorCategoryLabel(factor.key) }}</span>
                           <div class="qualification-factor-card__title-row">
                             <h3>{{ factor.label }}</h3>
                             <span class="factor-required-badge" *ngIf="factor.required">Required</span>
                             <span class="factor-scoring-badge" *ngIf="!factor.includeInScore">Context only</span>
                           </div>
                           <p>{{ factor.helperText }}</p>
+                          </div>
                         </div>
                         <span class="accordion-header-badge accordion-header-badge--score" [attr.data-tone]="qualificationStatusChipTone(factor.key)">
                           {{ qualificationStatusChipLabel(factor.key) }}
@@ -1173,9 +1184,8 @@
                             optionLabel="label"
                             optionValue="value"
                             [ngModel]="factor.value"
-                            (ngModelChange)="setCustomFactorValue(factor.key, $event); onQualificationFactorChange()"
-                            *ngIf="factor.key !== 'budget' && factor.key !== 'readiness' && factor.key !== 'timeline' && factor.key !== 'problem' && factor.key !== 'economicBuyer' && factor.key !== 'icpFit'"
-                            placeholder="Unknown / not assessed"
+                            (ngModelChange)="setQualificationFactorValue(factor.key, $event); onQualificationFactorChange()"
+                            placeholder="{{ qualificationFactorPlaceholder(factor.key) }}"
                             appendTo="body"
                             class="w-full"
                           >
@@ -1192,85 +1202,6 @@
                               </div>
                             </ng-template>
                           </p-select>
-
-                          <p-select
-                            *ngIf="factor.key === 'budget'"
-                            [inputId]="'lead-factor-' + factor.key"
-                            name="budgetAvailability"
-                            [options]="budgetOptions"
-                            optionLabel="label"
-                            optionValue="value"
-                            [(ngModel)]="form.budgetAvailability"
-                            (ngModelChange)="onQualificationFactorChange()"
-                            placeholder="Unknown / not yet discussed"
-                            appendTo="body"
-                            class="w-full"
-                          ></p-select>
-                          <p-select
-                            *ngIf="factor.key === 'readiness'"
-                            [inputId]="'lead-factor-' + factor.key"
-                            name="readinessToSpend"
-                            [options]="readinessOptions"
-                            optionLabel="label"
-                            optionValue="value"
-                            [(ngModel)]="form.readinessToSpend"
-                            (ngModelChange)="onQualificationFactorChange()"
-                            placeholder="Unknown / not yet discussed"
-                            appendTo="body"
-                            class="w-full"
-                          ></p-select>
-                          <p-select
-                            *ngIf="factor.key === 'timeline'"
-                            [inputId]="'lead-factor-' + factor.key"
-                            name="buyingTimeline"
-                            [options]="timelineOptions"
-                            optionLabel="label"
-                            optionValue="value"
-                            [(ngModel)]="form.buyingTimeline"
-                            (ngModelChange)="onQualificationFactorChange()"
-                            placeholder="Unknown / not yet discussed"
-                            appendTo="body"
-                            class="w-full"
-                          ></p-select>
-                          <p-select
-                            *ngIf="factor.key === 'problem'"
-                            [inputId]="'lead-factor-' + factor.key"
-                            name="problemSeverity"
-                            [options]="problemOptions"
-                            optionLabel="label"
-                            optionValue="value"
-                            [(ngModel)]="form.problemSeverity"
-                            (ngModelChange)="onQualificationFactorChange()"
-                            placeholder="Unknown / not yet discussed"
-                            appendTo="body"
-                            class="w-full"
-                          ></p-select>
-                          <p-select
-                            *ngIf="factor.key === 'economicBuyer'"
-                            [inputId]="'lead-factor-' + factor.key"
-                            name="economicBuyer"
-                            [options]="economicBuyerOptions"
-                            optionLabel="label"
-                            optionValue="value"
-                            [(ngModel)]="form.economicBuyer"
-                            (ngModelChange)="onQualificationFactorChange()"
-                            placeholder="Unknown / not yet discussed"
-                            appendTo="body"
-                            class="w-full"
-                          ></p-select>
-                          <p-select
-                            *ngIf="factor.key === 'icpFit'"
-                            [inputId]="'lead-factor-' + factor.key"
-                            name="icpFit"
-                            [options]="icpFitOptions"
-                            optionLabel="label"
-                            optionValue="value"
-                            [(ngModel)]="form.icpFit"
-                            (ngModelChange)="onQualificationFactorChange()"
-                            placeholder="Unknown / not yet discussed"
-                            appendTo="body"
-                            class="w-full"
-                          ></p-select>
                         </ng-container>
 
                         <ng-template #qualificationTextFactor>
@@ -1287,9 +1218,21 @@
                       </div>
 
                       <div class="qualification-factor-card__evidence-row">
-                        <div class="qualification-factor-card__evidence-summary">
+                        <div class="qualification-factor-card__evidence-summary" [attr.data-tone]="evidenceSummaryTone(factor.key)">
                           <span class="qualification-factor-card__evidence-label">Evidence</span>
-                          <strong>{{ evidenceSummaryLabel(factor.key) }}</strong>
+                          <strong>
+                            <i
+                              class="pi"
+                              [ngClass]="
+                                evidenceSummaryTone(factor.key) === 'captured'
+                                  ? 'pi-check-circle'
+                                  : evidenceSummaryTone(factor.key) === 'missing'
+                                    ? 'pi-exclamation-triangle'
+                                    : 'pi-info-circle'
+                              "
+                            ></i>
+                            <span>{{ evidenceSummaryLabel(factor.key) }}</span>
+                          </strong>
                         </div>
                         <button
                           type="button"

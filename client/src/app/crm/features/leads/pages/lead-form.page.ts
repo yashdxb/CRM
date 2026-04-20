@@ -3937,6 +3937,109 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     return this.qualificationEvidenceExpanded().includes(key);
   }
 
+  protected qualificationFactorIcon(key: string): string {
+    switch (key) {
+      case 'budget':
+        return 'pi-wallet';
+      case 'readiness':
+        return 'pi-bolt';
+      case 'timeline':
+        return 'pi-clock';
+      case 'problem':
+        return 'pi-exclamation-circle';
+      case 'economicBuyer':
+        return 'pi-user';
+      case 'icpFit':
+        return 'pi-compass';
+      default:
+        return 'pi-sliders-h';
+    }
+  }
+
+  protected qualificationFactorTheme(key: string): 'indigo' | 'cyan' | 'amber' | 'rose' | 'emerald' | 'violet' {
+    switch (key) {
+      case 'budget':
+        return 'emerald';
+      case 'readiness':
+        return 'amber';
+      case 'timeline':
+        return 'indigo';
+      case 'problem':
+        return 'rose';
+      case 'economicBuyer':
+        return 'cyan';
+      case 'icpFit':
+        return 'violet';
+      default:
+        return 'indigo';
+    }
+  }
+
+  protected qualificationFactorCategoryLabel(key: string): string {
+    switch (key) {
+      case 'budget':
+        return 'Financial signal';
+      case 'readiness':
+        return 'Buying intent';
+      case 'timeline':
+        return 'Decision timing';
+      case 'problem':
+        return 'Pain severity';
+      case 'economicBuyer':
+        return 'Stakeholder access';
+      case 'icpFit':
+        return 'Profile alignment';
+      default:
+        return 'Custom signal';
+    }
+  }
+
+  protected qualificationFactorPlaceholder(key: string): string {
+    switch (key) {
+      case 'budget':
+        return 'Unknown / not yet discussed';
+      case 'readiness':
+        return 'Unknown / unclear';
+      case 'timeline':
+        return 'Unknown / not discussed';
+      case 'problem':
+        return 'Unknown / not validated';
+      case 'economicBuyer':
+        return 'Unknown / not identified';
+      case 'icpFit':
+        return 'Unknown / not assessed';
+      default:
+        return 'Unknown / not assessed';
+    }
+  }
+
+  protected setQualificationFactorValue(key: string, value: string | null): void {
+    const normalized = value ?? undefined;
+    switch (key) {
+      case 'budget':
+        this.form.budgetAvailability = normalized;
+        break;
+      case 'readiness':
+        this.form.readinessToSpend = normalized;
+        break;
+      case 'timeline':
+        this.form.buyingTimeline = normalized;
+        break;
+      case 'problem':
+        this.form.problemSeverity = normalized;
+        break;
+      case 'economicBuyer':
+        this.form.economicBuyer = normalized;
+        break;
+      case 'icpFit':
+        this.form.icpFit = normalized;
+        break;
+      default:
+        this.setCustomFactorValue(key, value);
+        break;
+    }
+  }
+
   protected toggleEvidenceExpanded(key: string): void {
     this.qualificationEvidenceExpanded.update((keys) =>
       keys.includes(key) ? keys.filter((item) => item !== key) : [...keys, key]
@@ -3959,6 +4062,15 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
       return this.requiresEvidenceBeforeQualified() ? 'Evidence required' : 'No evidence added';
     }
     return evidence;
+  }
+
+  protected evidenceSummaryTone(key: string): 'missing' | 'captured' | 'optional' {
+    const evidence = (this.evidenceValueForFactor(key) ?? '').trim();
+    if (evidence && evidence !== 'No evidence yet') {
+      return 'captured';
+    }
+
+    return this.requiresEvidenceBeforeQualified() ? 'missing' : 'optional';
   }
 
   protected qualificationStatusChipTone(key: string): 'none' | 'low' | 'medium' | 'high' {
