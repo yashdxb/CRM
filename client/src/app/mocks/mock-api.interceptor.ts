@@ -600,6 +600,88 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
     }
   }
 
+  // ── Help Desk mock endpoints ──
+
+  if (req.method === 'GET' && path === '/api/helpdesk/cases') {
+    return respond({ items: [], total: 0 }, 200, 120);
+  }
+
+  if (req.method === 'GET' && /^\/api\/helpdesk\/cases\/[^/]+$/.test(path)) {
+    return respond({ message: 'Not found' }, 404, 120);
+  }
+
+  if (req.method === 'POST' && path === '/api/helpdesk/cases') {
+    const now = new Date().toISOString();
+    const id = `hd-${Date.now()}`;
+    const body = req.body as Record<string, unknown>;
+    return respond({
+      id,
+      caseNumber: `CASE-${Math.floor(1000 + Math.random() * 9000)}`,
+      subject: body['subject'] ?? '',
+      description: body['description'] ?? '',
+      status: 'New',
+      priority: body['priority'] ?? 'Medium',
+      severity: body['severity'] ?? 'S3',
+      category: body['category'] ?? 'General',
+      subcategory: body['subcategory'] ?? null,
+      source: body['source'] ?? 'Manual',
+      accountId: body['accountId'] ?? null,
+      accountName: null,
+      contactId: body['contactId'] ?? null,
+      contactName: null,
+      queueId: body['queueId'] ?? null,
+      queueName: null,
+      ownerUserId: null,
+      ownerUserName: null,
+      firstResponseDueUtc: now,
+      resolutionDueUtc: now,
+      firstRespondedUtc: null,
+      resolvedUtc: null,
+      closedUtc: null,
+      closureReason: null,
+      csatScore: null,
+      csatFeedback: null,
+      createdAtUtc: now,
+      updatedAtUtc: null
+    }, 201, 150);
+  }
+
+  if (req.method === 'PUT' && /^\/api\/helpdesk\/cases\/[^/]+$/.test(path)) {
+    return respond(null, 204, 120);
+  }
+
+  if (req.method === 'POST' && /^\/api\/helpdesk\/cases\/[^/]+\/status$/.test(path)) {
+    return respond(null, 204, 120);
+  }
+
+  if (req.method === 'POST' && /^\/api\/helpdesk\/cases\/[^/]+\/assign$/.test(path)) {
+    return respond(null, 204, 120);
+  }
+
+  if (req.method === 'POST' && /^\/api\/helpdesk\/cases\/[^/]+\/comments$/.test(path)) {
+    return respond(null, 204, 120);
+  }
+
+  if (req.method === 'GET' && path === '/api/helpdesk/queues') {
+    return respond([], 200, 100);
+  }
+
+  if (req.method === 'GET' && path === '/api/helpdesk/sla-policies') {
+    return respond([], 200, 100);
+  }
+
+  if (req.method === 'GET' && path === '/api/helpdesk/reports/summary') {
+    return respond({
+      openCount: 0,
+      atRiskCount: 0,
+      breachedCount: 0,
+      resolvedTodayCount: 0,
+      averageCsatScore: null,
+      ratedCaseCount: 0,
+      topClosureReasons: []
+    }, 200, 100);
+  }
+
   // ── Lookup / Picklist CRUD stubs ──
   // Return empty arrays for GET list, 501 for mutations — backend handles real data.
 

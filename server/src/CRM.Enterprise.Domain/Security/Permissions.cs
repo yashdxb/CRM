@@ -137,6 +137,8 @@ public static class Permissions
         Policies.ActivitiesManage,
         Policies.EmailsView,
         Policies.EmailsManage,
+        Policies.HelpDeskView,
+        Policies.HelpDeskManage,
         Policies.PropertiesView,
         Policies.PropertiesManage
     };
