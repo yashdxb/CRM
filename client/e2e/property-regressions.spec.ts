@@ -1,3 +1,4 @@
+import * as path from 'path';
 import { expect, test } from '@playwright/test';
 
 const UI_BASE_URL = process.env.E2E_BASE_URL ?? 'http://localhost:4200';
@@ -12,7 +13,7 @@ const SALES_MANAGER_EMAIL = process.env.E2E_SALES_MANAGER_EMAIL ?? 'yasser.ahame
 const SALES_MANAGER_PASSWORD = process.env.E2E_SALES_MANAGER_PASSWORD ?? 'P@ssw0rd!';
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'yasser.ahamed@live.com';
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'yAsh@123';
-const SAMPLE_PHOTO_PATH = process.env.E2E_PROPERTY_PHOTO_PATH ?? '/Users/yasserahmed/Desktop/Development Projects/CRM-Enterprise/client/src/assets/avatars/lead1.png';
+const SAMPLE_PHOTO_PATH = process.env.E2E_PROPERTY_PHOTO_PATH ?? path.join(__dirname, '../src/assets/avatars/lead1.png');
 
 type PropertyRecord = {
   id: string;

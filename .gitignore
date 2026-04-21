@@ -56,6 +56,10 @@ __screenshots__/
 server/src/CRM.Enterprise.Api/Reports/CRM/
 temp/
 
+# Playwright local run artifacts
+client/playwright-output.txt
+client/playwright-css-verify.log
+
 # Duplicate client folder
 /client/client/
 
