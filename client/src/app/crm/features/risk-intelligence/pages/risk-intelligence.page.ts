@@ -53,50 +53,119 @@ export class RiskIntelligencePage {
     const risks = this.workspace().priorityRisks;
     return risks.find((item) => item.id === selectedId) ?? risks[0] ?? null;
   });
-  protected readonly summaryCards = computed(() => {
+  protected readonly metricCards = computed(() => {
     const summary = this.workspace().summary;
+    const total = Math.max(summary.totalOpenRisks, 1);
+    const share = (value: number) => Math.min(100, Math.round((value / total) * 100));
     return [
-      { label: 'Open Risks', value: summary.totalOpenRisks, tone: 'neutral', icon: 'pi pi-shield' },
-      { label: 'Immediate', value: summary.immediateRisks, tone: 'danger', icon: 'pi pi-bolt' },
-      { label: 'Soon', value: summary.soonRisks, tone: 'warning', icon: 'pi pi-clock' },
-      { label: 'Stale Pipeline', value: summary.stalePipelineCount, tone: 'warning', icon: 'pi pi-chart-line' },
-      { label: 'Overdue Approvals', value: summary.overdueApprovals, tone: 'danger', icon: 'pi pi-inbox' }
+      {
+        key: 'total',
+        label: 'Open Risks',
+        value: summary.totalOpenRisks,
+        icon: 'pi pi-shield',
+        variant: 'total',
+        ringColor: 'cyan',
+        ringPercent: 100
+      },
+      {
+        key: 'immediate',
+        label: 'Immediate',
+        value: summary.immediateRisks,
+        icon: 'pi pi-bolt',
+        variant: 'immediate',
+        ringColor: 'red',
+        ringPercent: share(summary.immediateRisks)
+      },
+      {
+        key: 'soon',
+        label: 'Soon',
+        value: summary.soonRisks,
+        icon: 'pi pi-clock',
+        variant: 'soon',
+        ringColor: 'amber',
+        ringPercent: share(summary.soonRisks)
+      },
+      {
+        key: 'stale',
+        label: 'Stale Pipeline',
+        value: summary.stalePipelineCount,
+        icon: 'pi pi-chart-line',
+        variant: 'stale',
+        ringColor: 'purple',
+        ringPercent: share(summary.stalePipelineCount)
+      },
+      {
+        key: 'overdue',
+        label: 'Overdue Approvals',
+        value: summary.overdueApprovals,
+        icon: 'pi pi-inbox',
+        variant: 'overdue',
+        ringColor: 'rose',
+        ringPercent: share(summary.overdueApprovals)
+      }
     ];
   });
   protected readonly heroHighlights = computed(() => {
     const summary = this.workspace().summary;
+    const total = Math.max(summary.totalOpenRisks, 1);
+    const sharePct = (value: number) => Math.min(100, Math.round((value / total) * 100));
     return [
       {
         label: 'Immediate actions',
         value: summary.immediateRisks,
         caption: summary.immediateRisks === 1 ? 'risk needs action now' : 'risks need action now',
         tone: 'danger',
-        icon: 'pi pi-bolt'
+        icon: 'pi pi-bolt',
+        share: sharePct(summary.immediateRisks)
       },
       {
         label: 'Pipeline pressure',
         value: summary.stalePipelineCount,
         caption: summary.stalePipelineCount === 1 ? 'stale deal to review' : 'stale deals to review',
         tone: 'warning',
-        icon: 'pi pi-chart-line'
+        icon: 'pi pi-chart-line',
+        share: sharePct(summary.stalePipelineCount)
       },
       {
         label: 'Approval backlog',
         value: summary.overdueApprovals,
         caption: summary.overdueApprovals === 1 ? 'overdue approval' : 'overdue approvals',
         tone: 'neutral',
-        icon: 'pi pi-clock'
+        icon: 'pi pi-clock',
+        share: sharePct(summary.overdueApprovals)
       }
     ];
   });
-  protected readonly liveWorkspaceCard = computed(() => {
+  protected readonly systemStatus = computed(() => {
     const summary = this.workspace().summary;
-    const riskLoad = summary.immediateRisks + summary.overdueApprovals + summary.soonRisks;
-    const tone = riskLoad >= 16 ? 'critical' : riskLoad >= 8 ? 'watch' : 'normal';
+    const critical = summary.immediateRisks + summary.overdueApprovals;
+    const watch = summary.soonRisks + summary.stalePipelineCount;
+
+    if (critical >= 5) {
+      return {
+        tone: 'critical',
+        label: 'Action required',
+        caption: `${critical} critical signals across immediate risks and overdue approvals.`
+      };
+    }
+    if (critical >= 1 || watch >= 8) {
+      return {
+        tone: 'watch',
+        label: 'Monitor closely',
+        caption: `${critical} critical · ${watch} watch-level signals are open.`
+      };
+    }
+    if (summary.totalOpenRisks === 0) {
+      return {
+        tone: 'normal',
+        label: 'All clear',
+        caption: 'No open risk signals across the workspace.'
+      };
+    }
     return {
-      tone,
-      title: `${summary.totalOpenRisks} active risk signals`,
-      caption: `${summary.immediateRisks} immediate · ${summary.overdueApprovals} overdue approvals`
+      tone: 'normal',
+      label: 'Operating normally',
+      caption: `${summary.totalOpenRisks} open signals being tracked, none critical.`
     };
   });
   protected readonly filteredPriorityQueue = computed(() => {
@@ -110,15 +179,6 @@ export class RiskIntelligencePage {
     });
   });
   protected readonly priorityQueue = computed(() => this.filteredPriorityQueue().slice(0, 5));
-  protected readonly riskPanelSummary = computed(() => {
-    const summary = this.workspace().summary;
-    return [
-      { label: 'Immediate', count: summary.immediateRisks, severity: 'critical' },
-      { label: 'Soon', count: summary.soonRisks, severity: 'high' },
-      { label: 'Overdue approvals', count: summary.overdueApprovals, severity: 'medium' },
-      { label: 'Open risks', count: summary.totalOpenRisks, severity: 'info' }
-    ].filter((item) => item.count > 0);
-  });
   protected readonly focusSignals = computed(() => {
     const selected = this.selectedRisk();
     if (!selected) {

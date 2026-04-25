@@ -42,9 +42,11 @@
           </div>
           <strong class="hero-command-card__value">{{ item.value }}</strong>
           <span class="hero-command-card__caption">{{ item.caption }}</span>
-          <span class="hero-command-card__delta" [ngClass]="item.delta >= 0 ? 'up' : 'down'">
-            <i [class]="item.delta >= 0 ? 'pi pi-arrow-up' : 'pi pi-arrow-down'"></i>
-            {{ item.delta | number: '1.0-0' }} vs yesterday
+          <span class="hero-command-card__share" *ngIf="workspace().summary.totalOpenRisks > 0">
+            <span class="hero-command-card__share-bar">
+              <span class="hero-command-card__share-fill" [style.width.%]="item.share"></span>
+            </span>
+            <span class="hero-command-card__share-label">{{ item.share }}% of open risks</span>
           </span>
         </div>
 
@@ -60,6 +62,31 @@
 
         <div class="hero-actions">
           <button pButton type="button" class="crm-secondary-btn hero-refresh-btn" icon="pi pi-refresh" label="Refresh" (click)="loadWorkspace()"></button>
+        </div>
+      </div>
+    </section>
+
+    <section class="metrics-section" *ngIf="!loading()">
+      <div
+        *ngFor="let card of metricCards()"
+        class="metric-card"
+        [ngClass]="'metric-card--' + card.variant">
+        <div class="metric-icon">
+          <i [class]="card.icon"></i>
+        </div>
+        <div class="metric-content">
+          <span class="metric-label">{{ card.label }}</span>
+          <strong class="metric-value">{{ card.value }}</strong>
+        </div>
+        <div class="metric-ring" *ngIf="card.key !== 'total'">
+          <svg viewBox="0 0 36 36">
+            <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+            <path
+              class="ring-fill"
+              [ngClass]="'ring-fill--' + card.ringColor"
+              [attr.stroke-dasharray]="card.ringPercent + ', 100'"
+              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+          </svg>
         </div>
       </div>
     </section>
@@ -103,7 +130,7 @@
                     <th>Summary</th>
                     <th>Owner</th>
                     <th>Urgency</th>
-                    <th>Trend</th>
+                    <th>Score &amp; Source</th>
                   </tr>
                 </ng-template>
 
@@ -140,13 +167,14 @@
                     </td>
 
                     <td>
-                      <div class="priority-risk-cell priority-risk-cell--trend">
-                        <svg class="trend-sparkline" viewBox="0 0 80 32" aria-hidden="true">
-                          <path [attr.d]="trendPath(item, rowIndex)"></path>
-                        </svg>
-                        <span class="trend-delta" [ngClass]="trendDelta(item, rowIndex) >= 0 ? 'up' : 'down'">
-                          <i [class]="trendDelta(item, rowIndex) >= 0 ? 'pi pi-arrow-up' : 'pi pi-arrow-down'"></i>
-                          {{ trendDelta(item, rowIndex) | number: '1.0-0' }}%
+                      <div class="priority-risk-cell priority-risk-cell--score">
+                        <span class="risk-score-chip" [ngClass]="riskCardSeverityClass(item)">
+                          <strong>{{ item.score }}</strong>
+                          <span>score</span>
+                        </span>
+                        <span class="risk-source-chip" [title]="item.sourceSurface">
+                          <i class="pi pi-tag"></i>
+                          {{ item.sourceSurface }}
                         </span>
                       </div>
                     </td>
@@ -176,18 +204,6 @@
 
             <ng-container *ngIf="!loading(); else watchlistLoading">
               <div class="watchlist-panel__content">
-                <div class="watchlist-trend-line" aria-hidden="true">
-                  <svg viewBox="0 0 240 80">
-                    <defs>
-                      <linearGradient id="watchlistStroke" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stop-color="#9be7ba" />
-                        <stop offset="100%" stop-color="#16a34a" />
-                      </linearGradient>
-                    </defs>
-                    <path d="M 6 68 L 28 58 L 50 60 L 72 44 L 94 48 L 116 36 L 138 39 L 160 28 L 182 34 L 204 18 L 228 8"></path>
-                  </svg>
-                </div>
-
                 <div class="watchlist-stack" data-testid="risk-watchlist">
                   <button
                     *ngFor="let item of visibleWatchlist()"
@@ -213,23 +229,32 @@
               <div>
                 <h2 class="panel-title panel-title--heatmap">
                   <i class="pi pi-th-large"></i>
-                  Risk Heatmap
+                  Risk by Module
                 </h2>
-                <p class="panel-copy">Real-time concentration of risk across pipeline and operations.</p>
+                <p class="panel-copy">Where current priority risks are concentrated across the workspace.</p>
               </div>
             </div>
 
-            <div class="heatmap-card">
-              <div class="heatmap-grid">
-                <span
-                  *ngFor="let cell of heatmapCells()"
-                  class="heatmap-cell"
-                  [style.opacity]="cell.intensity / 100"
-                  [attr.aria-label]="cell.label">
-                </span>
-              </div>
-
-              <button type="button" class="panel-cta" (click)="setUrgencyFilter('all')">Open Heatmap</button>
+            <div class="module-breakdown-card" *ngIf="!loading()">
+              <ng-container *ngIf="moduleBreakdown().length; else emptyBreakdown">
+                <div
+                  class="module-breakdown-row"
+                  *ngFor="let entry of moduleBreakdown()">
+                  <div class="module-breakdown-row__head">
+                    <span class="module-breakdown-row__label">{{ entry.label }}</span>
+                    <span class="module-breakdown-row__count">{{ entry.count }}</span>
+                  </div>
+                  <div class="module-breakdown-row__bar">
+                    <span
+                      class="module-breakdown-row__fill"
+                      [style.width.%]="entry.percent"></span>
+                  </div>
+                  <span class="module-breakdown-row__share">{{ entry.percent }}%</span>
+                </div>
+              </ng-container>
+              <ng-template #emptyBreakdown>
+                <p class="module-breakdown-empty">No active risks to break down.</p>
+              </ng-template>
             </div>
           </section>
         </section>
