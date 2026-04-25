@@ -342,11 +342,13 @@
                     ></p-knob>
                   </div>
                 </div>
-                <div class="status-ribbon__meta-pills">
-                  <span class="status-ribbon__meta-pill status-ribbon__meta-pill--status">{{ form.status }}</span>
-                  <span class="status-ribbon__meta-pill">{{ leadProgressSummary() }}</span>
+                <div class="status-ribbon__meta-text">
+                  <div class="status-ribbon__meta-pills">
+                    <span class="status-ribbon__meta-pill status-ribbon__meta-pill--status">{{ form.status }}</span>
+                    <span class="status-ribbon__meta-pill">{{ leadProgressSummary() }}</span>
+                  </div>
+                  <span class="status-ribbon__meta-copy">{{ leadHeaderProgressMessage() }}</span>
                 </div>
-                <span class="status-ribbon__meta-copy">{{ leadHeaderProgressMessage() }}</span>
               </div>
               <div class="status-ribbon__mobile-toggle">
                 <button type="button" class="status-ribbon__mobile-toggle-btn" (click)="toggleStatusPath()">
