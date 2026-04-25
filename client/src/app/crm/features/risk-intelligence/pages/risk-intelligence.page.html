@@ -36,9 +36,28 @@
           class="hero-command-card"
           *ngFor="let item of heroHighlights()"
           [ngClass]="'tone-' + item.tone">
-          <span class="hero-command-card__label">{{ item.label }}</span>
+          <div class="hero-command-card__topline">
+            <span class="hero-command-card__icon"><i [class]="item.icon"></i></span>
+            <span class="hero-command-card__label">{{ item.label }}</span>
+          </div>
           <strong class="hero-command-card__value">{{ item.value }}</strong>
           <span class="hero-command-card__caption">{{ item.caption }}</span>
+          <span class="hero-command-card__share" *ngIf="workspace().summary.totalOpenRisks > 0">
+            <span class="hero-command-card__share-bar">
+              <span class="hero-command-card__share-fill" [style.width.%]="item.share"></span>
+            </span>
+            <span class="hero-command-card__share-label">{{ item.share }}% of open risks</span>
+          </span>
+        </div>
+
+        <div class="hero-status-card" [ngClass]="'tone-' + systemStatus().tone">
+          <div class="hero-status-card__header">
+            <span class="hero-status-card__icon"><i class="pi pi-shield"></i></span>
+            <span class="hero-status-card__eyebrow">System Status</span>
+          </div>
+          <strong class="hero-status-card__title">{{ systemStatus().label }}</strong>
+          <span class="hero-status-card__caption">{{ systemStatus().caption }}</span>
+          <button pButton type="button" class="hero-status-card__cta" label="View system health"></button>
         </div>
 
         <div class="hero-actions">
@@ -47,29 +66,59 @@
       </div>
     </section>
 
+    <section class="metrics-section" *ngIf="!loading()">
+      <div
+        *ngFor="let card of metricCards()"
+        class="metric-card"
+        [ngClass]="'metric-card--' + card.variant">
+        <div class="metric-icon">
+          <i [class]="card.icon"></i>
+        </div>
+        <div class="metric-content">
+          <span class="metric-label">{{ card.label }}</span>
+          <strong class="metric-value">{{ card.value }}</strong>
+        </div>
+        <div class="metric-ring" *ngIf="card.key !== 'total'">
+          <svg viewBox="0 0 36 36">
+            <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+            <path
+              class="ring-fill"
+              [ngClass]="'ring-fill--' + card.ringColor"
+              [attr.stroke-dasharray]="card.ringPercent + ', 100'"
+              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+          </svg>
+        </div>
+      </div>
+    </section>
+
     <section class="workspace-grid">
       <div class="workspace-main">
         <section class="risk-panel-shell">
-          <div class="priority-board-header">
-            <h2 class="section-title">
-              <i class="pi pi-shield"></i>
-              Priority Risks
-            </h2>
-            <span class="risk-intelligence-subtitle">Ranked guidance across current CRM operational signals.</span>
+          <div class="priority-panel-header">
+            <div class="priority-panel-copy">
+              <h2 class="section-title">
+                <i class="pi pi-shield"></i>
+                Priority Risks
+              </h2>
+              <span class="risk-intelligence-subtitle">Ranked guidance across current CRM operational signals.</span>
+            </div>
+
+            <div class="priority-toolbar">
+              <div class="toolbar-chip-group">
+                <button type="button" class="toolbar-chip" [ngClass]="{ active: urgencyFilter() === 'all' }" (click)="setUrgencyFilter('all')">All Risks</button>
+                <button type="button" class="toolbar-chip tone-danger" [ngClass]="{ active: urgencyFilter() === 'immediate' }" (click)="setUrgencyFilter('immediate')">Immediate</button>
+                <button type="button" class="toolbar-chip tone-warning" [ngClass]="{ active: severityFilter() === 'critical' }" (click)="setSeverityFilter('critical')">High</button>
+                <button type="button" class="toolbar-chip tone-neutral" [ngClass]="{ active: severityFilter() === 'high' }" (click)="setSeverityFilter('high')">Medium</button>
+              </div>
+
+              <button type="button" class="toolbar-icon-btn" (click)="setSeverityFilter('all')" aria-label="Reset risk filters">
+                <i class="pi pi-ellipsis-h"></i>
+              </button>
+            </div>
           </div>
 
           <ng-container *ngIf="!loading(); else tableLoading">
             <div class="priority-board" *ngIf="priorityQueue().length; else emptyState" data-testid="risk-priority-table">
-              <div class="priority-board-summary" *ngIf="riskPanelSummary().length">
-                <span
-                  class="risk-summary-pill"
-                  *ngFor="let item of riskPanelSummary()"
-                  [ngClass]="item.severity"
-                >
-                  {{ item.label }} · {{ item.count }}
-                </span>
-              </div>
-
               <p-table
                 [value]="priorityQueue()"
                 styleClass="priority-risk-table"
@@ -78,9 +127,10 @@
                 <ng-template pTemplate="header">
                   <tr>
                     <th>Risk</th>
-                    <th>Record</th>
+                    <th>Summary</th>
                     <th>Owner</th>
                     <th>Urgency</th>
+                    <th>Score &amp; Source</th>
                   </tr>
                 </ng-template>
 
@@ -97,14 +147,15 @@
                     </td>
 
                     <td>
-                      <div class="priority-risk-cell priority-risk-cell--record">
+                      <div class="priority-risk-cell priority-risk-cell--summary">
                         <strong>{{ item.entityLabel }}</strong>
-                        <span>{{ item.affectedModule }}</span>
+                        <span>{{ item.reasonSummary }}</span>
                       </div>
                     </td>
 
                     <td>
                       <div class="priority-risk-cell priority-risk-cell--owner">
+                        <span class="owner-avatar">{{ ownerInitials(item.owner) }}</span>
                         <span>{{ item.owner }}</span>
                       </div>
                     </td>
@@ -114,49 +165,113 @@
                         <span class="urgency-pill" [ngClass]="riskCardSeverityClass(item)">{{ urgencyLabel(item.urgency) }}</span>
                       </div>
                     </td>
+
+                    <td>
+                      <div class="priority-risk-cell priority-risk-cell--score">
+                        <span class="risk-score-chip" [ngClass]="riskCardSeverityClass(item)">
+                          <strong>{{ item.score }}</strong>
+                          <span>score</span>
+                        </span>
+                        <span class="risk-source-chip" [title]="item.sourceSurface">
+                          <i class="pi pi-tag"></i>
+                          {{ item.sourceSurface }}
+                        </span>
+                      </div>
+                    </td>
                   </tr>
                 </ng-template>
               </p-table>
+
+              <button type="button" class="view-all-link" (click)="setUrgencyFilter('all'); setSeverityFilter('all')">
+                View all priority risks
+                <i class="pi pi-arrow-right"></i>
+              </button>
             </div>
           </ng-container>
         </section>
 
-        <section class="watchlist-panel">
-          <div class="panel-header">
-            <div>
-              <h2 class="panel-title">Watchlist & Trends</h2>
-              <p class="panel-copy">Shared risk patterns that stay visible even when no single record should dominate the queue.</p>
+        <section class="insight-grid">
+          <section class="watchlist-panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title panel-title--watchlist">
+                  <i class="pi pi-chart-line"></i>
+                  Watchlist & Trends
+                </h2>
+                <p class="panel-copy">Shared risk patterns that stay visible even when no single record should dominate the queue.</p>
+              </div>
             </div>
-          </div>
 
-          <ng-container *ngIf="!loading(); else watchlistLoading">
-            <div class="watchlist-stack" data-testid="risk-watchlist">
-              <button
-                *ngFor="let item of workspace().watchlist"
-                type="button"
-                class="watchlist-item"
-                (click)="openRisk(item)">
-                <div class="watchlist-item__head">
-                  <strong>{{ item.label }}</strong>
-                  <div class="watchlist-item__meta">
-                    <p-tag [value]="item.severity" [severity]="watchlistSeverity(item.severity)"></p-tag>
-                    <span class="watchlist-item__count">{{ item.count }}</span>
-                  </div>
+            <ng-container *ngIf="!loading(); else watchlistLoading">
+              <div class="watchlist-panel__content">
+                <div class="watchlist-stack" data-testid="risk-watchlist">
+                  <button
+                    *ngFor="let item of visibleWatchlist()"
+                    type="button"
+                    class="watchlist-item"
+                    (click)="openRisk(item)">
+                    <div class="watchlist-item__head">
+                      <strong>{{ item.label }}</strong>
+                      <div class="watchlist-item__meta">
+                        <p-tag [value]="item.severity" [severity]="watchlistSeverity(item.severity)"></p-tag>
+                        <span class="watchlist-item__count">{{ item.count }}</span>
+                      </div>
+                    </div>
+                    <p>{{ item.context }}</p>
+                  </button>
                 </div>
-                <p>{{ item.context }}</p>
-              </button>
+              </div>
+            </ng-container>
+          </section>
+
+          <section class="watchlist-panel heatmap-panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title panel-title--heatmap">
+                  <i class="pi pi-th-large"></i>
+                  Risk by Module
+                </h2>
+                <p class="panel-copy">Where current priority risks are concentrated across the workspace.</p>
+              </div>
             </div>
-          </ng-container>
+
+            <div class="module-breakdown-card" *ngIf="!loading()">
+              <ng-container *ngIf="moduleBreakdown().length; else emptyBreakdown">
+                <div
+                  class="module-breakdown-row"
+                  *ngFor="let entry of moduleBreakdown()">
+                  <div class="module-breakdown-row__head">
+                    <span class="module-breakdown-row__label">{{ entry.label }}</span>
+                    <span class="module-breakdown-row__count">{{ entry.count }}</span>
+                  </div>
+                  <div class="module-breakdown-row__bar">
+                    <span
+                      class="module-breakdown-row__fill"
+                      [style.width.%]="entry.percent"></span>
+                  </div>
+                  <span class="module-breakdown-row__share">{{ entry.percent }}%</span>
+                </div>
+              </ng-container>
+              <ng-template #emptyBreakdown>
+                <p class="module-breakdown-empty">No active risks to break down.</p>
+              </ng-template>
+            </div>
+          </section>
         </section>
       </div>
 
       <div class="workspace-rail">
         <section class="detail-panel">
-          <div class="panel-header">
+          <div class="panel-header panel-header--rail">
             <div>
-              <h2 class="panel-title">Selected Risk</h2>
-              <p class="panel-copy">Immediate explanation and next best action.</p>
+              <h2 class="panel-title panel-title--detail">
+                <i class="pi pi-sparkles"></i>
+                Selected Risk
+              </h2>
             </div>
+            <button type="button" class="expand-btn" aria-label="Expand selected risk">
+              <i class="pi pi-arrow-up-right"></i>
+            </button>
           </div>
 
           <ng-container *ngIf="selectedRisk() as selected; else noSelection">
@@ -164,13 +279,13 @@
               <div class="selected-risk-console__head">
                 <span class="selected-risk-flag" [ngClass]="riskCardSeverityClass(selected)">{{ riskCardSeverityLabel(selected) }} issue</span>
                 <div [class]="scoreClass(selected.score)">
-                  <span class="score-badge__label">Score</span>
-                  <strong class="score-badge__value">{{ selected.score }}</strong>
+                  <span class="score-badge__value">{{ selected.score }}</span>
+                  <span class="score-badge__label">Risk score</span>
                 </div>
               </div>
 
               <h3 class="detail-title">{{ selected.entityLabel }}</h3>
-              <div class="detail-meta">
+              <div class="detail-meta detail-meta--chips">
                 <span>{{ selected.riskType }}</span>
                 <span>{{ selected.affectedModule }}</span>
                 <span>{{ selected.owner }}</span>
@@ -184,7 +299,7 @@
               </div>
 
               <div class="detail-section detail-section--action">
-                <h4>Next action</h4>
+                <h4>Next Action</h4>
                 <div class="recommended-action-card">
                   <p>{{ selected.recommendedAction }}</p>
                 </div>
@@ -195,15 +310,14 @@
                   pButton
                   type="button"
                   class="selected-risk-btn selected-risk-btn--secondary"
-                  icon="pi pi-search"
-                  label="Review selected"
+                  label="Review Details"
                   (click)="selectRisk(selected)"></button>
                 <button
                   pButton
                   type="button"
                   class="selected-risk-btn selected-risk-btn--primary"
-                  icon="pi pi-arrow-right"
-                  label="Open source record"
+                  icon="pi pi-arrow-up-right"
+                  label="Open Source Record"
                   data-testid="risk-open-selected"
                   (click)="openRisk(selected)"></button>
               </div>
@@ -213,8 +327,13 @@
               <h4>Operator Focus</h4>
               <div class="focus-pill-grid">
                 <div *ngFor="let item of focusSignals()" [class]="focusSignalToneClass(item.tone)">
-                  <span class="focus-pill__label">{{ item.label }}</span>
-                  <strong class="focus-pill__value">{{ item.value }}</strong>
+                  <span class="focus-pill__icon">
+                    <i [class]="item.label === 'Urgency' ? 'pi pi-bolt' : item.label === 'Owner' ? 'pi pi-user' : item.label === 'Source' ? 'pi pi-verified' : 'pi pi-box'"></i>
+                  </span>
+                  <span class="focus-pill__content">
+                    <span class="focus-pill__label">{{ item.label }}</span>
+                    <strong class="focus-pill__value">{{ item.value }}</strong>
+                  </span>
                 </div>
               </div>
             </div>
@@ -260,15 +379,17 @@
 </ng-template>
 
 <ng-template #noActiveRisks>
-  <i class="pi pi-shield"></i>
-  <h3>No active risks right now</h3>
-  <p>The current thresholds and CRM signals did not produce any open guidance items.</p>
+  <div class="empty-state" data-testid="risk-no-active-risks">
+    <i class="pi pi-check-circle"></i>
+    <h3>No priority risks right now</h3>
+    <p>The workspace is clear. Refresh later or review the watchlist for lower-signal trends.</p>
+  </div>
 </ng-template>
 
 <ng-template #noSelection>
-  <div class="empty-state">
-    <i class="pi pi-search"></i>
+  <div class="empty-state empty-state--rail">
+    <i class="pi pi-shield"></i>
     <h3>Select a risk</h3>
-    <p>Pick a priority row to inspect its evidence and recommended action.</p>
+    <p>Choose a row from the priority table to review impact, recommendation, and operator focus.</p>
   </div>
 </ng-template>

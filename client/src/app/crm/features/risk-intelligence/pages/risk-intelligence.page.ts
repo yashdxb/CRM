@@ -33,6 +33,8 @@ export class RiskIntelligencePage {
 
   protected readonly loading = signal(true);
   protected readonly loadError = signal<string | null>(null);
+  protected readonly urgencyFilter = signal<'all' | 'immediate' | 'soon' | 'planned'>('all');
+  protected readonly severityFilter = signal<'all' | 'critical' | 'high' | 'medium'>('all');
   protected readonly workspace = signal<RiskIntelligenceWorkspace>({
     summary: {
       totalOpenRisks: 0,
@@ -51,49 +53,132 @@ export class RiskIntelligencePage {
     const risks = this.workspace().priorityRisks;
     return risks.find((item) => item.id === selectedId) ?? risks[0] ?? null;
   });
-  protected readonly summaryCards = computed(() => {
+  protected readonly metricCards = computed(() => {
     const summary = this.workspace().summary;
+    const total = Math.max(summary.totalOpenRisks, 1);
+    const share = (value: number) => Math.min(100, Math.round((value / total) * 100));
     return [
-      { label: 'Open Risks', value: summary.totalOpenRisks, tone: 'neutral', icon: 'pi pi-shield' },
-      { label: 'Immediate', value: summary.immediateRisks, tone: 'danger', icon: 'pi pi-bolt' },
-      { label: 'Soon', value: summary.soonRisks, tone: 'warning', icon: 'pi pi-clock' },
-      { label: 'Stale Pipeline', value: summary.stalePipelineCount, tone: 'warning', icon: 'pi pi-chart-line' },
-      { label: 'Overdue Approvals', value: summary.overdueApprovals, tone: 'danger', icon: 'pi pi-inbox' }
+      {
+        key: 'total',
+        label: 'Open Risks',
+        value: summary.totalOpenRisks,
+        icon: 'pi pi-shield',
+        variant: 'total',
+        ringColor: 'cyan',
+        ringPercent: 100
+      },
+      {
+        key: 'immediate',
+        label: 'Immediate',
+        value: summary.immediateRisks,
+        icon: 'pi pi-bolt',
+        variant: 'immediate',
+        ringColor: 'red',
+        ringPercent: share(summary.immediateRisks)
+      },
+      {
+        key: 'soon',
+        label: 'Soon',
+        value: summary.soonRisks,
+        icon: 'pi pi-clock',
+        variant: 'soon',
+        ringColor: 'amber',
+        ringPercent: share(summary.soonRisks)
+      },
+      {
+        key: 'stale',
+        label: 'Stale Pipeline',
+        value: summary.stalePipelineCount,
+        icon: 'pi pi-chart-line',
+        variant: 'stale',
+        ringColor: 'purple',
+        ringPercent: share(summary.stalePipelineCount)
+      },
+      {
+        key: 'overdue',
+        label: 'Overdue Approvals',
+        value: summary.overdueApprovals,
+        icon: 'pi pi-inbox',
+        variant: 'overdue',
+        ringColor: 'rose',
+        ringPercent: share(summary.overdueApprovals)
+      }
     ];
   });
   protected readonly heroHighlights = computed(() => {
     const summary = this.workspace().summary;
+    const total = Math.max(summary.totalOpenRisks, 1);
+    const sharePct = (value: number) => Math.min(100, Math.round((value / total) * 100));
     return [
       {
         label: 'Immediate actions',
         value: summary.immediateRisks,
         caption: summary.immediateRisks === 1 ? 'risk needs action now' : 'risks need action now',
-        tone: 'danger'
+        tone: 'danger',
+        icon: 'pi pi-bolt',
+        share: sharePct(summary.immediateRisks)
       },
       {
         label: 'Pipeline pressure',
         value: summary.stalePipelineCount,
         caption: summary.stalePipelineCount === 1 ? 'stale deal to review' : 'stale deals to review',
-        tone: 'warning'
+        tone: 'warning',
+        icon: 'pi pi-chart-line',
+        share: sharePct(summary.stalePipelineCount)
       },
       {
         label: 'Approval backlog',
         value: summary.overdueApprovals,
         caption: summary.overdueApprovals === 1 ? 'overdue approval' : 'overdue approvals',
-        tone: 'neutral'
+        tone: 'neutral',
+        icon: 'pi pi-clock',
+        share: sharePct(summary.overdueApprovals)
       }
     ];
   });
-  protected readonly priorityQueue = computed(() => this.workspace().priorityRisks.slice(0, 5));
-  protected readonly riskPanelSummary = computed(() => {
+  protected readonly systemStatus = computed(() => {
     const summary = this.workspace().summary;
-    return [
-      { label: 'Immediate', count: summary.immediateRisks, severity: 'critical' },
-      { label: 'Soon', count: summary.soonRisks, severity: 'high' },
-      { label: 'Overdue approvals', count: summary.overdueApprovals, severity: 'medium' },
-      { label: 'Open risks', count: summary.totalOpenRisks, severity: 'info' }
-    ].filter((item) => item.count > 0);
+    const critical = summary.immediateRisks + summary.overdueApprovals;
+    const watch = summary.soonRisks + summary.stalePipelineCount;
+
+    if (critical >= 5) {
+      return {
+        tone: 'critical',
+        label: 'Action required',
+        caption: `${critical} critical signals across immediate risks and overdue approvals.`
+      };
+    }
+    if (critical >= 1 || watch >= 8) {
+      return {
+        tone: 'watch',
+        label: 'Monitor closely',
+        caption: `${critical} critical · ${watch} watch-level signals are open.`
+      };
+    }
+    if (summary.totalOpenRisks === 0) {
+      return {
+        tone: 'normal',
+        label: 'All clear',
+        caption: 'No open risk signals across the workspace.'
+      };
+    }
+    return {
+      tone: 'normal',
+      label: 'Operating normally',
+      caption: `${summary.totalOpenRisks} open signals being tracked, none critical.`
+    };
   });
+  protected readonly filteredPriorityQueue = computed(() => {
+    const urgency = this.urgencyFilter();
+    const severity = this.severityFilter();
+
+    return this.workspace().priorityRisks.filter((item) => {
+      const urgencyMatch = urgency === 'all' || (item.urgency ?? '').trim().toLowerCase() === urgency;
+      const severityMatch = severity === 'all' || this.riskCardSeverityClass(item) === severity;
+      return urgencyMatch && severityMatch;
+    });
+  });
+  protected readonly priorityQueue = computed(() => this.filteredPriorityQueue().slice(0, 5));
   protected readonly focusSignals = computed(() => {
     const selected = this.selectedRisk();
     if (!selected) {
@@ -107,6 +192,24 @@ export class RiskIntelligencePage {
       { label: 'Module', value: selected.affectedModule, tone: 'neutral' }
     ];
   });
+  protected readonly moduleBreakdown = computed(() => {
+    const counts = new Map<string, number>();
+    for (const item of this.workspace().priorityRisks) {
+      const key = item.affectedModule?.trim() || 'Unassigned';
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+
+    const total = Math.max(this.workspace().priorityRisks.length, 1);
+    return Array.from(counts.entries())
+      .map(([label, count]) => ({
+        label,
+        count,
+        percent: Math.round((count / total) * 100)
+      }))
+      .sort((left, right) => right.count - left.count || left.label.localeCompare(right.label))
+      .slice(0, 6);
+  });
+  protected readonly visibleWatchlist = computed(() => this.workspace().watchlist.slice(0, 3));
 
   constructor() {
     this.loadWorkspace();
@@ -143,6 +246,14 @@ export class RiskIntelligencePage {
 
   protected selectRisk(item: RiskGuidanceItem) {
     this.selectedRiskId.set(item.id);
+  }
+
+  protected setUrgencyFilter(filter: 'all' | 'immediate' | 'soon' | 'planned') {
+    this.urgencyFilter.set(filter);
+  }
+
+  protected setSeverityFilter(filter: 'all' | 'critical' | 'high' | 'medium') {
+    this.severityFilter.set(filter);
   }
 
   protected openRisk(item: RiskGuidanceItem | RiskWatchlistItem) {
@@ -333,5 +444,18 @@ export class RiskIntelligencePage {
       return 'focus-pill focus-pill--warning';
     }
     return 'focus-pill focus-pill--neutral';
+  }
+
+  protected ownerInitials(name: string): string {
+    return (name ?? '')
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? '')
+      .join('') || '?';
+  }
+
+  protected evidenceCount(item: RiskGuidanceItem): number {
+    return item.evidence?.filter((entry) => !!entry?.trim()).length ?? 0;
   }
 }
