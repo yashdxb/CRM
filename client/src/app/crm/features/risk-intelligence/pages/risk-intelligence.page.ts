@@ -188,7 +188,7 @@ export class RiskIntelligencePage {
     return [
       { label: 'Urgency', value: this.urgencyLabel(selected.urgency), tone: selected.urgency },
       { label: 'Owner', value: selected.owner, tone: 'neutral' },
-      { label: 'Source', value: selected.sourceSurface, tone: 'neutral' },
+      { label: 'Source', value: this.humanizeSource(selected.sourceSurface), tone: 'neutral' },
       { label: 'Module', value: selected.affectedModule, tone: 'neutral' }
     ];
   });
@@ -453,6 +453,30 @@ export class RiskIntelligencePage {
       .slice(0, 2)
       .map((part) => part[0]?.toUpperCase() ?? '')
       .join('') || '?';
+  }
+
+  protected humanizeSource(source: string | null | undefined): string {
+    const value = (source ?? '').trim();
+    if (!value) {
+      return 'Unattributed';
+    }
+    const map: Record<string, string> = {
+      'assistant-insights': 'Assistant insights',
+      'decision-inbox': 'Decision inbox',
+      'activity-queue': 'Activity queue',
+      'lead-engine': 'Lead engine',
+      'opportunity-pulse': 'Opportunity pulse',
+      'commission-control': 'Commission control',
+      'renewals-radar': 'Renewals radar',
+    };
+    const key = value.toLowerCase().replace(/[_\s]+/g, '-');
+    if (map[key]) {
+      return map[key];
+    }
+    return value
+      .replace(/[_\-]+/g, ' ')
+      .toLowerCase()
+      .replace(/\b\w/g, (c) => c.toUpperCase());
   }
 
   protected evidenceCount(item: RiskGuidanceItem): number {

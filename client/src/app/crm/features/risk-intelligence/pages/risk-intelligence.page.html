@@ -100,7 +100,7 @@
                 <i class="pi pi-shield"></i>
                 Priority Risks
               </h2>
-              <span class="risk-intelligence-subtitle">Ranked guidance across current CRM operational signals.</span>
+              <span class="risk-intelligence-subtitle">Top issues to act on right now, ranked by urgency and impact.</span>
             </div>
 
             <div class="priority-toolbar">
@@ -170,11 +170,11 @@
                       <div class="priority-risk-cell priority-risk-cell--score">
                         <span class="risk-score-chip" [ngClass]="riskCardSeverityClass(item)">
                           <strong>{{ item.score }}</strong>
-                          <span>score</span>
+                          <span>/ 100</span>
                         </span>
-                        <span class="risk-source-chip" [title]="item.sourceSurface">
+                        <span class="risk-source-chip" [title]="humanizeSource(item.sourceSurface)">
                           <i class="pi pi-tag"></i>
-                          {{ item.sourceSurface }}
+                          {{ humanizeSource(item.sourceSurface) }}
                         </span>
                       </div>
                     </td>
