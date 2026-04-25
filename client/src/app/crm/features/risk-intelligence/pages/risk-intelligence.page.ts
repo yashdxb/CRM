@@ -33,6 +33,8 @@ export class RiskIntelligencePage {
 
   protected readonly loading = signal(true);
   protected readonly loadError = signal<string | null>(null);
+  protected readonly urgencyFilter = signal<'all' | 'immediate' | 'soon' | 'planned'>('all');
+  protected readonly severityFilter = signal<'all' | 'critical' | 'high' | 'medium'>('all');
   protected readonly workspace = signal<RiskIntelligenceWorkspace>({
     summary: {
       totalOpenRisks: 0,
@@ -68,23 +70,46 @@ export class RiskIntelligencePage {
         label: 'Immediate actions',
         value: summary.immediateRisks,
         caption: summary.immediateRisks === 1 ? 'risk needs action now' : 'risks need action now',
-        tone: 'danger'
+        tone: 'danger',
+        icon: 'pi pi-bolt'
       },
       {
         label: 'Pipeline pressure',
         value: summary.stalePipelineCount,
         caption: summary.stalePipelineCount === 1 ? 'stale deal to review' : 'stale deals to review',
-        tone: 'warning'
+        tone: 'warning',
+        icon: 'pi pi-chart-line'
       },
       {
         label: 'Approval backlog',
         value: summary.overdueApprovals,
         caption: summary.overdueApprovals === 1 ? 'overdue approval' : 'overdue approvals',
-        tone: 'neutral'
+        tone: 'neutral',
+        icon: 'pi pi-clock'
       }
     ];
   });
-  protected readonly priorityQueue = computed(() => this.workspace().priorityRisks.slice(0, 5));
+  protected readonly liveWorkspaceCard = computed(() => {
+    const summary = this.workspace().summary;
+    const riskLoad = summary.immediateRisks + summary.overdueApprovals + summary.soonRisks;
+    const tone = riskLoad >= 16 ? 'critical' : riskLoad >= 8 ? 'watch' : 'normal';
+    return {
+      tone,
+      title: `${summary.totalOpenRisks} active risk signals`,
+      caption: `${summary.immediateRisks} immediate · ${summary.overdueApprovals} overdue approvals`
+    };
+  });
+  protected readonly filteredPriorityQueue = computed(() => {
+    const urgency = this.urgencyFilter();
+    const severity = this.severityFilter();
+
+    return this.workspace().priorityRisks.filter((item) => {
+      const urgencyMatch = urgency === 'all' || (item.urgency ?? '').trim().toLowerCase() === urgency;
+      const severityMatch = severity === 'all' || this.riskCardSeverityClass(item) === severity;
+      return urgencyMatch && severityMatch;
+    });
+  });
+  protected readonly priorityQueue = computed(() => this.filteredPriorityQueue().slice(0, 5));
   protected readonly riskPanelSummary = computed(() => {
     const summary = this.workspace().summary;
     return [
@@ -107,6 +132,24 @@ export class RiskIntelligencePage {
       { label: 'Module', value: selected.affectedModule, tone: 'neutral' }
     ];
   });
+  protected readonly moduleBreakdown = computed(() => {
+    const counts = new Map<string, number>();
+    for (const item of this.workspace().priorityRisks) {
+      const key = item.affectedModule?.trim() || 'Unassigned';
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+
+    const total = Math.max(this.workspace().priorityRisks.length, 1);
+    return Array.from(counts.entries())
+      .map(([label, count]) => ({
+        label,
+        count,
+        percent: Math.round((count / total) * 100)
+      }))
+      .sort((left, right) => right.count - left.count || left.label.localeCompare(right.label))
+      .slice(0, 6);
+  });
+  protected readonly visibleWatchlist = computed(() => this.workspace().watchlist.slice(0, 3));
 
   constructor() {
     this.loadWorkspace();
@@ -143,6 +186,14 @@ export class RiskIntelligencePage {
 
   protected selectRisk(item: RiskGuidanceItem) {
     this.selectedRiskId.set(item.id);
+  }
+
+  protected setUrgencyFilter(filter: 'all' | 'immediate' | 'soon' | 'planned') {
+    this.urgencyFilter.set(filter);
+  }
+
+  protected setSeverityFilter(filter: 'all' | 'critical' | 'high' | 'medium') {
+    this.severityFilter.set(filter);
   }
 
   protected openRisk(item: RiskGuidanceItem | RiskWatchlistItem) {
@@ -333,5 +384,18 @@ export class RiskIntelligencePage {
       return 'focus-pill focus-pill--warning';
     }
     return 'focus-pill focus-pill--neutral';
+  }
+
+  protected ownerInitials(name: string): string {
+    return (name ?? '')
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? '')
+      .join('') || '?';
+  }
+
+  protected evidenceCount(item: RiskGuidanceItem): number {
+    return item.evidence?.filter((entry) => !!entry?.trim()).length ?? 0;
   }
 }

@@ -139,14 +139,40 @@
 }
 
 .topbar__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
   cursor: pointer;
   flex-shrink: 0;
 }
 
 .topbar__logo {
   height: 42px;
-  width: auto;
+  width: 42px;
+  object-fit: contain;
   display: block;
+}
+
+.topbar__brand-text {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+
+.topbar__brand-wordmark {
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.topbar__brand-crm {
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: #8b5cf6;
 }
 
 .topbar__nav {
@@ -3409,6 +3435,20 @@
 
   .topbar__logo {
     height: 36px;
+    width: 36px;
+  }
+
+  .topbar__brand {
+    gap: 0.55rem;
+  }
+
+  .topbar__brand-wordmark {
+    font-size: 0.84rem;
+    letter-spacing: 0.1em;
+  }
+
+  .topbar__brand-crm {
+    font-size: 1.05rem;
   }
 
   .topbar__nav {

@@ -13,6 +13,10 @@
     <div class="topbar__inner shell">
       <a class="topbar__brand" (click)="scrollTo('hero')">
         <img src="/assets/branding/logo-v2-light.png" alt="North Edge System" class="topbar__logo" />
+        <span class="topbar__brand-text" aria-label="North Edge CRM">
+          <span class="topbar__brand-wordmark">North Edge</span>
+          <span class="topbar__brand-crm">CRM</span>
+        </span>
       </a>
       <ul class="topbar__nav" [class.topbar__nav--open]="mobileMenuOpen">
         <li><a routerLink="/platform">Platform</a></li>
