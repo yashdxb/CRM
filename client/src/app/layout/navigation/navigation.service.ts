@@ -55,9 +55,13 @@ export class NavigationService {
       return tokenHasPermission(context.payload, link.permission);
     };
 
+    const DEFAULT_TRUE_FLAGS = new Set(['mailbox.enabled', 'helpdesk.enabled']);
     const hasFeatureFlag = (link: NavLink) => {
       if (!link.featureFlag) return true;
-      return this.tenantContext()?.featureFlags?.[link.featureFlag] === true;
+      const value = this.tenantContext()?.featureFlags?.[link.featureFlag];
+      if (value === true) return true;
+      if (value === false) return false;
+      return DEFAULT_TRUE_FLAGS.has(link.featureFlag);
     };
 
     const filterChildren = (items?: NavLink[]) =>

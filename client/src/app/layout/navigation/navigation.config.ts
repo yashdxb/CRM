@@ -97,6 +97,7 @@ export const NAV_LINKS: NavLink[] = [
     icon: 'pi-envelope',
     path: '/app/mailbox',
     permission: PERMISSION_KEYS.emailsView,
+    featureFlag: 'mailbox.enabled',
     children: [
       { label: 'Inbox', icon: 'pi-inbox', path: '/app/mailbox/inbox', permission: PERMISSION_KEYS.emailsView, iconColor: '#3b82f6' },
       { label: 'Starred', icon: 'pi-star-fill', path: '/app/mailbox/starred', permission: PERMISSION_KEYS.emailsView, iconColor: '#eab308' },
@@ -231,7 +232,7 @@ export const NAV_LINKS: NavLink[] = [
     icon: 'pi-headphones',
     path: '/app/helpdesk/cases',
     permission: PERMISSION_KEYS.helpDeskView,
-    featureFlag: 'helpdesk.cases',
+    featureFlag: 'helpdesk.enabled',
     children: [
       { label: 'Cases', icon: 'pi-list', path: '/app/helpdesk/cases', permission: PERMISSION_KEYS.helpDeskView, featureFlag: 'helpdesk.cases' },
       { label: 'Queues', icon: 'pi-sitemap', path: '/app/helpdesk/queues', permission: PERMISSION_KEYS.helpDeskAdmin, featureFlag: 'helpdesk.cases' },

@@ -86,6 +86,7 @@ export class WorkspaceSettingsPage {
   protected readonly companyPanels = signal<string[]>(['company-info', 'workspace-branding']);
   protected readonly operationsPanels = signal<string[]>(['lead-sla', 'record-numbering', 'ai-scoring', 'supporting-docs', 'delivery-renewal']);
   protected readonly regionalPanels = signal<string[]>(['regional-settings']);
+  protected readonly modulesPanels = signal<string[]>(['crm-modules', 'helpdesk-module', 'mailbox-module']);
 
   protected readonly brandingLogoUrl = this.brandingState.logoUrl;
   protected readonly brandingUploading = signal(false);
@@ -151,9 +152,11 @@ export class WorkspaceSettingsPage {
     featureRealtimeRecordPresence: [false],
     featureRealtimeAssistantStreaming: [false],
     featureAiKnowledgeSearch: [true],
+    featureHelpDesk: [true],
     featureHelpDeskCases: [false],
     featureHelpDeskEmailIntake: [false],
     featureHelpDeskRealtime: [false],
+    featureMyMailbox: [true],
     featureEmailDelivery: [false],
     featureEmailDeliveryInvites: [false],
     featureEmailDeliverySecurity: [false],
@@ -260,6 +263,7 @@ export class WorkspaceSettingsPage {
   protected onCompanyPanelsChange(v: string | number | string[] | number[] | null | undefined) { this.companyPanels.set((v ?? []) as string[]); }
   protected onOperationsPanelsChange(v: string | number | string[] | number[] | null | undefined) { this.operationsPanels.set((v ?? []) as string[]); }
   protected onRegionalPanelsChange(v: string | number | string[] | number[] | null | undefined) { this.regionalPanels.set((v ?? []) as string[]); }
+  protected onModulesPanelsChange(v: string | number | string[] | number[] | null | undefined) { this.modulesPanels.set((v ?? []) as string[]); }
 
   protected loadSettings() {
     this.loading.set(true);
@@ -323,9 +327,11 @@ export class WorkspaceSettingsPage {
         'realtime.recordPresence': !!payload.featureRealtimeRecordPresence,
         'realtime.assistantStreaming': !!payload.featureRealtimeAssistantStreaming,
         'ai.knowledgeSearch': !!payload.featureAiKnowledgeSearch,
+        'helpdesk.enabled': !!payload.featureHelpDesk,
         'helpdesk.cases': !!payload.featureHelpDeskCases,
         'helpdesk.emailIntake': !!payload.featureHelpDeskEmailIntake,
         'helpdesk.realtime': !!payload.featureHelpDeskRealtime,
+        'mailbox.enabled': !!payload.featureMyMailbox,
         'communications.emailDelivery': !!payload.featureEmailDelivery,
         'communications.emailDelivery.invites': !!payload.featureEmailDeliveryInvites,
         'communications.emailDelivery.security': !!payload.featureEmailDeliverySecurity,
@@ -386,9 +392,11 @@ export class WorkspaceSettingsPage {
       featureRealtimeRecordPresence: this.resolveFeatureFlag(settings.featureFlags, 'realtime.recordPresence'),
       featureRealtimeAssistantStreaming: this.resolveFeatureFlag(settings.featureFlags, 'realtime.assistantStreaming'),
       featureAiKnowledgeSearch: this.resolveFeatureFlag(settings.featureFlags, 'ai.knowledgeSearch', true),
+      featureHelpDesk: this.resolveFeatureFlag(settings.featureFlags, 'helpdesk.enabled', true),
       featureHelpDeskCases: this.resolveFeatureFlag(settings.featureFlags, 'helpdesk.cases'),
       featureHelpDeskEmailIntake: this.resolveFeatureFlag(settings.featureFlags, 'helpdesk.emailIntake'),
       featureHelpDeskRealtime: this.resolveFeatureFlag(settings.featureFlags, 'helpdesk.realtime'),
+      featureMyMailbox: this.resolveFeatureFlag(settings.featureFlags, 'mailbox.enabled', true),
       featureEmailDelivery: this.resolveFeatureFlag(settings.featureFlags, 'communications.emailDelivery'),
       featureEmailDeliveryInvites: this.resolveFeatureFlag(settings.featureFlags, 'communications.emailDelivery.invites'),
       featureEmailDeliverySecurity: this.resolveFeatureFlag(settings.featureFlags, 'communications.emailDelivery.security'),

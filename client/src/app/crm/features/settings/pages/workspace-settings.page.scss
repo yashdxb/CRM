@@ -2140,3 +2140,35 @@
     color: #991b1b;
   }
 }
+
+/* ── Modules tab: feature flag toggles ── */
+.flag-grid {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+  padding: $space-3 $space-4;
+}
+
+.flag-item {
+  display: flex;
+  align-items: flex-start;
+  gap: $space-3;
+}
+
+.flag-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  cursor: pointer;
+
+  strong {
+    font-size: $font-size-sm;
+    font-weight: 600;
+    color: $gray-800;
+  }
+
+  span {
+    font-size: $font-size-xs;
+    color: $gray-500;
+  }
+}

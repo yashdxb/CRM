@@ -185,6 +185,10 @@
                   <i class="pi pi-globe"></i>
                   <span class="ws-sidebar-label">Regional</span>
                 </p-tab>
+                <p-tab value="modules" [pt]="{ root: { class: 'ws-sidebar-item' } }">
+                  <i class="pi pi-th-large"></i>
+                  <span class="ws-sidebar-label">Modules</span>
+                </p-tab>
               </p-tablist>
 
               <!-- Tab Content Area -->
@@ -735,6 +739,126 @@
               </div>
             </div>
           </section>
+                    </p-accordion-content>
+                  </p-accordion-panel>
+                </p-accordion>
+              </p-tabpanel>
+
+              <!-- ═══════════════ TAB 4 — Modules ═══════════════ -->
+              <p-tabpanel value="modules">
+                <p-accordion class="ws-section-accordion" [multiple]="true" [value]="modulesPanels()" (valueChange)="onModulesPanelsChange($any($event))">
+                  <!-- CRM Modules -->
+                  <p-accordion-panel value="crm-modules">
+                    <p-accordion-header>
+                      <div class="ws-accordion-header">
+                        <div class="ws-accordion-header__title">
+                          <i class="pi pi-th-large"></i>
+                          <span>CRM Modules</span>
+                        </div>
+                        <div class="ws-accordion-header__badges">
+                          <span class="status-badge status-badge--info">Feature toggles</span>
+                        </div>
+                      </div>
+                    </p-accordion-header>
+                    <p-accordion-content>
+                      <section class="form-card">
+                        <p class="section-description">Enable or disable optional CRM modules across this workspace.</p>
+                        <div class="flag-grid">
+                          <div class="flag-item">
+                            <p-checkbox inputId="ws-feature-properties" formControlName="featureProperties" [binary]="true"></p-checkbox>
+                            <label for="ws-feature-properties" class="flag-label">
+                              <strong>Properties</strong>
+                              <span>Manage real-estate or asset inventory listings.</span>
+                            </label>
+                          </div>
+                          <div class="flag-item">
+                            <p-checkbox inputId="ws-feature-marketing" formControlName="featureMarketingCampaigns" [binary]="true"></p-checkbox>
+                            <label for="ws-feature-marketing" class="flag-label">
+                              <strong>Marketing Campaigns</strong>
+                              <span>Plan campaigns, send broadcasts, and track attribution.</span>
+                            </label>
+                          </div>
+                        </div>
+                      </section>
+                    </p-accordion-content>
+                  </p-accordion-panel>
+
+                  <!-- My Mailbox Module -->
+                  <p-accordion-panel value="mailbox-module">
+                    <p-accordion-header>
+                      <div class="ws-accordion-header">
+                        <div class="ws-accordion-header__title">
+                          <i class="pi pi-inbox"></i>
+                          <span>My Mailbox</span>
+                        </div>
+                        <div class="ws-accordion-header__badges">
+                          <span class="status-badge status-badge--info">Communications</span>
+                        </div>
+                      </div>
+                    </p-accordion-header>
+                    <p-accordion-content>
+                      <section class="form-card">
+                        <p class="section-description">Personal mailbox for users to read and send email from inside the CRM.</p>
+                        <div class="flag-grid">
+                          <div class="flag-item">
+                            <p-checkbox inputId="ws-feature-mymailbox" formControlName="featureMyMailbox" [binary]="true"></p-checkbox>
+                            <label for="ws-feature-mymailbox" class="flag-label">
+                              <strong>Enable My Mailbox</strong>
+                              <span>Show the My Mailbox module in the navigation for all users.</span>
+                            </label>
+                          </div>
+                        </div>
+                      </section>
+                    </p-accordion-content>
+                  </p-accordion-panel>
+
+                  <!-- Help Desk Module -->
+                  <p-accordion-panel value="helpdesk-module">
+                    <p-accordion-header>
+                      <div class="ws-accordion-header">
+                        <div class="ws-accordion-header__title">
+                          <i class="pi pi-headphones"></i>
+                          <span>Help Desk</span>
+                        </div>
+                        <div class="ws-accordion-header__badges">
+                          <span class="status-badge status-badge--info">Service</span>
+                        </div>
+                      </div>
+                    </p-accordion-header>
+                    <p-accordion-content>
+                      <section class="form-card">
+                        <p class="section-description">Case management, queues, and customer support workflows.</p>
+                        <div class="flag-grid">
+                          <div class="flag-item">
+                            <p-checkbox inputId="ws-feature-helpdesk" formControlName="featureHelpDesk" [binary]="true"></p-checkbox>
+                            <label for="ws-feature-helpdesk" class="flag-label">
+                              <strong>Enable Help Desk</strong>
+                              <span>Show the Help Desk module in the navigation for all users.</span>
+                            </label>
+                          </div>
+                          <div class="flag-item">
+                            <p-checkbox inputId="ws-feature-helpdesk-cases" formControlName="featureHelpDeskCases" [binary]="true"></p-checkbox>
+                            <label for="ws-feature-helpdesk-cases" class="flag-label">
+                              <strong>Cases</strong>
+                              <span>Track and resolve support tickets.</span>
+                            </label>
+                          </div>
+                          <div class="flag-item">
+                            <p-checkbox inputId="ws-feature-helpdesk-email" formControlName="featureHelpDeskEmailIntake" [binary]="true"></p-checkbox>
+                            <label for="ws-feature-helpdesk-email" class="flag-label">
+                              <strong>Email Intake</strong>
+                              <span>Convert inbound support emails into cases automatically.</span>
+                            </label>
+                          </div>
+                          <div class="flag-item">
+                            <p-checkbox inputId="ws-feature-helpdesk-realtime" formControlName="featureHelpDeskRealtime" [binary]="true"></p-checkbox>
+                            <label for="ws-feature-helpdesk-realtime" class="flag-label">
+                              <strong>Realtime Updates</strong>
+                              <span>Live case updates and presence inside the Help Desk workspace.</span>
+                            </label>
+                          </div>
+                        </div>
+                      </section>
                     </p-accordion-content>
                   </p-accordion-panel>
                 </p-accordion>
