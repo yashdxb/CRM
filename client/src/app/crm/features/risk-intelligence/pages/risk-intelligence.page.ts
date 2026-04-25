@@ -287,6 +287,28 @@ export class RiskIntelligencePage {
     }
   }
 
+  protected urgencySlaHint(urgency: string): string {
+    switch ((urgency ?? '').trim().toLowerCase()) {
+      case 'immediate':
+        return 'Act today';
+      case 'soon':
+        return 'Within 48h';
+      default:
+        return 'This week';
+    }
+  }
+
+  protected rankBadge(index: number): string {
+    return `#${index + 1}`;
+  }
+
+  protected rankClass(index: number): string {
+    if (index === 0) return 'rank-gold';
+    if (index === 1) return 'rank-silver';
+    if (index === 2) return 'rank-bronze';
+    return 'rank-default';
+  }
+
   protected watchlistSeverity(severity: string): 'danger' | 'warn' | 'info' | 'secondary' {
     switch ((severity ?? '').trim().toLowerCase()) {
       case 'critical':

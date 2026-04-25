@@ -126,10 +126,9 @@
                 [tableStyle]="{ 'min-width': '100%' }">
                 <ng-template pTemplate="header">
                   <tr>
-                    <th>Risk</th>
+                    <th>Priority</th>
                     <th>Summary</th>
                     <th>Owner</th>
-                    <th>Urgency</th>
                     <th>Score &amp; Source</th>
                   </tr>
                 </ng-template>
@@ -141,8 +140,15 @@
                     (click)="selectRisk(item)"
                     [attr.data-testid]="'risk-row-' + item.id">
                     <td>
-                      <div class="priority-risk-cell priority-risk-cell--risk">
-                        <span class="priority-risk-rank" [ngClass]="riskCardSeverityClass(item)">{{ rowIndex + 1 }}</span>
+                      <div class="priority-cell">
+                        <span class="priority-dot" [ngClass]="riskCardSeverityClass(item)" aria-hidden="true"></span>
+                        <div class="priority-stack">
+                          <div class="priority-line">
+                            <span class="priority-rank" [ngClass]="rankClass(rowIndex)">{{ rankBadge(rowIndex) }}</span>
+                            <span class="priority-tier" [ngClass]="riskCardSeverityClass(item)">{{ urgencyLabel(item.urgency) }}</span>
+                          </div>
+                          <span class="priority-sla">{{ urgencySlaHint(item.urgency) }}</span>
+                        </div>
                       </div>
                     </td>
 
@@ -157,12 +163,6 @@
                       <div class="priority-risk-cell priority-risk-cell--owner">
                         <span class="owner-avatar">{{ ownerInitials(item.owner) }}</span>
                         <span>{{ item.owner }}</span>
-                      </div>
-                    </td>
-
-                    <td>
-                      <div class="priority-risk-cell priority-risk-cell--urgency">
-                        <span class="urgency-pill" [ngClass]="riskCardSeverityClass(item)">{{ urgencyLabel(item.urgency) }}</span>
                       </div>
                     </td>
 
