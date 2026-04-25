@@ -179,6 +179,15 @@ interface LeadOperationalHistoryItem {
   tone: 'info' | 'success' | 'warn' | 'danger' | 'neutral';
 }
 
+interface LeadHeaderStatusNode {
+  key: string;
+  label: string;
+  icon: string;
+  state: StepState;
+  secondary?: string | null;
+  branch?: boolean;
+}
+
 const CQVS_GROUP_DEFINITIONS: Array<{
   code: 'C' | 'Q' | 'V' | 'S';
   title: string;
@@ -1162,6 +1171,82 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     }
 
     return null;
+  }
+
+  protected compactHeaderSteps(): LeadHeaderStatusNode[] {
+    const steps = this.stepperSteps();
+    const newStep = steps.find((step) => step.status === 'New');
+    const contactedStep = steps.find((step) => step.status === 'Contacted');
+    const qualifiedStep = steps.find((step) => step.status === 'Qualified');
+
+    return [
+      newStep && {
+        key: 'New',
+        label: 'New',
+        icon: newStep.icon,
+        state: newStep.state,
+        secondary: newStep.timeInStage
+      },
+      contactedStep && {
+        key: 'Contacted',
+        label: 'Contacted',
+        icon: contactedStep.icon,
+        state: contactedStep.state,
+        secondary: contactedStep.timeInStage
+      },
+      {
+        key: 'Nurture',
+        label: 'Nurture',
+        icon: 'pi pi-clock',
+        state: this.nurtureBranchState(),
+        secondary: this.form.status === 'Nurture' ? 'Branch active' : 'Optional branch',
+        branch: true
+      },
+      qualifiedStep && {
+        key: 'Qualified',
+        label: 'Qualified',
+        icon: qualifiedStep.icon,
+        state: qualifiedStep.state,
+        secondary: qualifiedStep.timeInStage
+      }
+    ].filter(Boolean) as LeadHeaderStatusNode[];
+  }
+
+  protected onCompactHeaderStepClick(step: LeadHeaderStatusNode): void {
+    if (step.key === 'Nurture') {
+      this.onNurtureBranchClick();
+      return;
+    }
+
+    const target = this.stepperSteps().find((item) => item.status === step.key);
+    if (target) {
+      this.onStepClick(target);
+    }
+  }
+
+  protected leadCreatedLabel(): string | null {
+    return this.formatLeadHeaderDate(this.leadCreatedAtValue());
+  }
+
+  protected leadCreatedSupportLabel(): string {
+    return 'First recorded in CRM';
+  }
+
+  protected leadLastUpdatedLabel(): string | null {
+    return this.formatLeadHeaderDate(this.latestLeadUpdate()?.occurredAtUtc ?? null);
+  }
+
+  protected leadLastUpdatedSupportLabel(): string | null {
+    const actor = this.latestLeadUpdate()?.actor;
+    return actor ? `Updated by ${actor}` : 'Latest CRM change';
+  }
+
+  protected leadOutcomeSummaryLabel(): string {
+    return this.isOutcomeStatus() ? (this.form.status as string) : 'In progress';
+  }
+
+  protected leadOutcomeSupportLabel(): string {
+    return this.currentStatusInstruction() ?? this.leadHeaderProgressMessage();
   }
 
   protected nurtureBranchAction(): { label: string; icon: string } | null {
@@ -4489,6 +4574,53 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
       default:
         return 'Lead status summary';
     }
+  }
+
+  private latestLeadUpdate(): { occurredAtUtc: string; actor: string | null } | null {
+    const statusCandidates = this.statusHistory().map((entry) => ({
+      occurredAtUtc: entry.changedAtUtc,
+      actor: entry.changedBy ?? null
+    }));
+
+    const auditCandidates = this.scoreAuditEvents().map((entry) => ({
+      occurredAtUtc: entry.createdAtUtc,
+      actor: entry.changedByName ?? null
+    }));
+
+    const allCandidates = [...statusCandidates, ...auditCandidates]
+      .filter((entry) => !!entry.occurredAtUtc)
+      .sort((left, right) => new Date(right.occurredAtUtc).getTime() - new Date(left.occurredAtUtc).getTime());
+
+    const createdAt = this.leadCreatedAtValue();
+    return allCandidates[0] ?? (createdAt ? { occurredAtUtc: createdAt, actor: null } : null);
+  }
+
+  private leadCreatedAtValue(): string | null {
+    const timestamps = [
+      ...this.statusHistory().map((entry) => entry.changedAtUtc),
+      ...this.scoreAuditEvents().map((entry) => entry.createdAtUtc)
+    ]
+      .filter((value): value is string => !!value)
+      .sort((left, right) => new Date(left).getTime() - new Date(right).getTime());
+
+    return timestamps[0] ?? null;
+  }
+
+  private formatLeadHeaderDate(value: string | null | undefined): string | null {
+    if (!value) {
+      return null;
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return null;
+    }
+
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    }).format(parsed);
   }
 
   protected scoreContributionPercent(row: ScoreBreakdownRow): number {

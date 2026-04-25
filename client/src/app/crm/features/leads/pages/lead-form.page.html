@@ -268,37 +268,10 @@
                 <span class="title-light">Lead</span>
               </h1>
               <p>{{ isEditMode() ? 'Update lead details and status' : 'Add a new lead to your pipeline' }}</p>
-              <div class="lead-record-number" *ngIf="isEditMode() && leadNumber() as currentLeadNumber">
-                <span class="lead-record-number__label">Lead Number</span>
-                <strong>{{ currentLeadNumber }}</strong>
-              </div>
-              <div class="lead-header-progress" *ngIf="isEditMode()">
-                <div class="lead-header-progress__dial">
-                  <p-knob
-                    [ngModel]="leadHeaderScoreValue()"
-                    [readonly]="true"
-                    [valueTemplate]="'{value}%'"
-                    [size]="92"
-                    [strokeWidth]="9"
-                    [showValue]="true"
-                    [min]="0"
-                    [max]="100"
-                    [valueColor]="leadHeaderScoreColor()"
-                    valueColor="var(--lead-header-score-color)"
-                    rangeColor="rgba(148, 163, 184, 0.18)"
-                    textColor="#1e293b"
-                    styleClass="lead-header-progress__knob"
-                  ></p-knob>
-                </div>
-                <div class="lead-header-progress__content">
-                  <span class="lead-header-progress__eyebrow">Overall lead score</span>
-                  <div class="lead-header-progress__meta">
-                    <span class="lead-header-progress__status">{{ form.status }}</span>
-                    <span class="lead-header-progress__step">{{ leadProgressSummary() }}</span>
-                  </div>
-                  <p class="lead-header-progress__copy">
-                    {{ leadHeaderProgressMessage() }}
-                  </p>
+              <div class="lead-header-tags">
+                <div class="lead-record-number" *ngIf="isEditMode() && leadNumber() as currentLeadNumber">
+                  <span class="lead-record-number__label">Lead Number</span>
+                  <strong>{{ currentLeadNumber }}</strong>
                 </div>
               </div>
               <div class="form-draft-status" *ngIf="draftStatusMessage() as draftStatus">
@@ -318,167 +291,127 @@
                 <span>{{ editingPresenceSummary() }}</span>
               </div>
             </div>
-
-            <!-- Hero Status Ribbon (visual stepper beside title) -->
-            <div class="status-ribbon" *ngIf="showStatusStepper()">
-            <div class="status-ribbon__inner">
-              <div class="status-ribbon__meta-strip">
-                <div class="status-ribbon__score">
-                  <div class="status-ribbon__score-knob">
+            <div class="lead-command-header" *ngIf="showStatusStepper()">
+              <div class="lead-command-header__top">
+                <div class="lead-command-header__score">
+                  <div class="lead-command-header__score-dial">
                     <p-knob
                       [ngModel]="leadHeaderScoreValue()"
                       [readonly]="true"
                       [valueTemplate]="'{value}%'"
-                      [size]="92"
-                      [strokeWidth]="9"
+                      [size]="78"
+                      [strokeWidth]="8"
                       [showValue]="true"
                       [min]="0"
                       [max]="100"
                       [valueColor]="leadHeaderScoreColor()"
                       valueColor="var(--lead-header-score-color)"
-                      rangeColor="rgba(148, 163, 184, 0.18)"
+                      rangeColor="rgba(148, 163, 184, 0.16)"
                       textColor="#1e293b"
-                      styleClass="status-ribbon__score-knob-control"
+                      styleClass="lead-command-header__score-knob"
                     ></p-knob>
                   </div>
-                </div>
-                <div class="status-ribbon__meta-text">
-                  <div class="status-ribbon__meta-pills">
-                    <span class="status-ribbon__meta-pill status-ribbon__meta-pill--status">{{ form.status }}</span>
-                    <span class="status-ribbon__meta-pill">{{ leadProgressSummary() }}</span>
-                  </div>
-                  <span class="status-ribbon__meta-copy">{{ leadHeaderProgressMessage() }}</span>
-                </div>
-              </div>
-              <div class="status-ribbon__mobile-toggle">
-                <button type="button" class="status-ribbon__mobile-toggle-btn" (click)="toggleStatusPath()">
-                  <i class="pi" [ngClass]="statusPathExpanded() ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
-                  <span>{{ statusPathExpanded() ? 'Hide status path' : 'View status path' }}</span>
-                </button>
-              </div>
-              <div class="lead-stepper lead-stepper--ribbon">
-                <div class="lead-stepper__mobile-summary">
-                  <span class="lead-stepper__mobile-status">{{ form.status }}</span>
-                  <span class="lead-stepper__mobile-next" *ngIf="primaryStatusAction() as action">{{ action.label }}</span>
-                </div>
-                <div class="lead-stepper__desktop-path" [class.lead-stepper__desktop-path--expanded]="statusPathExpanded()">
-                <div class="lead-stepper__track">
-                  @for (step of stepperSteps(); track step.status; let i = $index; let last = $last) {
-                    <div
-                      class="lead-stepper__step"
-                      [attr.data-state]="step.state"
-                      [class.lead-stepper__step--clickable]="step.state !== 'current'"
-                      (click)="step.state !== 'current' ? onStepClick(step) : null"
-                      [pTooltip]="step.state === 'locked' ? (step.unlockHint ? step.unlockHint + ' (click to go there)' : undefined) : undefined"
-                      tooltipPosition="top"
-                    >
-                      <div class="lead-stepper__icon">
-                        <i class="pi" [ngClass]="step.state === 'completed' ? 'pi-check' : (step.state === 'locked' ? 'pi-lock' : step.icon)"></i>
-                      </div>
-                      <span class="lead-stepper__label">{{ step.label }}</span>
-                      <span class="lead-stepper__duration" *ngIf="step.timeInStage">{{ step.timeInStage }}</span>
+                  <div class="lead-command-header__score-copy">
+                    <span class="lead-command-header__eyebrow">Current status</span>
+                    <div class="lead-command-header__status-row">
+                      <strong>{{ form.status }}</strong>
+                      <span class="lead-command-header__status-chip" *ngIf="isOutcomeStatus()">Outcome recorded</span>
                     </div>
-                    <div class="lead-stepper__connector" *ngIf="!last" [attr.data-filled]="step.state === 'completed'"></div>
-                  }
+                    <p>{{ leadHeaderProgressMessage() }}</p>
+                  </div>
+                </div>
 
-                  <!-- AI Score badge near Qualified step -->
-                  <div class="lead-stepper__score-badge" *ngIf="form.score" [attr.data-quality]="form.score >= 80 ? 'high' : (form.score >= 50 ? 'medium' : 'low')">
-                    <i class="pi pi-bolt"></i>
-                    <span>{{ form.score }}</span>
+                <div class="lead-command-header__path">
+                  <div class="compact-stepper">
+                    <ng-container *ngFor="let step of compactHeaderSteps(); let last = last">
+                      <button
+                        type="button"
+                        class="compact-stepper__step"
+                        [attr.data-state]="step.state"
+                        [attr.data-branch]="step.branch ? 'true' : null"
+                        (click)="onCompactHeaderStepClick(step)"
+                      >
+                        <span class="compact-stepper__icon">
+                          <i class="pi" [ngClass]="step.state === 'completed' ? 'pi-check' : (step.state === 'locked' ? 'pi-lock' : step.icon)"></i>
+                        </span>
+                        <span class="compact-stepper__copy">
+                          <span class="compact-stepper__label">{{ step.label }}</span>
+                          <span class="compact-stepper__meta" *ngIf="step.secondary">{{ step.secondary }}</span>
+                        </span>
+                      </button>
+                      <span class="compact-stepper__connector" *ngIf="!last" [attr.data-filled]="step.state === 'completed' || step.state === 'current'"></span>
+                    </ng-container>
+                    <span class="compact-stepper__score-badge" *ngIf="form.score">{{ form.score }}</span>
                   </div>
                 </div>
-                <div class="lead-stepper__branch-lane">
-                  <div class="lead-stepper__branch-stem" [attr.data-state]="nurtureBranchState()"></div>
-                  <button
-                    type="button"
-                    class="lead-stepper__branch"
-                    [attr.data-state]="nurtureBranchState()"
-                    [class.lead-stepper__branch--clickable]="nurtureBranchState() === 'available'"
-                    (click)="onNurtureBranchClick()"
-                  >
-                    <span class="lead-stepper__branch-icon">
-                      <i class="pi pi-clock"></i>
-                    </span>
-                    <span class="lead-stepper__branch-copy">
-                      <span class="lead-stepper__branch-label">Nurture</span>
-                      <span class="lead-stepper__branch-meta">Branch for long-tail follow-up</span>
-                    </span>
-                  </button>
-                </div>
-                </div>
-              </div>
 
-              <div class="lead-status-rail">
-              <div class="lead-status-rail__summary">
-                <div class="lead-status-rail__current">
-                  <span class="lead-status-rail__eyebrow">Current status</span>
-                  <span class="lead-status-rail__value">{{ form.status }}</span>
-                </div>
-                  <p class="lead-status-rail__instruction" *ngIf="currentStatusInstruction() as instruction">{{ instruction }}</p>
-                  <div class="lead-status-rail__blocker-panel" *ngIf="progressActionBlockedReasons().length">
-                  <span class="lead-status-rail__blocker-label">To move forward:</span>
-                  <ul class="lead-status-rail__blockers">
-                    <li *ngFor="let blocker of progressActionBlockedReasons()">{{ blocker }}</li>
-                  </ul>
-                  </div>
-                  <div class="lead-stepper__backward-confirm" *ngIf="backwardConfirmPending()">
-                    <i class="pi pi-exclamation-triangle"></i>
-                    <span>Move back to <strong>{{ backwardConfirmTarget()?.label }}</strong>?</span>
-                    <button type="button" class="backward-confirm__yes" (click)="confirmBackward()">
-                      <i class="pi pi-check"></i> Yes
-                    </button>
-                    <button type="button" class="backward-confirm__no" (click)="cancelBackward()">
-                      <i class="pi pi-times"></i>
-                    </button>
-                  </div>
-                </div>
-                <div class="lead-status-rail__actions">
+                <div class="lead-command-header__actions">
                   <button
                     *ngIf="primaryStatusAction() as action"
                     type="button"
-                    class="lead-status-rail__primary"
+                    class="lead-command-header__primary"
                     [disabled]="action.disabled"
                     (click)="triggerPrimaryStatusAction()"
                   >
                     <i class="pi" [ngClass]="action.icon"></i>
                     <span>{{ action.label }}</span>
                   </button>
-                  <button
-                    *ngIf="nurtureBranchAction() as branch"
-                    type="button"
-                    class="lead-status-rail__branch"
-                    (click)="onNurtureBranchClick()"
-                  >
-                    <i class="pi" [ngClass]="branch.icon"></i>
-                    <span>{{ branch.label }}</span>
-                  </button>
-                  <div class="lead-status-rail__secondary" *ngIf="!canRecycleLead() && !isOutcomeStatus()">
+                  <div class="lead-command-header__secondary" *ngIf="!canRecycleLead() && !isOutcomeStatus()">
                     <button
                       *ngFor="let action of secondaryOutcomeActions()"
                       type="button"
-                      class="lead-status-rail__secondary-btn"
+                      class="lead-command-header__secondary-btn"
                       [disabled]="action.disabled"
                       (click)="onOutcomeClick(action.status)"
                     >
                       <i class="pi" [ngClass]="action.icon"></i>
-                      <span>{{ action.label }}</span>
                     </button>
                   </div>
                 </div>
               </div>
 
-              <!-- Compact audit trail -->
-              <div class="stepper-audit-trail" *ngIf="statusAuditTrail().length">
-                @for (entry of statusAuditTrail(); track entry.date; let last = $last) {
-                  <span class="audit-trail__entry" [attr.data-status]="entry.status">{{ entry.status }}</span>
-                  <span class="audit-trail__date">{{ entry.date }}</span>
-                  <span class="audit-trail__arrow" *ngIf="!last">→</span>
-                }
+              <div class="lead-command-header__bottom">
+                <div class="lead-command-meta">
+                  <span class="lead-command-meta__icon lead-command-meta__icon--outcome"><i class="pi pi-flag"></i></span>
+                  <div class="lead-command-meta__copy">
+                    <span class="lead-command-meta__label">Outcome</span>
+                    <strong>{{ leadOutcomeSummaryLabel() }}</strong>
+                    <span>{{ leadOutcomeSupportLabel() }}</span>
+                  </div>
+                </div>
+
+                <div class="lead-command-meta">
+                  <span class="lead-command-meta__icon lead-command-meta__icon--updated"><i class="pi pi-calendar"></i></span>
+                  <div class="lead-command-meta__copy">
+                    <span class="lead-command-meta__label">Last updated</span>
+                    <strong>{{ leadLastUpdatedLabel() || 'Not available' }}</strong>
+                    <span>{{ leadLastUpdatedSupportLabel() }}</span>
+                  </div>
+                </div>
+
+                <div class="lead-command-meta">
+                  <span class="lead-command-meta__icon lead-command-meta__icon--created"><i class="pi pi-file-edit"></i></span>
+                  <div class="lead-command-meta__copy">
+                    <span class="lead-command-meta__label">Created</span>
+                    <strong>{{ leadCreatedLabel() || 'Not available' }}</strong>
+                    <span>{{ leadCreatedSupportLabel() }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="lead-command-header__notice" *ngIf="progressActionBlockedReasons().length">
+                <i class="pi pi-exclamation-triangle"></i>
+                <span>{{ progressActionBlockedReasons()[0] }}</span>
+              </div>
+
+              <div class="lead-command-header__notice lead-command-header__notice--confirm" *ngIf="backwardConfirmPending()">
+                <i class="pi pi-history"></i>
+                <span>Move back to <strong>{{ backwardConfirmTarget()?.label }}</strong>?</span>
+                <button type="button" class="lead-command-header__confirm-btn" (click)="confirmBackward()">Yes</button>
+                <button type="button" class="lead-command-header__confirm-btn lead-command-header__confirm-btn--ghost" (click)="cancelBackward()">Cancel</button>
               </div>
             </div>
           </div>
-          </div>
-
         </div>
       </header>
 
