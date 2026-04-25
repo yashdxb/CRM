@@ -1915,10 +1915,11 @@ export class DashboardPage implements OnInit {
     const rect = element.getBoundingClientRect();
     const baseMinWidth = Number(element.dataset['minWidth'] ?? 260);
     const baseMinHeight = Number(element.dataset['minHeight'] ?? 220);
-    // Respect the rendered content so cards cannot be resized smaller than what they display.
-    const contentConstraints = this.getCardContentConstraints(element);
-    const minWidth = Math.max(baseMinWidth, contentConstraints.minWidth);
-    const minHeight = Math.max(baseMinHeight, contentConstraints.minHeight);
+    // Floor by header size so the card always shows its title bar; the body can scroll internally,
+    // so we intentionally do NOT clamp to full content height/width (that would block shrinking).
+    const headerFloor = this.getCardHeaderFloor(element);
+    const minWidth = Math.max(baseMinWidth, headerFloor.minWidth);
+    const minHeight = Math.max(baseMinHeight, headerFloor.minHeight);
     // Cap growth to the available grid / metrics-grid width.
     const grid = (element.closest('.dashboard-card-grid') ?? element.closest('.metrics-grid')) as HTMLElement | null;
     const gridRect = grid?.getBoundingClientRect();
@@ -2018,6 +2019,14 @@ export class DashboardPage implements OnInit {
     return { minWidth, minHeight };
   }
 
+  private getCardHeaderFloor(element: HTMLElement) {
+    // Only the header is required to remain visible; the body is allowed to scroll internally.
+    const header = element.querySelector('.card-header') as HTMLElement | null;
+    const minWidth = Math.ceil(header?.scrollWidth ?? 0);
+    const minHeight = Math.ceil(header?.offsetHeight ?? 0);
+    return { minWidth, minHeight };
+  }
+
   private loadChartVisibility(): void {
     if (!isPlatformBrowser(this.platformId)) return;
     try {
@@ -2086,7 +2095,13 @@ export class DashboardPage implements OnInit {
   protected getCardDimensions(cardId: string): Record<string, string> | null {
     const dimensions = this.layoutDimensions[cardId];
     if (!dimensions) return null;
-    const style: Record<string, string> = { width: `${dimensions.width}px`, height: `${dimensions.height}px` };
+    // Override CSS floors (e.g., .my-tasks-card { min-height: 420px }) so user-set sizes are honored.
+    const style: Record<string, string> = {
+      width: `${dimensions.width}px`,
+      height: `${dimensions.height}px`,
+      minWidth: '0',
+      minHeight: '0'
+    };
     if (cardId.startsWith('kpi-')) {
       style['flex'] = 'none';
     }
