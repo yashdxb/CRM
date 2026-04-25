@@ -662,8 +662,8 @@
     :host ::ng-deep .lead-tabs .p-tab.p-tab-active::after,
     :host ::ng-deep .lead-tabs .p-tab[aria-selected='true']::after,
     :host ::ng-deep .lead-tabs .p-tab[data-p-active='true']::after {
-      height: 3px;
-      bottom: 3px;
+      height: 6px;
+      bottom: 4px;
       left: 8%;
       right: 10%;
       opacity: 1;
@@ -680,9 +680,9 @@
         rgba(255, 255, 255, 0.18) 100%
       );
       box-shadow:
-        0 0 6px rgba(255, 255, 255, 0.35),
-        0 0 14px rgba(59, 130, 246, 0.28),
-        0 0 20px rgba(236, 72, 153, 0.2),
+        0 0 10px rgba(255, 255, 255, 0.45),
+        0 0 22px rgba(59, 130, 246, 0.4),
+        0 0 32px rgba(236, 72, 153, 0.3),
         0 1px 0 rgba(15, 23, 42, 0.12);
       background-size: 320% 100%;
       animation: lead-tab-active-strip 3.4s linear infinite;
