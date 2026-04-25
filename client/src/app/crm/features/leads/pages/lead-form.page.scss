@@ -664,8 +664,8 @@
     :host ::ng-deep .lead-tabs .p-tab[data-p-active='true']::after {
       height: 6px;
       bottom: 4px;
-      left: 8%;
-      right: 10%;
+      left: 0;
+      right: 0;
       opacity: 1;
       background: linear-gradient(
         90deg,
