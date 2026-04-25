@@ -1624,6 +1624,8 @@ public class DatabaseInitializer : IDatabaseInitializer
                 Permissions.Policies.OpportunitiesApprovalsApprove,
                 Permissions.Policies.ActivitiesView,
                 Permissions.Policies.ActivitiesManage,
+                Permissions.Policies.HelpDeskView,
+                Permissions.Policies.HelpDeskManage,
                 Permissions.Policies.ReportsView,
                 Permissions.Policies.PropertiesView,
                 Permissions.Policies.PropertiesManage
@@ -1646,6 +1648,8 @@ public class DatabaseInitializer : IDatabaseInitializer
                 Permissions.Policies.OpportunitiesApprovalsRequest,
                 Permissions.Policies.ActivitiesView,
                 Permissions.Policies.ActivitiesManage,
+                Permissions.Policies.HelpDeskView,
+                Permissions.Policies.HelpDeskManage,
                 Permissions.Policies.ReportsView,
                 Permissions.Policies.PropertiesView,
                 Permissions.Policies.PropertiesManage
@@ -1708,6 +1712,7 @@ public class DatabaseInitializer : IDatabaseInitializer
         await EnsureSchemaCompatibilityAsync(cancellationToken);
         await EnsureSuperAdminPermissionsAsync(cancellationToken);
         await BackfillRoleVisibilityScopesAsync(cancellationToken);
+        await EnsureSalesRoleHelpdeskPermissionsAsync(cancellationToken);
     }
 
     /// <summary>
@@ -2983,6 +2988,65 @@ public class DatabaseInitializer : IDatabaseInitializer
             var existing = new HashSet<string>(role.Permissions, StringComparer.OrdinalIgnoreCase);
 
             foreach (var key in allKeys)
+            {
+                if (existing.Contains(key))
+                    continue;
+
+                newPermissions.Add(new RolePermission
+                {
+                    RoleId = role.Id,
+                    Permission = key
+                });
+            }
+        }
+
+        if (newPermissions.Count > 0)
+        {
+            _dbContext.Set<RolePermission>().AddRange(newPermissions);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// Production-safe: ensures Sales Rep and Sales Manager roles have the Help Desk View
+    /// and Help Desk Manage permissions so that sales reps can create and manage helpdesk tickets.
+    /// Additive only — adds missing permissions without removing existing ones.
+    /// </summary>
+    private async Task EnsureSalesRoleHelpdeskPermissionsAsync(CancellationToken cancellationToken)
+    {
+        var salesRoleNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            Permissions.RoleNames.SalesRep,
+            Permissions.RoleNames.SalesManager
+        };
+
+        var requiredPermissions = new[]
+        {
+            Permissions.Policies.HelpDeskView,
+            Permissions.Policies.HelpDeskManage
+        };
+
+        var salesRoles = await _dbContext.Roles
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(r => salesRoleNames.Contains(r.Name))
+            .Select(r => new
+            {
+                r.Id,
+                Permissions = r.Permissions.Select(p => p.Permission).ToList()
+            })
+            .ToListAsync(cancellationToken);
+
+        if (salesRoles.Count == 0)
+            return;
+
+        var newPermissions = new List<RolePermission>();
+
+        foreach (var role in salesRoles)
+        {
+            var existing = new HashSet<string>(role.Permissions, StringComparer.OrdinalIgnoreCase);
+
+            foreach (var key in requiredPermissions)
             {
                 if (existing.Contains(key))
                     continue;
