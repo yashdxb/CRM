@@ -263,17 +263,17 @@
           </div>
           <div class="header-row">
             <div class="header-title">
-              <h1 class="hero-title">
-                <span class="title-gradient">{{ isEditMode() ? 'Edit' : 'Create New' }}</span>
-                <span class="title-light">Lead</span>
-              </h1>
-              <p>{{ isEditMode() ? 'Update lead details and status' : 'Add a new lead to your pipeline' }}</p>
-              <div class="lead-header-tags">
+              <div class="header-title__headline">
+                <h1 class="hero-title">
+                  <span class="title-gradient">{{ isEditMode() ? 'Edit' : 'Create New' }}</span>
+                  <span class="title-light">Lead</span>
+                </h1>
                 <div class="lead-record-number" *ngIf="isEditMode() && leadNumber() as currentLeadNumber">
                   <span class="lead-record-number__label">Lead Number</span>
                   <strong>{{ currentLeadNumber }}</strong>
                 </div>
               </div>
+              <p>{{ isEditMode() ? 'Update lead details and status' : 'Add a new lead to your pipeline' }}</p>
               <div class="form-draft-status" *ngIf="draftStatusMessage() as draftStatus">
                 <i class="pi pi-bookmark"></i>
                 <span>{{ draftStatus }}</span>
@@ -424,9 +424,9 @@
         </div>
       </div>
 
-      <section class="related-summary" *ngIf="isEditMode()" [class.related-summary--empty]="!hasLinkedRecords()">
+      <section class="related-summary" *ngIf="isEditMode() && hasLinkedRecords()">
         <div class="related-summary-label">Converted to</div>
-        <div class="related-summary-links" *ngIf="hasLinkedRecords(); else noLinkedSummary">
+        <div class="related-summary-links">
           <a *ngIf="linkedAccountLink() as link" [routerLink]="link" class="related-summary-link">
             <i class="pi pi-building"></i>
             Account
@@ -440,9 +440,6 @@
             Opportunity
           </a>
         </div>
-        <ng-template #noLinkedSummary>
-          <span class="related-summary-empty">No linked records yet.</span>
-        </ng-template>
       </section>
 
       <main class="form-container">

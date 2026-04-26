@@ -172,6 +172,13 @@
       max-width: 34rem;
     }
 
+    .header-title__headline {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
     .header-title h1 {
       margin: 0 0 0.1rem;
     }
@@ -190,7 +197,7 @@
       display: inline-flex;
       align-items: baseline;
       gap: 0.45rem;
-      margin-top: 0.55rem;
+      margin-top: 0;
       padding: 0.4rem 0.7rem;
       border-radius: 999px;
       background: rgba(var(--apple-blue), 0.08);
@@ -205,14 +212,6 @@
       letter-spacing: 0.08em;
       text-transform: uppercase;
       color: rgba(var(--apple-secondary), 0.72);
-    }
-
-    .lead-header-tags {
-      display: flex;
-      align-items: center;
-      gap: 0.55rem;
-      flex-wrap: wrap;
-      margin-top: 0.45rem;
     }
 
     .lead-header-state-pill {
