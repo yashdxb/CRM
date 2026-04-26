@@ -3981,6 +3981,50 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     return blockers;
   }
 
+  protected qualificationReadinessBlockerCountLabel(): string {
+    const count = this.qualificationReadinessBlockers().length;
+    if (count <= 0) {
+      return 'No blockers';
+    }
+    return `${count} blocker${count === 1 ? '' : 's'}`;
+  }
+
+  protected qualificationPrimaryActionLabel(): string {
+    const missingFactors = this.minimumRequiredQualificationFactors() - this.countQualificationFactors();
+    if (missingFactors > 0) {
+      return `Capture ${missingFactors} more factor${missingFactors === 1 ? '' : 's'}`;
+    }
+
+    if (this.requiresEvidenceBeforeQualified() && this.truthCoveragePercent() < this.minimumEvidenceCoveragePercent()) {
+      return 'Add evidence';
+    }
+
+    const weakest = this.qualificationFeedback()?.weakestSignal;
+    if (weakest) {
+      return `Strengthen ${weakest}`;
+    }
+
+    if (this.qualificationReadinessState() === 'ready') {
+      return 'Qualify the lead';
+    }
+
+    return 'Review readiness';
+  }
+
+  protected qualificationPrimaryActionDetail(): string {
+    const blockers = this.qualificationReadinessBlockers();
+    if (blockers.length > 0) {
+      return blockers[0];
+    }
+
+    const action = this.conversationNextActionDisplay()?.trim();
+    if (!action) {
+      return 'Review the current qualification inputs and move the lead forward.';
+    }
+
+    return action.length > 96 ? `${action.slice(0, 93).trimEnd()}...` : action;
+  }
+
   protected qualificationFactorCards(): QualificationFactorCard[] {
     const activeFactors = this.activeQualificationFactors();
     const key = activeFactors

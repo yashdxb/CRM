@@ -938,11 +938,18 @@
                 <span class="qualification-readiness-panel__eyebrow">Qualification readiness</span>
                 <h3>{{ qualificationReadinessTitle() }}</h3>
                 <p>{{ qualificationReadinessDescription() }}</p>
+                <span
+                  class="qualification-readiness-panel__blocker-pill"
+                  *ngIf="qualificationReadinessBlockers().length"
+                >
+                  {{ qualificationReadinessBlockerCountLabel() }}
+                </span>
               </div>
               <div class="qualification-readiness-panel__metrics">
                 <article class="qualification-summary-metric">
-                  <span class="qualification-summary-metric__label">CQVS Qualification</span>
+                  <span class="qualification-summary-metric__label">Score</span>
                   <strong>{{ qualificationContributionTotal() }} / 100</strong>
+                  <small>{{ qualificationStatusLabel() }}</small>
                 </article>
                 <article class="qualification-summary-metric">
                   <span class="qualification-summary-metric__label">{{ qualificationConfidenceMetricLabel() }}</span>
@@ -950,8 +957,9 @@
                   <small>{{ qualificationConfidenceDisplayLabel() }}</small>
                 </article>
                 <article class="qualification-summary-metric qualification-summary-metric--action">
-                  <span class="qualification-summary-metric__label">Next best action</span>
-                  <strong>{{ conversationNextActionDisplay() || 'Ask about budget and timeline.' }}</strong>
+                  <span class="qualification-summary-metric__label">Next</span>
+                  <strong>{{ qualificationPrimaryActionLabel() }}</strong>
+                  <small>{{ qualificationPrimaryActionDetail() }}</small>
                 </article>
               </div>
               <div class="qualification-readiness-panel__blockers" *ngIf="qualificationReadinessBlockers().length">
