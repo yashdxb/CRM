@@ -1,10 +1,12 @@
 using CRM.Enterprise.Api.Contracts.Tenants;
+using CRM.Enterprise.Application.Notifications;
 using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Infrastructure.Persistence;
 using CRM.Enterprise.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace CRM.Enterprise.Api.Controllers;
 
@@ -16,6 +18,34 @@ public class TenantsController : ControllerBase
     private readonly CrmDbContext _dbContext;
     private readonly ITenantProvisioningService _provisioningService;
     private readonly IIndustryPresetService _industryPresetService;
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly HashSet<string> SupportedFeatureFlags = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "properties",
+        "auth.entra",
+        "marketing.campaigns",
+        "mailbox.enabled",
+        "helpdesk.enabled",
+        "helpdesk.cases",
+        "helpdesk.emailIntake",
+        "helpdesk.realtime",
+        "realtime.dashboard",
+        "realtime.pipeline",
+        "realtime.entityCrud",
+        "realtime.importProgress",
+        "realtime.recordPresence",
+        "realtime.assistantStreaming",
+        "ai.knowledgeSearch",
+        WorkspaceEmailDeliveryFlags.Master,
+        WorkspaceEmailDeliveryFlags.Invites,
+        WorkspaceEmailDeliveryFlags.Security,
+        WorkspaceEmailDeliveryFlags.Approvals,
+        WorkspaceEmailDeliveryFlags.Proposals,
+        WorkspaceEmailDeliveryFlags.Marketing,
+        WorkspaceEmailDeliveryFlags.Notifications,
+        WorkspaceEmailDeliveryFlags.Mailbox,
+        WorkspaceEmailDeliveryFlags.StatusNotifications
+    };
 
     public TenantsController(
         CrmDbContext dbContext,
@@ -120,10 +150,24 @@ public class TenantsController : ControllerBase
         tenant.IndustryModules = request.IndustryModules is { Count: > 0 }
             ? string.Join(',', request.IndustryModules)
             : null;
+        if (request.FeatureFlags is not null)
+        {
+            tenant.FeatureFlagsJson = JsonSerializer.Serialize(
+                request.FeatureFlags
+                    .Where(pair => SupportedFeatureFlags.Contains(pair.Key))
+                    .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase),
+                JsonOptions);
+        }
+        if (request.ReportDesignerRequiredPermission is not null)
+        {
+            tenant.ReportDesignerRequiredPermission = string.IsNullOrWhiteSpace(request.ReportDesignerRequiredPermission)
+                ? null
+                : request.ReportDesignerRequiredPermission.Trim();
+        }
         tenant.UpdatedAtUtc = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
-        await _industryPresetService.ApplyPresetAsync(tenantId, presetId, false, cancellationToken);
+        await _industryPresetService.ApplyPresetAsync(tenantId, presetId, request.ResetExisting, cancellationToken);
 
         return Ok(new TenantSummaryResponse(
             tenant.Id,

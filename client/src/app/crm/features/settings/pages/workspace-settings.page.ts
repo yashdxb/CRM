@@ -25,7 +25,7 @@ import { TimeZoneOption, getTimeZoneFlagUrl } from '../../../../core/models/time
 import { UserAdminDataService } from '../services/user-admin-data.service';
 import { RoleSummary } from '../models/user-admin.model';
 import { ReferenceDataService } from '../../../../core/services/reference-data.service';
-import { TenantContextService } from '../../../../core/tenant/tenant-context.service';
+import { TenantContext, TenantContextService } from '../../../../core/tenant/tenant-context.service';
 import { TenantBrandingService } from '../../../../core/tenant/tenant-branding.service';
 import { TenantBrandingStateService } from '../../../../core/tenant/tenant-branding-state.service';
 
@@ -90,6 +90,7 @@ export class WorkspaceSettingsPage {
 
   protected readonly brandingLogoUrl = this.brandingState.logoUrl;
   protected readonly brandingUploading = signal(false);
+  protected readonly tenantScope = signal<TenantContext | null>(null);
 
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
@@ -169,6 +170,11 @@ export class WorkspaceSettingsPage {
     reportDesignerRequiredPermission: ['Permissions.Administration.Manage']
   });
 
+  private readonly tenantManagedFeatureKeys = new Set<string>([
+    'properties',
+    'marketing.campaigns'
+  ]);
+
   protected readonly emailDeliveryOptions = [
     { controlName: 'featureEmailDeliveryInvites', inputId: 'ws-email-delivery-invites', label: 'Invite emails' },
     { controlName: 'featureEmailDeliverySecurity', inputId: 'ws-email-delivery-security', label: 'Password and security emails' },
@@ -244,6 +250,8 @@ export class WorkspaceSettingsPage {
     this.timeZoneService.getTimeZones().subscribe((options) => {
       this.timeZoneOptions = options;
     });
+    this.settingsForm.get('featureProperties')?.disable({ emitEvent: false });
+    this.settingsForm.get('featureMarketingCampaigns')?.disable({ emitEvent: false });
     this.loadCurrencies();
     this.loadRoles();
     this.loadTenantContext();
@@ -264,6 +272,56 @@ export class WorkspaceSettingsPage {
   protected onOperationsPanelsChange(v: string | number | string[] | number[] | null | undefined) { this.operationsPanels.set((v ?? []) as string[]); }
   protected onRegionalPanelsChange(v: string | number | string[] | number[] | null | undefined) { this.regionalPanels.set((v ?? []) as string[]); }
   protected onModulesPanelsChange(v: string | number | string[] | number[] | null | undefined) { this.modulesPanels.set((v ?? []) as string[]); }
+  protected readonly tenantModuleCards = computed(() => {
+    const context = this.tenantScope();
+    const flags = context?.featureFlags ?? {};
+    return [
+      {
+        key: 'crm',
+        label: 'Core CRM',
+        description: 'Base CRM workspace, sales records, and operational settings.',
+        icon: 'pi pi-shield',
+        enabled: true
+      },
+      {
+        key: 'properties',
+        label: 'Properties',
+        description: 'Brokerage and property listing workspace availability.',
+        icon: 'pi pi-home',
+        enabled: !!flags['properties']
+      },
+      {
+        key: 'marketing.campaigns',
+        label: 'Marketing Campaigns',
+        description: 'Campaign planning, broadcasts, and attribution features.',
+        icon: 'pi pi-megaphone',
+        enabled: !!flags['marketing.campaigns']
+      }
+    ];
+  });
+
+  protected tenantIndustryPresetLabel(): string {
+    return this.tenantScope()?.industryPreset || this.latestSettings?.industryPreset || 'CoreCRM';
+  }
+
+  protected tenantModuleNames(): string[] {
+    return this.tenantModuleCards()
+      .filter((card) => card.enabled)
+      .map((card) => card.label);
+  }
+
+  protected tenantScopeSummary(): string {
+    const enabledModules = this.tenantModuleNames();
+    if (enabledModules.length <= 1) {
+      return 'Core CRM only';
+    }
+
+    return enabledModules.join(', ');
+  }
+
+  protected tenantModulesReady(): boolean {
+    return !!this.tenantScope();
+  }
 
   protected loadSettings() {
     this.loading.set(true);
@@ -291,7 +349,7 @@ export class WorkspaceSettingsPage {
       name: payload.name ?? '',
       timeZone: payload.timeZone ?? 'UTC',
       currency: this.resolveCurrency(payload.currency ?? null),
-      industryPreset: payload.industryPreset ?? 'CoreCRM',
+      industryPreset: this.latestSettings?.industryPreset ?? this.tenantScope()?.industryPreset ?? 'CoreCRM',
       leadFirstTouchSlaHours: payload.leadFirstTouchSlaHours ?? 24,
       defaultContractTermMonths: payload.defaultContractTermMonths ?? 12,
       defaultDeliveryOwnerRoleId: payload.defaultDeliveryOwnerRoleId ?? null,
@@ -317,8 +375,8 @@ export class WorkspaceSettingsPage {
       },
       recordNumberingPolicies: this.buildRecordNumberingPolicies(payload),
       featureFlags: {
-        properties: !!payload.featureProperties,
-        'marketing.campaigns': !!payload.featureMarketingCampaigns,
+        properties: this.resolveTenantManagedFeatureFlag('properties', !!payload.featureProperties),
+        'marketing.campaigns': this.resolveTenantManagedFeatureFlag('marketing.campaigns', !!payload.featureMarketingCampaigns),
         'auth.entra': !!payload.featureAuthEntra,
         'realtime.dashboard': !!payload.featureRealtimeDashboard,
         'realtime.pipeline': !!payload.featureRealtimePipeline,
@@ -409,6 +467,7 @@ export class WorkspaceSettingsPage {
       reportDesignerRequiredPermission: settings.reportDesignerRequiredPermission || 'Permissions.Administration.Manage'
     });
     this.activeVerticalPresetConfiguration.set(settings.verticalPresetConfiguration ?? null);
+    this.syncTenantManagedControls();
   }
 
   protected applyVerticalPreset(resetExisting: boolean) {
@@ -472,12 +531,18 @@ export class WorkspaceSettingsPage {
   private loadTenantContext() {
     this.tenantContext.getTenantContext().subscribe({
       next: (context) => {
+        this.tenantScope.set(context);
         this.effectiveFeatureFlags.set(context.featureFlags ?? {});
+        this.syncTenantManagedControls();
         if (this.latestSettings) {
           this.applySettings(this.latestSettings);
         }
       },
-      error: () => this.effectiveFeatureFlags.set({})
+      error: () => {
+        this.tenantScope.set(null);
+        this.effectiveFeatureFlags.set({});
+        this.syncTenantManagedControls();
+      }
     });
   }
 
@@ -553,6 +618,27 @@ export class WorkspaceSettingsPage {
         this.toastService.show('error', 'Failed to remove logo');
       }
     });
+  }
+
+  private resolveTenantManagedFeatureFlag(key: string, fallback: boolean): boolean {
+    const effective = this.effectiveFeatureFlags()[key];
+    if (typeof effective === 'boolean') {
+      return effective;
+    }
+
+    const current = this.latestSettings?.featureFlags?.[key];
+    return typeof current === 'boolean' ? current : fallback;
+  }
+
+  private syncTenantManagedControls(): void {
+    const featurePatch: Partial<Record<'featureProperties' | 'featureMarketingCampaigns', boolean>> = {
+      featureProperties: this.resolveTenantManagedFeatureFlag('properties', false),
+      featureMarketingCampaigns: this.resolveTenantManagedFeatureFlag('marketing.campaigns', false)
+    };
+
+    this.settingsForm.patchValue(featurePatch, { emitEvent: false });
+    this.settingsForm.get('featureProperties')?.disable({ emitEvent: false });
+    this.settingsForm.get('featureMarketingCampaigns')?.disable({ emitEvent: false });
   }
 
 }

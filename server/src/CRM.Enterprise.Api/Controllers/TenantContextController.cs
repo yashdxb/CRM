@@ -26,6 +26,8 @@ public class TenantContextController : ControllerBase
         "properties",
         "auth.entra",
         "marketing.campaigns",
+        "mailbox.enabled",
+        "helpdesk.enabled",
         "helpdesk.cases",
         "helpdesk.emailIntake",
         "helpdesk.realtime",
@@ -93,6 +95,8 @@ public class TenantContextController : ControllerBase
         {
             ["properties"] = string.Equals(tenant.IndustryPreset, VerticalPresetIds.RealEstateBrokerage, StringComparison.OrdinalIgnoreCase),
             ["marketing.campaigns"] = marketingEnabled,
+            ["mailbox.enabled"] = false,
+            ["helpdesk.enabled"] = helpDeskEnabled,
             ["helpdesk.cases"] = helpDeskEnabled,
             ["helpdesk.emailIntake"] = helpDeskEnabled,
             ["helpdesk.realtime"] = helpDeskEnabled,
@@ -121,18 +125,6 @@ public class TenantContextController : ControllerBase
         featureFlags["realtime.recordPresence"] = IsRealtimeFlagEnabled("realtime.recordPresence", tenant.Key, realtimeTenantEnabled);
         featureFlags["realtime.assistantStreaming"] = IsRealtimeFlagEnabled("realtime.assistantStreaming", tenant.Key, realtimeTenantEnabled);
         ApplyTenantFeatureOverrides(featureFlags, tenant.FeatureFlagsJson);
-
-        // Super Admins bypass feature flag restrictions — full module access
-        if (User.IsInRole(Permissions.RoleNames.SuperAdmin))
-        {
-            foreach (var key in featureFlags.Keys)
-            {
-                if (!key.StartsWith("communications.", StringComparison.OrdinalIgnoreCase))
-                {
-                    featureFlags[key] = true;
-                }
-            }
-        }
 
         return Ok(new TenantContextResponse(
             tenant.Id,

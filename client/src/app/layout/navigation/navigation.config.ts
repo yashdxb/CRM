@@ -99,14 +99,14 @@ export const NAV_LINKS: NavLink[] = [
     permission: PERMISSION_KEYS.emailsView,
     featureFlag: 'mailbox.enabled',
     children: [
-      { label: 'Inbox', icon: 'pi-inbox', path: '/app/mailbox/inbox', permission: PERMISSION_KEYS.emailsView, iconColor: '#3b82f6' },
-      { label: 'Starred', icon: 'pi-star-fill', path: '/app/mailbox/starred', permission: PERMISSION_KEYS.emailsView, iconColor: '#eab308' },
-      { label: 'Sent', icon: 'pi-send', path: '/app/mailbox/sent', permission: PERMISSION_KEYS.emailsView, iconColor: '#22c55e' },
-      { label: 'Drafts', icon: 'pi-file-edit', path: '/app/mailbox/drafts', permission: PERMISSION_KEYS.emailsView, iconColor: '#a855f7' },
-      { label: 'Archive', icon: 'pi-folder', path: '/app/mailbox/archive', permission: PERMISSION_KEYS.emailsView, iconColor: '#f97316' },
-      { label: 'Spam', icon: 'pi-ban', path: '/app/mailbox/spam', permission: PERMISSION_KEYS.emailsView, iconColor: '#ef4444' },
-      { label: 'Trash', icon: 'pi-trash', path: '/app/mailbox/trash', permission: PERMISSION_KEYS.emailsView, iconColor: '#6b7280' },
-      { label: 'Templates', icon: 'pi-copy', path: '/app/mailbox/templates', permission: PERMISSION_KEYS.emailsManage, iconColor: '#06b6d4' }
+      { label: 'Inbox', icon: 'pi-inbox', path: '/app/mailbox/inbox', permission: PERMISSION_KEYS.emailsView, featureFlag: 'mailbox.enabled', iconColor: '#3b82f6' },
+      { label: 'Starred', icon: 'pi-star-fill', path: '/app/mailbox/starred', permission: PERMISSION_KEYS.emailsView, featureFlag: 'mailbox.enabled', iconColor: '#eab308' },
+      { label: 'Sent', icon: 'pi-send', path: '/app/mailbox/sent', permission: PERMISSION_KEYS.emailsView, featureFlag: 'mailbox.enabled', iconColor: '#22c55e' },
+      { label: 'Drafts', icon: 'pi-file-edit', path: '/app/mailbox/drafts', permission: PERMISSION_KEYS.emailsView, featureFlag: 'mailbox.enabled', iconColor: '#a855f7' },
+      { label: 'Archive', icon: 'pi-folder', path: '/app/mailbox/archive', permission: PERMISSION_KEYS.emailsView, featureFlag: 'mailbox.enabled', iconColor: '#f97316' },
+      { label: 'Spam', icon: 'pi-ban', path: '/app/mailbox/spam', permission: PERMISSION_KEYS.emailsView, featureFlag: 'mailbox.enabled', iconColor: '#ef4444' },
+      { label: 'Trash', icon: 'pi-trash', path: '/app/mailbox/trash', permission: PERMISSION_KEYS.emailsView, featureFlag: 'mailbox.enabled', iconColor: '#6b7280' },
+      { label: 'Templates', icon: 'pi-copy', path: '/app/mailbox/templates', permission: PERMISSION_KEYS.emailsManage, featureFlag: 'mailbox.enabled', iconColor: '#06b6d4' }
     ]
   },
   { 

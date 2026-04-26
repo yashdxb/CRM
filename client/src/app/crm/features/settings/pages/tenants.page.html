@@ -139,15 +139,16 @@
 
             <div class="industry-config-content">
               <div class="industry-pack-grid">
-                <div class="pack-card pack-card--core">
+                <div class="pack-card" *ngFor="let pack of industryPackCards()" [ngClass]="pack.tone === 'supply' ? 'pack-card--supply' : 'pack-card--core'">
                   <div class="pack-header">
-                    <div class="pack-icon pack-icon--core">
-                      <i class="pi pi-shield"></i>
+                    <div class="pack-icon" [ngClass]="pack.tone === 'supply' ? 'pack-icon--supply' : 'pack-icon--core'">
+                      <i class="pi" [ngClass]="pack.tone === 'supply' ? 'pi-compass' : 'pi-shield'"></i>
                     </div>
                     <div class="pack-meta">
-                      <h4>Core CRM</h4>
+                      <h4>{{ pack.title }}</h4>
+                      <p>{{ pack.description }}</p>
                     </div>
-                    <p-tag value="Always on" severity="success"></p-tag>
+                    <p-tag [value]="pack.title === 'Core CRM' ? 'Always on' : 'Enabled'" severity="success"></p-tag>
                   </div>
                 </div>
               </div>
@@ -231,7 +232,7 @@
             <p-tabpanels class="tc-sidebar-content">
               <!-- ── Tab 1: Modules ── -->
               <p-tabpanel value="modules">
-                <p-accordion [multiple]="true" [value]="['vertical-preset', 'crm-modules', 'helpdesk']" class="tc-config-accordion">
+                <p-accordion [multiple]="true" [value]="['vertical-preset', 'crm-modules']" class="tc-config-accordion">
 
                   <p-accordion-panel value="vertical-preset">
                     <p-accordion-header>
@@ -283,63 +284,78 @@
                       <div class="acc-header">
                         <div class="acc-header__icon acc-header__icon--primary"><i class="pi pi-box"></i></div>
                         <div class="acc-header__text">
-                          <span class="acc-header__title">CRM Modules</span>
-                          <span class="acc-header__subtitle">Enable or disable optional CRM modules</span>
+                          <span class="acc-header__title">CRM Module Tree</span>
+                          <span class="acc-header__subtitle">Parent modules control child and grandchild capabilities</span>
                         </div>
                       </div>
                     </p-accordion-header>
                     <p-accordion-content>
-                      <div class="flag-grid">
-                        <div class="flag-item">
-                          <p-checkbox inputId="tc-properties" formControlName="featureProperties" [binary]="true"></p-checkbox>
-                          <label for="tc-properties" class="flag-label">
-                            <strong>Properties</strong>
-                            <span>Property management module</span>
-                          </label>
+                      <div class="module-tree">
+                        <div class="module-tree__legend">
+                          <span>Root platform is always on. Checking a parent enables its branch; clearing a parent disables all descendants.</span>
                         </div>
-                        <div class="flag-item">
-                          <p-checkbox inputId="tc-marketing" formControlName="featureMarketingCampaigns" [binary]="true"></p-checkbox>
-                          <label for="tc-marketing" class="flag-label">
-                            <strong>Marketing Campaigns</strong>
-                            <span>Campaign planning and execution</span>
-                          </label>
-                        </div>
-                      </div>
-                    </p-accordion-content>
-                  </p-accordion-panel>
 
-                  <p-accordion-panel value="helpdesk">
-                    <p-accordion-header>
-                      <div class="acc-header">
-                        <div class="acc-header__icon acc-header__icon--orange"><i class="pi pi-headphones"></i></div>
-                        <div class="acc-header__text">
-                          <span class="acc-header__title">Help Desk</span>
-                          <span class="acc-header__subtitle">Configure help desk and support features</span>
-                        </div>
-                      </div>
-                    </p-accordion-header>
-                    <p-accordion-content>
-                      <div class="flag-grid">
-                        <div class="flag-item">
-                          <p-checkbox inputId="tc-hd-cases" formControlName="featureHelpDeskCases" [binary]="true"></p-checkbox>
-                          <label for="tc-hd-cases" class="flag-label">
-                            <strong>Help Desk Cases</strong>
-                            <span>Enable support case management</span>
-                          </label>
-                        </div>
-                        <div class="flag-item">
-                          <p-checkbox inputId="tc-hd-email" formControlName="featureHelpDeskEmailIntake" [binary]="true"></p-checkbox>
-                          <label for="tc-hd-email" class="flag-label">
-                            <strong>Email Intake</strong>
-                            <span>Auto-create cases from inbound email</span>
-                          </label>
-                        </div>
-                        <div class="flag-item">
-                          <p-checkbox inputId="tc-hd-realtime" formControlName="featureHelpDeskRealtime" [binary]="true"></p-checkbox>
-                          <label for="tc-hd-realtime" class="flag-label">
-                            <strong>Realtime Help Desk</strong>
-                            <span>Live updates for case activity</span>
-                          </label>
+                        <div class="module-tree__root" *ngFor="let root of moduleTree()">
+                          <div class="module-tree-node module-tree-node--root">
+                            <div class="module-tree-node__connector"></div>
+                            <div class="module-tree-node__content">
+                              <span class="module-tree-node__badge module-tree-node__badge--always">Always on</span>
+                              <div class="module-tree-node__title-row">
+                                <span class="module-tree-node__icon"><i class="pi" [ngClass]="root.icon"></i></span>
+                                <div class="module-tree-node__copy">
+                                  <strong>{{ root.label }}</strong>
+                                  <span>{{ root.description }}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="module-tree__children" *ngIf="root.children?.length">
+                            <div class="module-tree-node module-tree-node--child" *ngFor="let child of root.children">
+                              <div class="module-tree-node__branch"></div>
+                              <div class="module-tree-node__content">
+                                <div class="module-tree-node__title-row">
+                                  <p-checkbox
+                                    *ngIf="child.controlName"
+                                    [inputId]="'tree-' + child.key"
+                                    [binary]="true"
+                                    [ngModel]="isModuleNodeChecked(child)"
+                                    [ngModelOptions]="{ standalone: true }"
+                                    (ngModelChange)="onModuleNodeToggle(child, $event)"
+                                  ></p-checkbox>
+                                  <span class="module-tree-node__icon module-tree-node__icon--child"><i class="pi" [ngClass]="child.icon"></i></span>
+                                  <div class="module-tree-node__copy">
+                                    <strong>{{ child.label }}</strong>
+                                    <span>{{ child.description }}</span>
+                                  </div>
+                                </div>
+
+                                <div class="module-tree__grandchildren" *ngIf="child.children?.length">
+                                  <div class="module-tree-node module-tree-node--grandchild" *ngFor="let grandchild of child.children">
+                                    <div class="module-tree-node__branch module-tree-node__branch--grandchild"></div>
+                                    <div class="module-tree-node__content module-tree-node__content--grandchild">
+                                      <div class="module-tree-node__title-row">
+                                        <p-checkbox
+                                          *ngIf="grandchild.controlName"
+                                          [inputId]="'tree-' + grandchild.key"
+                                          [binary]="true"
+                                          [ngModel]="isModuleNodeChecked(grandchild)"
+                                          [ngModelOptions]="{ standalone: true }"
+                                          [disabled]="!isModuleNodeChecked(child)"
+                                          (ngModelChange)="onModuleNodeToggle(grandchild, $event)"
+                                        ></p-checkbox>
+                                        <span class="module-tree-node__icon module-tree-node__icon--grandchild"><i class="pi" [ngClass]="grandchild.icon"></i></span>
+                                        <div class="module-tree-node__copy">
+                                          <strong>{{ grandchild.label }}</strong>
+                                          <span>{{ grandchild.description }}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </p-accordion-content>

@@ -167,6 +167,34 @@
 
         <!-- Form -->
         <form class="settings-form" *ngIf="!loading()" [formGroup]="settingsForm" (ngSubmit)="saveSettings()">
+          <section class="tenant-scope-card">
+            <div class="tenant-scope-card__header">
+              <div>
+                <span class="tenant-scope-card__eyebrow">Tenant-owned scope</span>
+                <h3>Modules and industry preset are managed in Tenant Configuration</h3>
+                <p>
+                  Workspace Settings controls CRM behavior. Module entitlement and industry pack selection stay at tenant level to avoid conflicting sources of truth.
+                </p>
+              </div>
+              <button pButton type="button" class="btn btn-secondary tenant-scope-card__action" routerLink="/app/settings/tenants">
+                <i class="pi pi-cog"></i>
+                <span>Open Tenant Configuration</span>
+              </button>
+            </div>
+
+            <div class="tenant-scope-card__grid">
+              <div class="tenant-scope-metric">
+                <span class="tenant-scope-metric__label">Industry preset</span>
+                <strong>{{ tenantIndustryPresetLabel() }}</strong>
+                <span>{{ tenantModulesReady() ? 'Inherited from tenant configuration' : 'Waiting for tenant context' }}</span>
+              </div>
+              <div class="tenant-scope-metric">
+                <span class="tenant-scope-metric__label">Enabled tenant modules</span>
+                <strong>{{ tenantScopeSummary() }}</strong>
+                <span>Operational settings below respect this module scope.</span>
+              </div>
+            </div>
+          </section>
 
           <!-- ═══════════════ VERTICAL SIDEBAR TABS ═══════════════ -->
           <p-tabs class="ws-sidebar-tabs" [value]="activeTab()" (valueChange)="onActiveTabChange($event)">
@@ -187,7 +215,7 @@
                 </p-tab>
                 <p-tab value="modules" [pt]="{ root: { class: 'ws-sidebar-item' } }">
                   <i class="pi pi-th-large"></i>
-                  <span class="ws-sidebar-label">Modules</span>
+                  <span class="ws-sidebar-label">Modules &amp; Capabilities</span>
                 </p-tab>
               </p-tablist>
 
@@ -753,31 +781,35 @@
                       <div class="ws-accordion-header">
                         <div class="ws-accordion-header__title">
                           <i class="pi pi-th-large"></i>
-                          <span>CRM Modules</span>
+                          <span>Tenant Modules</span>
                         </div>
                         <div class="ws-accordion-header__badges">
-                          <span class="status-badge status-badge--info">Feature toggles</span>
+                          <span class="status-badge status-badge--info">Read only</span>
                         </div>
                       </div>
                     </p-accordion-header>
                     <p-accordion-content>
                       <section class="form-card">
-                        <p class="section-description">Enable or disable optional CRM modules across this workspace.</p>
-                        <div class="flag-grid">
-                          <div class="flag-item">
-                            <p-checkbox inputId="ws-feature-properties" formControlName="featureProperties" [binary]="true"></p-checkbox>
-                            <label for="ws-feature-properties" class="flag-label">
-                              <strong>Properties</strong>
-                              <span>Manage real-estate or asset inventory listings.</span>
-                            </label>
+                        <p class="section-description">These modules are controlled in Tenant Configuration. Workspace Settings can only configure capabilities for modules that are already enabled.</p>
+                        <div class="tenant-module-grid">
+                          <div class="tenant-module-card" *ngFor="let module of tenantModuleCards()">
+                            <div class="tenant-module-card__icon">
+                              <i class="pi" [ngClass]="module.icon"></i>
+                            </div>
+                            <div class="tenant-module-card__content">
+                              <div class="tenant-module-card__title">
+                                <strong>{{ module.label }}</strong>
+                                <span class="status-badge" [ngClass]="module.enabled ? 'status-badge--success' : 'status-badge--warning'">
+                                  {{ module.enabled ? 'Enabled' : 'Disabled' }}
+                                </span>
+                              </div>
+                              <p>{{ module.description }}</p>
+                            </div>
                           </div>
-                          <div class="flag-item">
-                            <p-checkbox inputId="ws-feature-marketing" formControlName="featureMarketingCampaigns" [binary]="true"></p-checkbox>
-                            <label for="ws-feature-marketing" class="flag-label">
-                              <strong>Marketing Campaigns</strong>
-                              <span>Plan campaigns, send broadcasts, and track attribution.</span>
-                            </label>
-                          </div>
+                        </div>
+                        <div class="tenant-module-note">
+                          <i class="pi pi-info-circle"></i>
+                          <span>To enable Properties, Marketing, or switch the industry preset, go to Tenant Configuration.</span>
                         </div>
                       </section>
                     </p-accordion-content>
@@ -789,7 +821,7 @@
                       <div class="ws-accordion-header">
                         <div class="ws-accordion-header__title">
                           <i class="pi pi-inbox"></i>
-                          <span>My Mailbox</span>
+                          <span>My Mailbox Capability</span>
                         </div>
                         <div class="ws-accordion-header__badges">
                           <span class="status-badge status-badge--info">Communications</span>
@@ -818,7 +850,7 @@
                       <div class="ws-accordion-header">
                         <div class="ws-accordion-header__title">
                           <i class="pi pi-headphones"></i>
-                          <span>Help Desk</span>
+                          <span>Help Desk Capabilities</span>
                         </div>
                         <div class="ws-accordion-header__badges">
                           <span class="status-badge status-badge--info">Service</span>

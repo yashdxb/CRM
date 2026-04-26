@@ -31,6 +31,8 @@ public class WorkspaceController : ControllerBase
         "properties",
         "auth.entra",
         "marketing.campaigns",
+        "mailbox.enabled",
+        "helpdesk.enabled",
         "helpdesk.cases",
         "helpdesk.emailIntake",
         "helpdesk.realtime",
@@ -451,6 +453,8 @@ public class WorkspaceController : ControllerBase
             defaults["properties"] = true;
         }
 
+        defaults["mailbox.enabled"] = false;
+        defaults["helpdesk.enabled"] = false;
         defaults[WorkspaceEmailDeliveryFlags.Master] = false;
         defaults[WorkspaceEmailDeliveryFlags.Invites] = false;
         defaults[WorkspaceEmailDeliveryFlags.Security] = false;

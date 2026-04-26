@@ -6,6 +6,9 @@ import { CreateTenantRequest, TenantSummary } from '../models/tenant-admin.model
 export interface UpdateTenantIndustryRequest {
   industryPreset?: string | null;
   industryModules?: string[] | null;
+  featureFlags?: Record<string, boolean> | null;
+  reportDesignerRequiredPermission?: string | null;
+  resetExisting?: boolean;
 }
 
 @Injectable({ providedIn: 'root' })

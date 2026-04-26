@@ -55,28 +55,35 @@ export class NavigationService {
       return tokenHasPermission(context.payload, link.permission);
     };
 
-    const DEFAULT_TRUE_FLAGS = new Set(['mailbox.enabled', 'helpdesk.enabled']);
     const hasFeatureFlag = (link: NavLink) => {
       if (!link.featureFlag) return true;
       const value = this.tenantContext()?.featureFlags?.[link.featureFlag];
       if (value === true) return true;
       if (value === false) return false;
-      return DEFAULT_TRUE_FLAGS.has(link.featureFlag);
+      return false;
     };
 
-    const filterChildren = (items?: NavLink[]) =>
+    const filterChildren = (
+      items?: NavLink[],
+      inheritedPermission = true,
+      inheritedFeatureFlag = true
+    ) =>
       items?.reduce<NavLink[]>((acc, item) => {
-        const nestedChildren = filterChildren(item.children);
-        const hasAnyChildren = (nestedChildren?.length ?? 0) > 0;
-        const allowed = hasPermission(item) && hasFeatureFlag(item);
+        const permissionAllowed = inheritedPermission && hasPermission(item);
+        const featureAllowed = inheritedFeatureFlag && hasFeatureFlag(item);
+        const nestedChildren = filterChildren(item.children, permissionAllowed, featureAllowed);
+        const hasAnyChildren = (nestedChildren.length ?? 0) > 0;
+        const allowed = permissionAllowed && featureAllowed;
         if (!allowed && !hasAnyChildren) return acc;
         acc.push({ ...item, children: nestedChildren });
         return acc;
       }, []) ?? [];
 
     return this.navLinks().reduce<NavLink[]>((acc, link) => {
-      const children = filterChildren(link.children);
-      if ((!hasPermission(link) || !hasFeatureFlag(link)) && children.length === 0) return acc;
+      const permissionAllowed = hasPermission(link);
+      const featureAllowed = hasFeatureFlag(link);
+      const children = filterChildren(link.children, permissionAllowed, featureAllowed);
+      if ((!permissionAllowed || !featureAllowed) && children.length === 0) return acc;
       acc.push({ ...link, children });
       return acc;
     }, []);
