@@ -1,7 +1,36 @@
 {
-  // For more information, visit: https://go.microsoft.com/fwlink/?LinkId=733558
   "version": "2.0.0",
   "tasks": [
+    {
+      "label": "Open API Terminal",
+      "type": "shell",
+      "command": "cd \"${workspaceFolder}/server/src/CRM.Enterprise.Api\" && exec zsh",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "dedicated",
+        "group": "dev-terminals",
+        "focus": false,
+        "clear": false
+      },
+      "runOptions": {
+        "runOn": "folderOpen"
+      }
+    },
+    {
+      "label": "Open Client Terminal",
+      "type": "shell",
+      "command": "cd \"${workspaceFolder}/client\" && exec zsh",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "dedicated",
+        "group": "dev-terminals",
+        "focus": false,
+        "clear": false
+      },
+      "runOptions": {
+        "runOn": "folderOpen"
+      }
+    },
     {
       "label": "build-api",
       "type": "process",
