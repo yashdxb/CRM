@@ -6,4 +6,5 @@ public record DashboardLayoutState(
     IReadOnlyList<string> CardOrder,
     IReadOnlyDictionary<string, string> Sizes,
     IReadOnlyDictionary<string, DashboardCardDimensions> Dimensions,
-    IReadOnlyList<string> HiddenCards);
+    IReadOnlyList<string> HiddenCards,
+    IReadOnlyList<string>? KpiOrder = null);

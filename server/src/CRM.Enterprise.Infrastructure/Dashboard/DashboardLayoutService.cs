@@ -37,6 +37,16 @@ public class DashboardLayoutService : IDashboardLayoutService
         "growth"
     ];
 
+    private static readonly IReadOnlyList<string> DefaultKpiOrder =
+    [
+        "raw-pipeline",
+        "at-risk",
+        "no-next-step",
+        "tasks-due",
+        "overdue-activities",
+        "new-leads"
+    ];
+
     private static readonly HashSet<string> AllowedCardIds = new(DefaultOrder);
     private static readonly HashSet<string> AllowedIds = new(DefaultOrder.Concat(ChartIds));
     private readonly CrmDbContext _dbContext;
@@ -114,7 +124,8 @@ public class DashboardLayoutService : IDashboardLayoutService
                 NormalizeOrder(stored, Array.Empty<string>()),
                 new Dictionary<string, string>(),
                 new Dictionary<string, DashboardCardDimensions>(),
-                new List<string>());
+                new List<string>(),
+                DefaultKpiOrder);
             if (IsLegacyFullDefault(normalized))
             {
                 return await GetDefaultLayoutAsync(userId, cancellationToken);
@@ -143,12 +154,14 @@ public class DashboardLayoutService : IDashboardLayoutService
             layout.CardOrder,
             layout.Sizes,
             layout.Dimensions,
-            layout.HiddenCards));
+            layout.HiddenCards,
+            layout.KpiOrder));
         user.CommandCenterLayoutJson = JsonSerializer.Serialize(new LayoutPayload(
             normalized.CardOrder,
             normalized.Sizes,
             normalized.Dimensions,
-            normalized.HiddenCards));
+            normalized.HiddenCards,
+            normalized.KpiOrder));
         user.UpdatedAtUtc = DateTime.UtcNow;
         await _dbContext.SaveChangesAsync(cancellationToken);
         return normalized;
@@ -235,7 +248,8 @@ public class DashboardLayoutService : IDashboardLayoutService
             defaultLayout.CardOrder,
             defaultLayout.Sizes,
             defaultLayout.Dimensions,
-            defaultLayout.HiddenCards));
+            defaultLayout.HiddenCards,
+            defaultLayout.KpiOrder));
         user.UpdatedAtUtc = DateTime.UtcNow;
         await _dbContext.SaveChangesAsync(cancellationToken);
         return defaultLayout;
@@ -350,8 +364,9 @@ public class DashboardLayoutService : IDashboardLayoutService
         var dimensions = payload.Dimensions?
             .Where(item => AllowedCardIds.Contains(item.Key))
             .ToDictionary(item => item.Key, item => item.Value) ?? new Dictionary<string, DashboardCardDimensions>();
+        var kpiOrder = NormalizeKpiOrder(payload.KpiOrder);
 
-        return new DashboardLayoutState(order, sizes, dimensions, hidden);
+        return new DashboardLayoutState(order, sizes, dimensions, hidden, kpiOrder);
     }
 
     private static IReadOnlyList<string> NormalizeOrder(IEnumerable<string>? candidate, IReadOnlyCollection<string> hidden)
@@ -383,6 +398,41 @@ public class DashboardLayoutService : IDashboardLayoutService
             {
                 continue;
             }
+            if (seen.Add(id))
+            {
+                normalized.Add(id);
+            }
+        }
+
+        return normalized;
+    }
+
+    private static IReadOnlyList<string> NormalizeKpiOrder(IEnumerable<string>? candidate)
+    {
+        if (candidate is null)
+        {
+            return DefaultKpiOrder.ToList();
+        }
+
+        var allowed = new HashSet<string>(DefaultKpiOrder, StringComparer.OrdinalIgnoreCase);
+        var normalized = new List<string>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var id in candidate)
+        {
+            if (!allowed.Contains(id))
+            {
+                continue;
+            }
+
+            if (seen.Add(id))
+            {
+                normalized.Add(id);
+            }
+        }
+
+        foreach (var id in DefaultKpiOrder)
+        {
             if (seen.Add(id))
             {
                 normalized.Add(id);
@@ -463,12 +513,13 @@ public class DashboardLayoutService : IDashboardLayoutService
 
     private string SerializeLayout(DashboardLayoutState layout)
     {
-        var normalized = NormalizePayload(new LayoutPayload(layout.CardOrder, layout.Sizes, layout.Dimensions, layout.HiddenCards));
+        var normalized = NormalizePayload(new LayoutPayload(layout.CardOrder, layout.Sizes, layout.Dimensions, layout.HiddenCards, layout.KpiOrder));
         return JsonSerializer.Serialize(new LayoutPayload(
             normalized.CardOrder,
             normalized.Sizes,
             normalized.Dimensions,
-            normalized.HiddenCards));
+            normalized.HiddenCards,
+            normalized.KpiOrder));
     }
 
     private async Task ClearDefaultTemplateAsync(Guid tenantId, CancellationToken cancellationToken)
@@ -528,7 +579,7 @@ public class DashboardLayoutService : IDashboardLayoutService
         }
 
         var selected = ordered.LastOrDefault(item => item.RoleLevel <= roleLevel) ?? ordered.First();
-        return new LayoutPayload(selected.CardOrder, selected.Sizes, selected.Dimensions, selected.HiddenCards);
+        return new LayoutPayload(selected.CardOrder, selected.Sizes, selected.Dimensions, selected.HiddenCards, selected.KpiOrder);
     }
 
     private static RoleDefaultLayout EnsureLegacyDefaultHiddenCards(RoleDefaultLayout layout)
@@ -582,13 +633,15 @@ public class DashboardLayoutService : IDashboardLayoutService
         IReadOnlyList<string>? CardOrder,
         IReadOnlyDictionary<string, string>? Sizes,
         IReadOnlyDictionary<string, DashboardCardDimensions>? Dimensions,
-        IReadOnlyList<string>? HiddenCards);
+        IReadOnlyList<string>? HiddenCards,
+        IReadOnlyList<string>? KpiOrder = null);
 
     private sealed record UserLayoutSourcePayload(
         IReadOnlyList<string>? CardOrder,
         IReadOnlyDictionary<string, string>? Sizes,
         IReadOnlyDictionary<string, DashboardCardDimensions>? Dimensions,
         IReadOnlyList<string>? HiddenCards,
+        IReadOnlyList<string>? KpiOrder,
         string? SourceKey,
         string? SourceName,
         string? SourceType,
@@ -600,7 +653,8 @@ public class DashboardLayoutService : IDashboardLayoutService
         IReadOnlyList<string> CardOrder,
         IReadOnlyDictionary<string, string>? Sizes,
         IReadOnlyDictionary<string, DashboardCardDimensions>? Dimensions,
-        IReadOnlyList<string>? HiddenCards);
+        IReadOnlyList<string>? HiddenCards,
+        IReadOnlyList<string>? KpiOrder = null);
 
     private async Task<LayoutPayload?> ResolveUserPackLayoutAsync(
         string commandCenterLayoutJson,
@@ -654,7 +708,7 @@ public class DashboardLayoutService : IDashboardLayoutService
             // Template might be deleted; use the embedded snapshot saved on the user as fallback.
             if ((payload.CardOrder?.Count ?? 0) > 0)
             {
-                return EnsureStrictPackPayload(new LayoutPayload(payload.CardOrder, payload.Sizes, payload.Dimensions, payload.HiddenCards));
+                return EnsureStrictPackPayload(new LayoutPayload(payload.CardOrder, payload.Sizes, payload.Dimensions, payload.HiddenCards, payload.KpiOrder));
             }
         }
 

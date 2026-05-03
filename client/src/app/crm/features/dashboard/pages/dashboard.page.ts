@@ -9,8 +9,7 @@ import { ChartModule } from 'primeng/chart';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { OrderListModule } from 'primeng/orderlist';
-import { DatePickerModule } from 'primeng/datepicker';
-import { Subject, startWith, switchMap } from 'rxjs';
+import { Subject, switchMap } from 'rxjs';
 import { debounceTime, filter } from 'rxjs/operators';
 
 import { DashboardDataService } from '../services/dashboard-data.service';
@@ -29,10 +28,18 @@ import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { WorkspaceSettingsService } from '../../settings/services/workspace-settings.service';
 import { ReferenceDataService } from '../../../../core/services/reference-data.service';
 import { CrmEventsService } from '../../../../core/realtime/crm-events.service';
+import { UiStateService } from '../../../../core/ui-state/ui-state.service';
 import { DASHBOARD_CARD_CATALOG, DASHBOARD_CHART_CATALOG, type DashboardChartId } from '../dashboard-catalog';
 
 type ChartId = DashboardChartId;
 type PriorityStreamType = 'task' | 'lead' | 'deal' | 'decision';
+type DashboardPeriod = 'today' | 'week' | 'month' | 'range';
+
+interface DashboardSummaryRequestParams {
+  period: DashboardPeriod;
+  fromUtc?: string;
+  toUtc?: string;
+}
 
 interface PriorityStreamItem {
   id: string;
@@ -60,6 +67,20 @@ interface AssistantDiagnosticItem {
   linkedActionTitle: string | null;
 }
 
+interface AssistantExecutionSummary {
+  title: string;
+  detail: string;
+  targetLabel: string;
+  actionLabel: string;
+  action: AssistantInsightsAction;
+}
+
+interface DashboardDateFilterPreference {
+  period: DashboardPeriod;
+  fromUtc?: string | null;
+  toUtc?: string | null;
+}
+
 @Component({
   selector: 'app-dashboard-page',
   standalone: true,
@@ -81,7 +102,6 @@ interface AssistantDiagnosticItem {
     ButtonModule,
     DialogModule,
     OrderListModule,
-    DatePickerModule,
     BreadcrumbsComponent
   ],
   templateUrl: './dashboard.page.html',
@@ -101,6 +121,7 @@ export class DashboardPage implements OnInit {
   private readonly crmEventsService = inject(CrmEventsService);
   private readonly settingsService = inject(WorkspaceSettingsService);
   private readonly referenceData = inject(ReferenceDataService);
+  private readonly uiStateService = inject(UiStateService);
   private readonly opportunityData = inject(OpportunityDataService);
   private readonly approvalService = inject(OpportunityApprovalService);
   private readonly router = inject(Router);
@@ -176,6 +197,7 @@ export class DashboardPage implements OnInit {
   };
   private readonly managerHealthRefresh$ = new Subject<void>();
   private readonly dashboardRealtimeRefresh$ = new Subject<void>();
+  private readonly teamPerformanceRefresh$ = new Subject<DashboardSummaryRequestParams>();
   private readonly managerHealthSignal = signal<ManagerPipelineHealth>(this.emptyManagerHealth);
   private readonly emptyTeamPerformance: SalesTeamPerformance = {
     teamRevenue: 0,
@@ -198,9 +220,11 @@ export class DashboardPage implements OnInit {
   private readonly assistantInsightsSignal = signal<AssistantInsights>(this.emptyAssistantInsights);
   protected readonly expansionSignals = signal<ExpansionSignal[]>([]);
   protected readonly pendingDecisionInbox = signal<OpportunityApprovalInboxItem[]>([]);
-  protected readonly selectedPeriod = signal<'today' | 'week' | 'month' | 'range'>('month');
+  protected readonly selectedPeriod = signal<DashboardPeriod>('month');
   protected readonly dateRange = signal<Date[] | null>(null);
   protected readonly showRangePicker = signal(false);
+  protected rangeDraftStart = '';
+  protected rangeDraftEnd = '';
   protected readonly rangeLabel = computed(() => {
     const r = this.dateRange();
     if (!r || r.length < 2 || !r[0] || !r[1]) return '';
@@ -229,13 +253,15 @@ export class DashboardPage implements OnInit {
   protected assistantReviewDialogOpen = false;
   protected assistantReviewNote = '';
   protected assistantReviewSubmitting = false;
-  private pendingAssistantAction: AssistantInsightsAction | null = null;
+  protected assistantReviewDecision: 'approve' | 'reject' | null = null;
+  protected pendingAssistantAction: AssistantInsightsAction | null = null;
   protected assistantExpandedActionIds = signal<string[]>([]);
   protected assistantDetailDialogOpen = false;
   protected assistantDetailAction: AssistantInsightsAction | null = null;
   protected assistantUndoVisible = false;
   protected assistantUndoBusy = false;
   protected assistantUndoMessage = '';
+  protected assistantExecutionSummary: AssistantExecutionSummary | null = null;
   private assistantUndoTimerId: number | null = null;
   private assistantUndoActivityId: string | null = null;
   private assistantUndoActionType: string | null = null;
@@ -457,42 +483,62 @@ export class DashboardPage implements OnInit {
   protected selectPeriod(period: 'today' | 'week' | 'month'): void {
     this.selectedPeriod.set(period);
     this.showRangePicker.set(false);
-    this.refreshSummaryForSelectedPeriod();
+    this.persistDateFilterPreference();
+    this.refreshDashboardDataForSelectedPeriod();
   }
 
   protected toggleRangePicker(): void {
     if (this.selectedPeriod() === 'range') {
+      if (!this.showRangePicker()) {
+        this.syncRangeDraftFromSelection();
+      }
       this.showRangePicker.update(v => !v);
     } else {
       this.selectedPeriod.set('range');
+      this.syncRangeDraftFromSelection();
       this.showRangePicker.set(true);
     }
   }
 
-  protected onDateRangeChange(range: Date[] | null): void {
-    this.dateRange.set(range);
-    if (range && range.length === 2 && range[0] && range[1]) {
-      this.showRangePicker.set(false);
-      this.refreshSummaryForSelectedPeriod();
+  protected applyDateRangeSelection(): void {
+    const from = this.parseDateInputValue(this.rangeDraftStart, false);
+    const to = this.parseDateInputValue(this.rangeDraftEnd, true);
+    if (!from || !to || from > to) {
+      return;
+    }
+
+    this.dateRange.set([from, to]);
+    this.selectedPeriod.set('range');
+    this.showRangePicker.set(false);
+    this.persistDateFilterPreference();
+    this.refreshDashboardDataForSelectedPeriod();
+  }
+
+  protected clearDateRangeDraft(): void {
+    this.rangeDraftStart = '';
+    this.rangeDraftEnd = '';
+  }
+
+  protected cancelDateRangeSelection(): void {
+    this.syncRangeDraftFromSelection();
+    this.showRangePicker.set(false);
+  }
+
+  protected rangeDraftReady(): boolean {
+    const from = this.parseDateInputValue(this.rangeDraftStart, false);
+    const to = this.parseDateInputValue(this.rangeDraftEnd, true);
+    return !!from && !!to && from <= to;
+  }
+
+  private refreshDashboardDataForSelectedPeriod(): void {
+    const request = this.buildSummaryRequestParams();
+    this.loadSummary(request);
+    if (this.secondaryDashboardDataInitialized) {
+      this.refreshSecondaryDashboardData(request);
     }
   }
 
-  private refreshSummaryForSelectedPeriod(): void {
-    const request = this.buildSummaryRequestParams();
-    this.dashboardData.getSummary(request.period, request.fromUtc, request.toUtc)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((summary) => {
-        const resolvedSummary = summary ?? this.emptySummary;
-        this.summarySignal.set(resolvedSummary);
-        this.emitRiskAlerts(resolvedSummary);
-      });
-  }
-
-  private buildSummaryRequestParams(): {
-    period: 'today' | 'week' | 'month' | 'range';
-    fromUtc?: string;
-    toUtc?: string;
-  } {
+  private buildSummaryRequestParams(): DashboardSummaryRequestParams {
     const period = this.selectedPeriod();
     if (period !== 'range') {
       return { period };
@@ -900,6 +946,7 @@ export class DashboardPage implements OnInit {
   }
   protected layoutDialogOpen = false;
   protected layoutDraft: Array<{ id: string; label: string; icon: string }> = [];
+  protected kpiDraft: Array<{ id: string; label: string; icon: string }> = [];
   protected layoutSizes: Record<string, 'sm' | 'md' | 'lg'> = {};
   protected layoutDimensions: Record<string, { width: number; height: number }> = {};
   private hasLocalLayoutPreference = false;
@@ -937,7 +984,17 @@ export class DashboardPage implements OnInit {
 
   private readonly defaultKpiOrder = ['raw-pipeline', 'at-risk', 'no-next-step', 'tasks-due', 'overdue-activities', 'new-leads'];
   private readonly kpiOrderStorageKey = 'crm.dashboard.kpi.order';
+  private readonly kpiCatalog: Array<{ id: string; label: string; icon: string }> = [
+    { id: 'raw-pipeline', label: 'Raw pipeline', icon: 'pi pi-dollar' },
+    { id: 'at-risk', label: 'At-risk deals', icon: 'pi pi-exclamation-triangle' },
+    { id: 'no-next-step', label: 'No next step', icon: 'pi pi-calendar-times' },
+    { id: 'tasks-due', label: 'Tasks due today', icon: 'pi pi-calendar' },
+    { id: 'overdue-activities', label: 'Overdue activities', icon: 'pi pi-history' },
+    { id: 'new-leads', label: 'Newly assigned leads', icon: 'pi pi-user-plus' }
+  ];
+  private readonly dashboardDateFilterStateKey = 'dashboard.date-filter';
   protected readonly kpiOrder = signal<string[]>([]);
+  private secondaryDashboardDataInitialized = false;
 
   private readonly layoutStorageKey = 'crm.dashboard.command-center.layout';
   private readonly chartVisibilityStorageKey = 'crm.dashboard.charts.visibility';
@@ -985,8 +1042,6 @@ export class DashboardPage implements OnInit {
   }
 
   ngOnInit(): void {
-    this.loadAllDashboardData();
-
     this.crmEventsService.events$
       .pipe(
         filter((event) => event.eventType === 'dashboard.metrics.delta' || event.eventType === 'dashboard.metrics.refresh-requested'),
@@ -1013,14 +1068,9 @@ export class DashboardPage implements OnInit {
       )
       .subscribe(() => {
         const request = this.buildSummaryRequestParams();
-        this.dashboardData.getSummary(request.period, request.fromUtc, request.toUtc)
-          .pipe(takeUntilDestroyed(this.destroyRef))
-          .subscribe(summary => {
-            const resolvedSummary = summary ?? this.emptySummary;
-            this.summarySignal.set(resolvedSummary);
-            this.emitRiskAlerts(resolvedSummary);
-          });
+        this.loadSummary(request);
         this.managerHealthRefresh$.next();
+        this.teamPerformanceRefresh$.next(request);
       });
 
     const { order, sizes, dimensions, hasLocalPreference } = this.loadLayoutPreferences();
@@ -1066,6 +1116,8 @@ export class DashboardPage implements OnInit {
       }
     });
 
+    this.restoreDateFilterPreferenceAndLoad();
+
   }
 
   private loadAllDashboardData(): void {
@@ -1079,16 +1131,44 @@ export class DashboardPage implements OnInit {
           const resolvedSummary = summary ?? this.emptySummary;
           this.summarySignal.set(resolvedSummary);
           this.emitRiskAlerts(resolvedSummary);
-          queueMicrotask(() => this.loadSecondaryDashboardData());
+          queueMicrotask(() => this.ensureSecondaryDashboardDataInitialized(request));
         },
         error: () => {
           this.dataLoadFailed.set(true);
-          queueMicrotask(() => this.loadSecondaryDashboardData());
+          queueMicrotask(() => this.ensureSecondaryDashboardDataInitialized(request));
         }
       });
   }
 
-  private loadSecondaryDashboardData(): void {
+  private ensureSecondaryDashboardDataInitialized(request: DashboardSummaryRequestParams): void {
+    if (this.secondaryDashboardDataInitialized) {
+      this.refreshSecondaryDashboardData(request);
+      return;
+    }
+
+    this.secondaryDashboardDataInitialized = true;
+    this.managerHealthRefresh$
+      .pipe(
+        switchMap(() => this.dashboardData.getManagerPipelineHealth()),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(health => {
+        this.managerHealthSignal.set(health ?? this.emptyManagerHealth);
+      });
+
+    this.teamPerformanceRefresh$
+      .pipe(
+        switchMap((params) => this.dashboardData.getSalesTeamPerformance(params.period, params.fromUtc, params.toUtc)),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(perf => {
+        this.teamPerformanceSignal.set(perf ?? this.emptyTeamPerformance);
+      });
+
+    this.refreshSecondaryDashboardData(request);
+  }
+
+  private refreshSecondaryDashboardData(request: DashboardSummaryRequestParams): void {
     this.dashboardData.getAssistantInsights()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((insights) => {
@@ -1098,22 +1178,99 @@ export class DashboardPage implements OnInit {
 
     this.loadExpansionSignals();
     this.loadPendingDecisionInbox();
+    this.managerHealthRefresh$.next();
+    this.teamPerformanceRefresh$.next(request);
+  }
 
-    this.managerHealthRefresh$
-      .pipe(
-        startWith(void 0),
-        switchMap(() => this.dashboardData.getManagerPipelineHealth()),
-        takeUntilDestroyed(this.destroyRef)
-      )
-      .subscribe(health => {
-        this.managerHealthSignal.set(health ?? this.emptyManagerHealth);
-      });
-
-    this.dashboardData.getSalesTeamPerformance()
+  private loadSummary(request: DashboardSummaryRequestParams): void {
+    this.dashboardData.getSummary(request.period, request.fromUtc, request.toUtc)
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(perf => {
-        this.teamPerformanceSignal.set(perf ?? this.emptyTeamPerformance);
+      .subscribe((summary) => {
+        const resolvedSummary = summary ?? this.emptySummary;
+        this.summarySignal.set(resolvedSummary);
+        this.emitRiskAlerts(resolvedSummary);
       });
+  }
+
+  private restoreDateFilterPreferenceAndLoad(): void {
+    this.uiStateService
+      .get<DashboardDateFilterPreference>(this.dashboardDateFilterStateKey)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((preference) => {
+        this.applyDateFilterPreference(preference);
+        this.loadAllDashboardData();
+      });
+  }
+
+  private applyDateFilterPreference(preference: DashboardDateFilterPreference | null): void {
+    if (!preference) {
+      return;
+    }
+
+    const period = preference.period;
+    if (period !== 'today' && period !== 'week' && period !== 'month' && period !== 'range') {
+      return;
+    }
+
+    if (period !== 'range') {
+      this.selectedPeriod.set(period);
+      return;
+    }
+
+    const from = preference.fromUtc ? new Date(preference.fromUtc) : null;
+    const to = preference.toUtc ? new Date(preference.toUtc) : null;
+    if (!from || !to || Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || from > to) {
+      return;
+    }
+
+    this.selectedPeriod.set('range');
+    this.dateRange.set([from, to]);
+    this.syncRangeDraftFromSelection();
+  }
+
+  private persistDateFilterPreference(): void {
+    const request = this.buildSummaryRequestParams();
+    const preference: DashboardDateFilterPreference = {
+      period: request.period,
+      fromUtc: request.period === 'range' ? request.fromUtc ?? null : null,
+      toUtc: request.period === 'range' ? request.toUtc ?? null : null
+    };
+
+    this.uiStateService
+      .set(this.dashboardDateFilterStateKey, preference)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe();
+  }
+
+  private syncRangeDraftFromSelection(): void {
+    const range = this.dateRange();
+    this.rangeDraftStart = range?.[0] ? this.toDateInputValue(range[0]) : '';
+    this.rangeDraftEnd = range?.[1] ? this.toDateInputValue(range[1]) : '';
+  }
+
+  private toDateInputValue(date: Date): string {
+    const localDate = new Date(date);
+    localDate.setMinutes(localDate.getMinutes() - localDate.getTimezoneOffset());
+    return localDate.toISOString().slice(0, 10);
+  }
+
+  private parseDateInputValue(value: string, endOfDay: boolean): Date | null {
+    if (!value) {
+      return null;
+    }
+
+    const parsed = new Date(`${value}T00:00:00`);
+    if (Number.isNaN(parsed.getTime())) {
+      return null;
+    }
+
+    if (endOfDay) {
+      parsed.setHours(23, 59, 59, 999);
+    } else {
+      parsed.setHours(0, 0, 0, 0);
+    }
+
+    return parsed;
   }
 
   protected teamPerfDelta(current: number, previous: number): number {
@@ -1332,6 +1489,7 @@ export class DashboardPage implements OnInit {
 
   protected openAssistantAction(action: AssistantInsightsAction): void {
     const risk = (action.riskTier ?? '').toLowerCase();
+    this.assistantExecutionSummary = null;
     if (risk === 'medium' || risk === 'high') {
       this.pendingAssistantAction = action;
       this.assistantReviewNote = '';
@@ -1343,7 +1501,8 @@ export class DashboardPage implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (result) => {
-          this.toastService.show('success', result.message || 'Action executed.');
+          this.toastService.show('success', this.buildAssistantExecutionToast(action, result, true));
+          this.assistantExecutionSummary = this.buildAssistantExecutionSummary(action, result, true);
           if (result.createdActivityId && (action.riskTier ?? '').toLowerCase() === 'low') {
             this.showAssistantUndo(action, result.createdActivityId);
           }
@@ -1353,7 +1512,6 @@ export class DashboardPage implements OnInit {
               this.assistantInsightsSignal.set(insights ?? this.emptyAssistantInsights);
               this.assistantExpandedActionIds.set([]);
             });
-          this.navigateAssistantAction(action);
         },
         error: () => this.toastService.show('error', 'Unable to execute assistant action.')
       });
@@ -1366,27 +1524,29 @@ export class DashboardPage implements OnInit {
     }
 
     this.assistantReviewSubmitting = true;
+    this.assistantReviewDecision = approved ? 'approve' : 'reject';
+    this.assistantExecutionSummary = null;
     this.dashboardData.reviewAssistantAction(action, approved, this.assistantReviewNote)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (result) => {
           this.assistantReviewSubmitting = false;
+          this.assistantReviewDecision = null;
           this.assistantReviewDialogOpen = false;
           this.pendingAssistantAction = null;
           this.assistantReviewNote = '';
-          this.toastService.show('success', result.message || (approved ? 'Action approved.' : 'Action rejected.'));
+          this.toastService.show('success', this.buildAssistantExecutionToast(action, result, approved));
+          this.assistantExecutionSummary = this.buildAssistantExecutionSummary(action, result, approved);
           this.dashboardData.getAssistantInsights()
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe((insights) => {
               this.assistantInsightsSignal.set(insights ?? this.emptyAssistantInsights);
               this.assistantExpandedActionIds.set([]);
             });
-          if (approved) {
-            this.navigateAssistantAction(action);
-          }
         },
         error: () => {
           this.assistantReviewSubmitting = false;
+          this.assistantReviewDecision = null;
           this.toastService.show('error', 'Unable to submit review decision.');
         }
       });
@@ -1396,6 +1556,19 @@ export class DashboardPage implements OnInit {
     this.assistantReviewDialogOpen = false;
     this.pendingAssistantAction = null;
     this.assistantReviewNote = '';
+    this.assistantReviewDecision = null;
+  }
+
+  protected clearAssistantExecutionSummary(): void {
+    this.assistantExecutionSummary = null;
+  }
+
+  protected openAssistantExecutionTarget(): void {
+    if (!this.assistantExecutionSummary) {
+      return;
+    }
+
+    this.navigateAssistantAction(this.assistantExecutionSummary.action);
   }
 
   protected undoAssistantAction(): void {
@@ -1470,6 +1643,155 @@ export class DashboardPage implements OnInit {
       this.assistantUndoMessage = '';
       this.assistantUndoTimerId = null;
     }, 60_000);
+  }
+
+  protected assistantTargetRecordLabel(action: AssistantInsightsAction | null): string {
+    if (!action) {
+      return 'Queue scope';
+    }
+
+    const namedEntity = (action.entities ?? []).find((entity) => !/\bID:\b/i.test(entity));
+    if (namedEntity) {
+      const separatorIndex = namedEntity.indexOf(':');
+      if (separatorIndex >= 0) {
+        return namedEntity.slice(separatorIndex + 1).trim();
+      }
+
+      return namedEntity.trim();
+    }
+
+    const entityType = (action.entityType ?? '').trim();
+    if (entityType) {
+      return `${this.toTitleCase(entityType)} record`;
+    }
+
+    return 'Queue scope';
+  }
+
+  protected assistantTargetTypeLabel(action: AssistantInsightsAction | null): string {
+    if (!action) {
+      return 'Scope';
+    }
+
+    const namedEntity = (action.entities ?? []).find((entity) => !/\bID:\b/i.test(entity));
+    if (namedEntity) {
+      const separatorIndex = namedEntity.indexOf(':');
+      if (separatorIndex >= 0) {
+        return namedEntity.slice(0, separatorIndex).trim();
+      }
+    }
+
+    const entityType = (action.entityType ?? '').trim();
+    return entityType ? this.toTitleCase(entityType) : 'Scope';
+  }
+
+  protected assistantExecutionPlan(action: AssistantInsightsAction | null): string[] {
+    if (!action) {
+      return [];
+    }
+
+    const steps = [
+      `Use this recommendation to address ${this.assistantTargetRecordLabel(action)}.`,
+      this.resolveAssistantExecutionStep(action)
+    ];
+
+    if ((action.riskTier ?? '').toLowerCase() !== 'low') {
+      steps.push('Write the decision outcome to the assistant review audit trail.');
+    }
+
+    steps.push(`Keep the action available from the dashboard with a direct link to ${this.assistantTargetTypeLabel(action).toLowerCase()}.`);
+    return steps;
+  }
+
+  private resolveAssistantExecutionStep(action: AssistantInsightsAction): string {
+    switch ((action.actionType ?? '').trim().toLowerCase()) {
+      case 'lead_follow_up':
+        return 'Create a follow-up task to recover the breached lead SLA.';
+      case 'lead_qualification':
+        return 'Create a qualification follow-up task to collect missing evidence.';
+      case 'opportunity_recovery':
+        return 'Create a recovery task to reactivate the stale opportunity.';
+      case 'activity_cleanup':
+        return 'Create a cleanup task to complete or reschedule overdue activities.';
+      case 'approval_follow_up':
+        return 'Create an approval follow-up record so the blocked decision can move forward.';
+      default:
+        return 'Execute the assistant recommendation and log the outcome.';
+    }
+  }
+
+  private buildAssistantExecutionToast(
+    action: AssistantInsightsAction,
+    result: { message?: string | null; createdActivityId?: string | null; createdApprovalId?: string | null },
+    approved: boolean
+  ): string {
+    const target = this.assistantTargetRecordLabel(action);
+    if (!approved) {
+      return `Rejected for ${target}.`;
+    }
+
+    if (result.createdApprovalId) {
+      return `Approval follow-up created for ${target}.`;
+    }
+
+    if (result.createdActivityId) {
+      return `Follow-up task created for ${target}.`;
+    }
+
+    return result.message || `Action completed for ${target}.`;
+  }
+
+  private buildAssistantExecutionSummary(
+    action: AssistantInsightsAction,
+    result: { createdActivityId?: string | null; createdApprovalId?: string | null },
+    approved: boolean
+  ): AssistantExecutionSummary {
+    const targetLabel = this.assistantTargetRecordLabel(action);
+    const actionLabel = this.assistantTargetTypeLabel(action);
+
+    if (!approved) {
+      return {
+        title: 'Recommendation rejected',
+        detail: `No automated change was applied to ${targetLabel}.`,
+        targetLabel,
+        actionLabel: `Open ${actionLabel}`,
+        action
+      };
+    }
+
+    if (result.createdApprovalId) {
+      return {
+        title: 'Approval follow-up created',
+        detail: `The assistant prepared the approval follow-up for ${targetLabel}.`,
+        targetLabel,
+        actionLabel: 'Open workflow queue',
+        action
+      };
+    }
+
+    if (result.createdActivityId) {
+      return {
+        title: 'Follow-up task created',
+        detail: `A high-priority assistant task was created for ${targetLabel} and added to the audit trail.`,
+        targetLabel,
+        actionLabel: `Open ${actionLabel}`,
+        action
+      };
+    }
+
+    return {
+      title: 'Recommendation completed',
+      detail: `The assistant completed the requested action for ${targetLabel}.`,
+      targetLabel,
+      actionLabel: `Open ${actionLabel}`,
+      action
+    };
+  }
+
+  private toTitleCase(value: string): string {
+    return value
+      .replace(/[_-]+/g, ' ')
+      .replace(/\b\w/g, (char) => char.toUpperCase());
   }
 
   private emitRiskAlerts(summary: DashboardSummary): void {
@@ -1606,7 +1928,7 @@ export class DashboardPage implements OnInit {
   }
 
   private loadServerLayout(): void {
-    this.dashboardData.getLayout().subscribe(({ cardOrder, sizes, dimensions, hiddenCards }) => {
+    this.dashboardData.getLayout().subscribe(({ cardOrder, sizes, dimensions, hiddenCards, kpiOrder }) => {
       const dashpackOrder = this.getLayoutDefaultOrder();
       const fallbackPackOrder = this.cardCatalog.map((card) => card.id);
       const normalizedServer = this.applyRoleDefault(
@@ -1628,6 +1950,8 @@ export class DashboardPage implements OnInit {
       }
       setTimeout(() => {
         this.layoutOrder = normalized;
+        this.kpiOrder.set(this.normalizeKpiOrder(kpiOrder));
+        this.persistKpiOrder();
         this.layoutSizes = this.buildDefaultSizeMap();
         const serverDimensions = dimensions ?? {};
         this.layoutDimensions = Object.keys(serverDimensions).length > 0
@@ -1647,6 +1971,7 @@ export class DashboardPage implements OnInit {
       defaultOrder
     );
     this.layoutDraft = this.getOrderedCards(this.layoutOrder);
+    this.kpiDraft = this.getOrderedKpis(this.kpiOrder());
     this.layoutDialogOpen = true;
   }
 
@@ -1702,9 +2027,13 @@ export class DashboardPage implements OnInit {
 
   protected saveLayout(): void {
     const order = this.layoutDraft.map(item => item.id);
+    const kpiOrder = this.normalizeKpiOrder(this.kpiDraft.map(item => item.id));
     const defaultOrder = this.getLayoutDefaultOrder();
     const requested = order.length === 0 ? [] : this.normalizeLayout(order, defaultOrder);
     this.layoutOrder = requested;
+    this.kpiOrder.set(kpiOrder);
+    this.persistKpiOrder();
+    this.kpiDraft = this.getOrderedKpis(kpiOrder);
     this.ensureSizeDefaults();
     this.persistLayoutPreferences();
     this.layoutDialogOpen = false;
@@ -1714,6 +2043,8 @@ export class DashboardPage implements OnInit {
         this.layoutOrder = this.shouldHonorServerLayout(normalized, requested, defaultOrder)
           ? normalized
           : requested;
+        this.kpiOrder.set(this.normalizeKpiOrder(response.kpiOrder));
+        this.persistKpiOrder();
         this.layoutSizes = this.buildDefaultSizeMap();
         this.layoutDimensions = response.dimensions ?? {};
         this.persistLayoutPreferences();
@@ -1721,6 +2052,8 @@ export class DashboardPage implements OnInit {
       },
       error: () => {
         this.layoutOrder = requested;
+        this.kpiOrder.set(kpiOrder);
+        this.persistKpiOrder();
         this.ensureSizeDefaults();
         this.persistLayoutPreferences();
         this.toastService.show('error', 'Unable to save layout.', 3000);
@@ -1739,11 +2072,14 @@ export class DashboardPage implements OnInit {
           hidden.filter((id): id is ChartId => this.chartIdTypeGuard(id))
         );
         this.layoutOrder = normalized;
+        this.kpiOrder.set(this.normalizeKpiOrder(response.kpiOrder));
+        this.persistKpiOrder();
         this.layoutSizes = this.buildDefaultSizeMap();
         this.layoutDimensions = response.dimensions ?? {};
         this.activePackName.set(this.resolvePackName(response.packName, response.roleLevel ?? this.roleDefaultLevel));
         this.persistLayoutPreferences();
         this.layoutDraft = this.getOrderedCards(this.layoutOrder);
+        this.kpiDraft = this.getOrderedKpis(this.kpiOrder());
         this.resetChartPreference();
         this.applyRoleDefaultCharts();
         this.refreshSelectableCharts();
@@ -1751,9 +2087,12 @@ export class DashboardPage implements OnInit {
       error: () => {
         const fallbackOrder = this.getLayoutDefaultOrder();
         this.layoutOrder = this.normalizeLayout(fallbackOrder, fallbackOrder);
+        this.kpiOrder.set(this.normalizeKpiOrder());
+        this.persistKpiOrder();
         this.ensureSizeDefaults();
         this.persistLayoutPreferences();
         this.layoutDraft = this.getOrderedCards(this.layoutOrder);
+        this.kpiDraft = this.getOrderedKpis(this.kpiOrder());
         this.resetChartPreference();
         this.applyRoleDefaultCharts();
       }
@@ -1792,6 +2131,15 @@ export class DashboardPage implements OnInit {
     const nextDraft = [...this.layoutDraft];
     moveItemInArray(nextDraft, event.previousIndex, event.currentIndex);
     this.layoutDraft = nextDraft;
+  }
+
+  protected onKpiDraftDrop(
+    event: CdkDragDrop<Array<{ id: string; label: string; icon: string }>>
+  ): void {
+    if (event.previousIndex === event.currentIndex) return;
+    const nextDraft = [...this.kpiDraft];
+    moveItemInArray(nextDraft, event.previousIndex, event.currentIndex);
+    this.kpiDraft = nextDraft;
   }
 
   protected hideCard(cardId: string): void {
@@ -1882,8 +2230,17 @@ export class DashboardPage implements OnInit {
     if (event.previousIndex === event.currentIndex) return;
     const nextOrder = [...this.kpiOrder()];
     moveItemInArray(nextOrder, event.previousIndex, event.currentIndex);
-    this.kpiOrder.set(nextOrder);
+    this.kpiOrder.set(this.normalizeKpiOrder(nextOrder));
     this.persistKpiOrder();
+    this.dashboardData.saveLayout(this.buildLayoutPayload()).subscribe({
+      next: response => {
+        this.kpiOrder.set(this.normalizeKpiOrder(response.kpiOrder));
+        this.persistKpiOrder();
+      },
+      error: () => {
+        // Keep local KPI order when persistence fails.
+      }
+    });
   }
 
   protected onCardDragStart(event: CdkDragStart<string>): void {
@@ -2065,13 +2422,7 @@ export class DashboardPage implements OnInit {
       if (!stored) return [...this.defaultKpiOrder];
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed) && parsed.every(item => typeof item === 'string')) {
-        const allowed = new Set(this.defaultKpiOrder);
-        const filtered = parsed.filter((item): item is string => allowed.has(item));
-        const missing = this.defaultKpiOrder.filter(item => !filtered.includes(item));
-        const resolved = [...filtered, ...missing];
-        if (resolved.length) {
-          return resolved;
-        }
+        return this.normalizeKpiOrder(parsed);
       }
     } catch {
       // Ignore invalid local storage values.
@@ -2856,6 +3207,13 @@ export class DashboardPage implements OnInit {
       .filter(Boolean) as Array<{ id: string; label: string; icon: string }>;
   }
 
+  private getOrderedKpis(order: string[]) {
+    const map = new Map(this.kpiCatalog.map(kpi => [kpi.id, kpi]));
+    return this.normalizeKpiOrder(order)
+      .map(id => map.get(id))
+      .filter(Boolean) as Array<{ id: string; label: string; icon: string }>;
+  }
+
   private buildLayoutPayload(orderOverride?: string[]) {
     const cardOrder = orderOverride ?? this.layoutOrder;
     const defaultOrder = this.getLayoutDefaultOrder();
@@ -2864,7 +3222,8 @@ export class DashboardPage implements OnInit {
       cardOrder,
       sizes: this.buildDefaultSizeMap(),
       dimensions: this.buildLayoutDimensionsPayload(),
-      hiddenCards
+      hiddenCards,
+      kpiOrder: this.normalizeKpiOrder(this.kpiOrder())
     };
   }
 
@@ -2876,8 +3235,16 @@ export class DashboardPage implements OnInit {
       cardOrder,
       sizes: this.buildDefaultSizeMap(),
       dimensions: this.buildLayoutDimensionsPayload(),
-      hiddenCards
+      hiddenCards,
+      kpiOrder: this.normalizeKpiOrder(this.kpiOrder())
     };
+  }
+
+  private normalizeKpiOrder(order?: string[] | null): string[] {
+    const allowed = new Set(this.defaultKpiOrder);
+    const filtered = (order ?? []).filter((item): item is string => typeof item === 'string' && allowed.has(item));
+    const missing = this.defaultKpiOrder.filter(item => !filtered.includes(item));
+    return [...filtered, ...missing];
   }
 
   private getLayoutDefaultOrder(): string[] {

@@ -1199,24 +1199,254 @@
 
 .assistant-review-content {
   display: grid;
+  gap: 18px;
+}
+
+.assistant-review-hero {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(130, 170, 255, 0.24);
+  background:
+    radial-gradient(circle at top left, rgba(90, 140, 255, 0.18), transparent 48%),
+    linear-gradient(160deg, rgba(16, 24, 50, 0.9), rgba(17, 32, 63, 0.74));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.assistant-review-kicker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.assistant-review-kicker__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(124, 92, 255, 0.16);
+  border: 1px solid rgba(167, 139, 250, 0.24);
+  color: rgba(228, 220, 255, 0.96);
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.assistant-review-hero__body {
+  display: grid;
+  gap: 8px;
+}
+
+.assistant-review-hero__body h3 {
+  margin: 0;
+  color: rgba(245, 249, 255, 0.98);
+  font-size: 1.18rem;
+  line-height: 1.2;
+}
+
+.assistant-review-hero__body p,
+.assistant-review-panel__text,
+.assistant-review-warning span {
+  margin: 0;
+  color: rgba(220, 233, 255, 0.86);
+  font-size: 0.94rem;
+  line-height: 1.6;
+}
+
+.assistant-review-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.assistant-review-metric,
+.assistant-review-panel {
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(130, 170, 255, 0.2);
+  background: rgba(10, 20, 44, 0.7);
+}
+
+.assistant-review-metric {
+  display: grid;
+  gap: 6px;
+}
+
+.assistant-review-metric__label,
+.assistant-review-panel__label,
+.assistant-review-note__label {
+  color: rgba(174, 198, 255, 0.76);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.assistant-review-metric strong {
+  color: rgba(244, 248, 255, 0.98);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.assistant-review-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.assistant-review-panel {
+  display: grid;
   gap: 10px;
 }
 
-.assistant-review-content p {
+.assistant-review-panel--wide {
+  grid-column: 1 / -1;
+}
+
+.assistant-review-target {
+  display: grid;
+  gap: 6px;
+}
+
+.assistant-review-target strong {
+  color: rgba(244, 248, 255, 0.98);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.assistant-review-target span {
+  color: rgba(184, 203, 240, 0.72);
+  font-size: 0.86rem;
+}
+
+.assistant-review-list {
   margin: 0;
-  color: rgba(220, 233, 255, 0.86);
-  font-size: 0.9rem;
+  padding-left: 18px;
+  color: rgba(228, 238, 255, 0.9);
+  display: grid;
+  gap: 8px;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.assistant-review-note {
+  display: grid;
+  gap: 10px;
+}
+
+.assistant-review-note__hint {
+  color: rgba(184, 203, 240, 0.72);
+  font-size: 0.85rem;
 }
 
 .assistant-review-content textarea {
   width: 100%;
-  border-radius: 10px;
-  border: 1px solid rgba(130, 170, 255, 0.3);
-  background: rgba(16, 24, 50, 0.6);
-  color: rgba(234, 242, 255, 0.92);
-  padding: 10px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(130, 170, 255, 0.28);
+  background: linear-gradient(180deg, rgba(15, 24, 48, 0.84), rgba(10, 17, 36, 0.94));
+  color: rgba(234, 242, 255, 0.94);
+  padding: 14px 16px;
   resize: vertical;
-  min-height: 96px;
+  min-height: 132px;
+  outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.assistant-review-content textarea::placeholder {
+  color: rgba(166, 186, 226, 0.46);
+}
+
+.assistant-review-content textarea:focus {
+  border-color: rgba(110, 167, 255, 0.68);
+  box-shadow: 0 0 0 4px rgba(76, 138, 255, 0.16);
+}
+
+.assistant-review-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(253, 224, 71, 0.12);
+  border: 1px solid rgba(250, 204, 21, 0.26);
+}
+
+.assistant-review-warning i {
+  margin-top: 2px;
+  color: #facc15;
+}
+
+.assistant-review-btn {
+  min-width: 132px;
+}
+
+.assistant-review-btn--reject {
+  border-color: rgba(248, 113, 113, 0.28);
+  color: rgba(255, 220, 220, 0.96);
+  background: rgba(127, 29, 29, 0.26);
+}
+
+.assistant-review-btn--reject:hover:not(:disabled) {
+  border-color: rgba(248, 113, 113, 0.4);
+  background: rgba(153, 27, 27, 0.36);
+}
+
+.assistant-review-btn--approve {
+  box-shadow: 0 16px 32px rgba(72, 102, 255, 0.24);
+}
+
+.assistant-result-strip {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(96, 165, 250, 0.24);
+  background:
+    radial-gradient(circle at top left, rgba(96, 165, 250, 0.14), transparent 45%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(239, 246, 255, 0.96));
+  color: rgba(36, 52, 84, 0.92);
+  box-shadow: 0 14px 28px rgba(48, 72, 118, 0.1);
+}
+
+.assistant-result-strip__copy {
+  display: grid;
+  gap: 4px;
+}
+
+.assistant-result-strip__eyebrow {
+  color: rgba(55, 96, 186, 0.78);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.assistant-result-strip__copy strong {
+  color: rgba(21, 38, 76, 0.96);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.assistant-result-strip__copy p {
+  margin: 0;
+  color: rgba(59, 79, 119, 0.88);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.assistant-result-strip__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .assistant-undo-strip {
@@ -1235,6 +1465,11 @@
 
 @media (max-width: 980px) {
   .ai-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .assistant-review-metrics,
+  .assistant-review-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -1306,6 +1541,34 @@
 
   .assistant-detail-hero {
     flex-direction: column;
+  }
+}
+
+@media (max-width: 640px) {
+  .assistant-review-hero {
+    padding: 16px;
+  }
+
+  .assistant-review-metrics,
+  .assistant-review-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .assistant-review-btn {
+    min-width: 0;
+  }
+
+  .assistant-result-strip {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .assistant-result-strip__actions {
+    justify-content: stretch;
+  }
+
+  .assistant-result-strip__actions .p-button {
+    flex: 1 1 auto;
   }
 }
 
@@ -1406,13 +1669,141 @@
   border-radius: $radius-xl;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 4px 16px rgba(0, 0, 0, 0.08);
   border: 1px solid $glass-border;
-  padding: $space-3;
+  padding: $space-4;
+  width: min(420px, calc(100vw - 32px));
   animation: fade-in-up 0.2s ease-out;
+}
 
-  ::ng-deep .p-datepicker {
-    border: none;
-    background: transparent;
-    font-family: inherit;
+.range-picker-shell {
+  display: grid;
+  gap: $space-4;
+}
+
+.range-picker-copy {
+  display: grid;
+  gap: $space-1;
+
+  h3 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: $text-primary;
+  }
+
+  p {
+    margin: 0;
+    color: $text-muted;
+    font-size: 0.9rem;
+    line-height: 1.45;
+  }
+}
+
+.range-picker-kicker {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: $primary;
+}
+
+.range-picker-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $space-3;
+}
+
+.range-input-group {
+  display: grid;
+  gap: $space-2;
+}
+
+.range-input-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: $text-secondary;
+}
+
+.range-date-input {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 $space-3;
+  border-radius: $radius-lg;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: linear-gradient(180deg, rgba(248, 250, 255, 0.98), rgba(239, 244, 255, 0.96));
+  color: $text-primary;
+  font: inherit;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  transition: border-color $transition-fast, box-shadow $transition-fast, transform $transition-fast;
+
+  &:focus {
+    outline: none;
+    border-color: rgba(59, 130, 246, 0.55);
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+  }
+}
+
+.range-picker-preview {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 $space-3;
+  border-radius: $radius-lg;
+  border: 1px dashed rgba(148, 163, 184, 0.42);
+  background: rgba(246, 248, 252, 0.92);
+  color: $text-muted;
+  font-size: 0.9rem;
+
+  &.is-ready {
+    border-style: solid;
+    border-color: rgba(59, 130, 246, 0.2);
+    background: linear-gradient(180deg, rgba(237, 244, 255, 0.96), rgba(228, 238, 255, 0.92));
+    color: $text-primary;
+    font-weight: 600;
+  }
+}
+
+.range-picker-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $space-2;
+}
+
+.range-action-btn {
+  min-height: 40px;
+  padding: 0 $space-4;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform $transition-fast, box-shadow $transition-fast, background $transition-fast, color $transition-fast;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+    box-shadow: none;
+  }
+
+  &--ghost {
+    border-color: rgba(148, 163, 184, 0.25);
+    background: rgba(255, 255, 255, 0.92);
+    color: $text-secondary;
+
+    &:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+    }
+  }
+
+  &--primary {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+    box-shadow: 0 14px 28px rgba(37, 99, 235, 0.22);
+
+    &:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 18px 30px rgba(37, 99, 235, 0.28);
+    }
   }
 }
 
@@ -2035,6 +2426,67 @@
   }
 }
 
+:host ::ng-deep .assistant-review-dialog {
+  .p-dialog {
+    overflow: hidden;
+    border-radius: 28px;
+    max-height: calc(100vh - 48px);
+    border: 1px solid rgba(130, 170, 255, 0.22);
+    background:
+      radial-gradient(circle at top left, rgba(74, 114, 255, 0.2), transparent 34%),
+      linear-gradient(160deg, rgba(7, 13, 28, 0.98), rgba(14, 23, 46, 0.96));
+    box-shadow: 0 28px 80px rgba(7, 12, 26, 0.48);
+  }
+
+  .p-dialog-header {
+    padding: 22px 24px 10px;
+    background: transparent;
+    border-bottom: 0;
+    color: rgba(244, 248, 255, 0.98);
+  }
+
+  .p-dialog-title {
+    font-size: 1.08rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+
+  .p-dialog-header-icons {
+    gap: 8px;
+  }
+
+  .p-dialog-header-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(223, 234, 255, 0.82);
+    transition: background 160ms ease, color 160ms ease, transform 160ms ease;
+  }
+
+  .p-dialog-header-icon:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    transform: translateY(-1px);
+  }
+
+  .p-dialog-content {
+    padding: 8px 24px 0;
+    background: transparent;
+    color: rgba(228, 238, 255, 0.92);
+    overscroll-behavior: contain;
+  }
+
+  .p-dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 18px 24px 24px;
+    background: transparent;
+    border-top: 0;
+  }
+}
+
 @media (max-width: 840px) {
   :host ::ng-deep .layout-dialog {
     .p-dialog {
@@ -2045,6 +2497,29 @@
 
     .p-dialog-content {
       max-height: calc(90vh - 120px);
+    }
+  }
+
+  :host ::ng-deep .assistant-review-dialog {
+    .p-dialog {
+      width: 96vw !important;
+      border-radius: 22px;
+    }
+
+    .p-dialog-header,
+    .p-dialog-content,
+    .p-dialog-footer {
+      padding-left: 18px;
+      padding-right: 18px;
+    }
+
+    .p-dialog-footer {
+      flex-wrap: wrap;
+      justify-content: stretch;
+    }
+
+    .p-dialog-footer .p-button {
+      flex: 1 1 160px;
     }
   }
 }
@@ -2097,6 +2572,16 @@
   }
 }
 
+.layout-section-copy {
+  margin: 0 0 $space-2;
+  font-size: $font-size-sm;
+  color: $text-muted;
+}
+
+.layout-order-list--compact {
+  max-height: 260px;
+}
+
 .layout-chart-list {
   display: grid;
   gap: $space-2;
@@ -2131,6 +2616,11 @@
   border: 1px solid rgba($glass-border, 0.6);
   background: rgba($primary, 0.04);
   transition: all $transition-fast;
+}
+
+.layout-item--compact {
+  padding-top: $space-2;
+  padding-bottom: $space-2;
 }
 
 .layout-item__drag {
@@ -5476,11 +5966,19 @@
     right: $space-3;
     left: $space-3;
     bottom: $space-3;
+    width: auto;
+    padding: $space-4;
+  }
 
-    ::ng-deep .p-datepicker {
-      .p-datepicker-panel {
-        flex-direction: column;
-      }
+  .range-picker-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .range-picker-actions {
+    flex-wrap: wrap;
+
+    .range-action-btn {
+      flex: 1 1 calc(50% - 4px);
     }
   }
   

@@ -8,4 +8,5 @@ public record UpdateDashboardDefaultLayoutRequest(
     IReadOnlyList<string> CardOrder,
     IReadOnlyDictionary<string, string>? Sizes = null,
     IReadOnlyDictionary<string, DashboardCardDimensions>? Dimensions = null,
-    IReadOnlyList<string>? HiddenCards = null);
+    IReadOnlyList<string>? HiddenCards = null,
+    IReadOnlyList<string>? KpiOrder = null);

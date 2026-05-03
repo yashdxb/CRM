@@ -106,15 +106,53 @@
         </div>
         @if (showRangePicker()) {
           <div class="range-picker-dropdown">
-            <p-datepicker
-              selectionMode="range"
-              [inline]="true"
-              [numberOfMonths]="2"
-              [ngModel]="dateRange()"
-              (ngModelChange)="onDateRangeChange($event)"
-              dateFormat="dd M yy"
-              placeholder="Select date range">
-            </p-datepicker>
+            <div class="range-picker-shell">
+              <div class="range-picker-copy">
+                <span class="range-picker-kicker">Custom range</span>
+                <h3>Select from and to dates</h3>
+                <p>Apply a saved reporting window for the dashboard KPIs.</p>
+              </div>
+
+              <div class="range-picker-fields">
+                <label class="range-input-group">
+                  <span class="range-input-label">From</span>
+                  <input
+                    type="date"
+                    class="range-date-input"
+                    [ngModel]="rangeDraftStart"
+                    (ngModelChange)="rangeDraftStart = $event" />
+                </label>
+
+                <label class="range-input-group">
+                  <span class="range-input-label">To</span>
+                  <input
+                    type="date"
+                    class="range-date-input"
+                    [ngModel]="rangeDraftEnd"
+                    (ngModelChange)="rangeDraftEnd = $event" />
+                </label>
+              </div>
+
+              <div class="range-picker-preview" [class.is-ready]="rangeDraftReady()">
+                @if (rangeDraftReady()) {
+                  <span>Selected window: {{ rangeDraftStart }} to {{ rangeDraftEnd }}</span>
+                } @else {
+                  <span>Select both dates to apply the range.</span>
+                }
+              </div>
+
+              <div class="range-picker-actions">
+                <button type="button" class="range-action-btn range-action-btn--ghost" (click)="clearDateRangeDraft()">Clear</button>
+                <button type="button" class="range-action-btn range-action-btn--ghost" (click)="cancelDateRangeSelection()">Cancel</button>
+                <button
+                  type="button"
+                  class="range-action-btn range-action-btn--primary"
+                  [disabled]="!rangeDraftReady()"
+                  (click)="applyDateRangeSelection()">
+                  Apply range
+                </button>
+              </div>
+            </div>
           </div>
         }
       </div>
@@ -324,6 +362,22 @@
           Undo
         </button>
       </div>
+
+      <div class="assistant-result-strip" *ngIf="assistantExecutionSummary as summary">
+        <div class="assistant-result-strip__copy">
+          <span class="assistant-result-strip__eyebrow">{{ summary.title }}</span>
+          <strong>{{ summary.targetLabel }}</strong>
+          <p>{{ summary.detail }}</p>
+        </div>
+        <div class="assistant-result-strip__actions">
+          <button pButton type="button" class="btn-glass" (click)="clearAssistantExecutionSummary()">
+            Dismiss
+          </button>
+          <button pButton type="button" class="btn-gradient" (click)="openAssistantExecutionTarget()">
+            {{ summary.actionLabel }}
+          </button>
+        </div>
+      </div>
     </section>
     </ng-template>
 
@@ -423,32 +477,111 @@
 
     <p-dialog
       [(visible)]="assistantReviewDialogOpen"
+      styleClass="assistant-review-dialog"
       [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
       [closable]="!assistantReviewSubmitting"
       [dismissableMask]="!assistantReviewSubmitting"
       header="Review Assistant Action"
-      [style]="{ width: '520px', maxWidth: '92vw' }"
+      [style]="{ width: '680px', maxWidth: '94vw' }"
+      [contentStyle]="{ maxHeight: '70vh', overflow: 'auto' }"
+      appendTo="body"
       (onHide)="cancelAssistantReview()"
     >
-      <div class="assistant-review-content">
-        <p>This action is marked medium/high risk and needs review before execution.</p>
-        <textarea
-          rows="4"
-          [disabled]="assistantReviewSubmitting"
-          placeholder="Add review note (optional)"
-          [ngModel]="assistantReviewNote"
-          (ngModelChange)="assistantReviewNote = $event"
-        ></textarea>
+      <div class="assistant-review-content" *ngIf="pendingAssistantAction as action">
+        <div class="assistant-review-hero">
+          <div class="assistant-review-kicker">
+            <span class="assistant-review-kicker__label">Decision required</span>
+            <span class="ai-risk-chip" [ngClass]="assistantRiskClass(action.riskTier)">
+              {{ assistantRiskLabel(action.riskTier) }}
+            </span>
+          </div>
+          <div class="assistant-review-hero__body">
+            <h3>{{ action.title }}</h3>
+            <p>{{ action.description }}</p>
+          </div>
+        </div>
+
+        <div class="assistant-review-metrics">
+          <div class="assistant-review-metric">
+            <span class="assistant-review-metric__label">Priority score</span>
+            <strong>{{ action.score }}</strong>
+          </div>
+          <div class="assistant-review-metric">
+            <span class="assistant-review-metric__label">Urgency</span>
+            <strong>{{ assistantUrgencyLabel(action.priority, action.urgency) }}</strong>
+          </div>
+          <div class="assistant-review-metric">
+            <span class="assistant-review-metric__label">Owner scope</span>
+            <strong>{{ action.ownerScope }}</strong>
+          </div>
+          <div class="assistant-review-metric">
+            <span class="assistant-review-metric__label">Due window</span>
+            <strong>{{ action.dueWindow }}</strong>
+          </div>
+        </div>
+
+        <div class="assistant-review-grid">
+          <section class="assistant-review-panel">
+            <span class="assistant-review-panel__label">Target record</span>
+            <div class="assistant-review-target">
+              <strong>{{ assistantTargetRecordLabel(action) }}</strong>
+              <span>{{ assistantTargetTypeLabel(action) }}</span>
+            </div>
+          </section>
+
+          <section class="assistant-review-panel">
+            <span class="assistant-review-panel__label">What will happen</span>
+            <ul class="assistant-review-list">
+              <li *ngFor="let step of assistantExecutionPlan(action)">{{ step }}</li>
+            </ul>
+          </section>
+
+          <section class="assistant-review-panel">
+            <span class="assistant-review-panel__label">Why this needs review</span>
+            <ul class="assistant-review-list">
+              <li *ngFor="let reason of action.reasons">{{ reason }}</li>
+            </ul>
+          </section>
+
+          <section class="assistant-review-panel">
+            <span class="assistant-review-panel__label">Expected impact</span>
+            <p class="assistant-review-panel__text">{{ action.impactEstimate }}</p>
+          </section>
+
+          <section class="assistant-review-panel assistant-review-panel--wide" *ngIf="action.reviewGuidance">
+            <span class="assistant-review-panel__label">Review guidance</span>
+            <p class="assistant-review-panel__text">{{ action.reviewGuidance }}</p>
+          </section>
+        </div>
+
+        <label class="assistant-review-note">
+          <span class="assistant-review-note__label">Reviewer note</span>
+          <span class="assistant-review-note__hint">Optional. Capture rationale, constraints, or follow-up context.</span>
+          <textarea
+            rows="5"
+            [disabled]="assistantReviewSubmitting"
+            placeholder="Add a decision note for the audit trail"
+            [ngModel]="assistantReviewNote"
+            (ngModelChange)="assistantReviewNote = $event"
+          ></textarea>
+        </label>
+
+        <div class="assistant-review-warning">
+          <i class="pi pi-shield"></i>
+          <span>Approving will execute the action and log the outcome in the assistant audit trail.</span>
+        </div>
       </div>
       <ng-template pTemplate="footer">
-        <button pButton type="button" class="btn-glass" [disabled]="assistantReviewSubmitting" (click)="cancelAssistantReview()">
+        <button pButton type="button" class="btn-glass assistant-review-btn assistant-review-btn--cancel" [disabled]="assistantReviewSubmitting" (click)="cancelAssistantReview()">
           Cancel
         </button>
-        <button pButton type="button" class="btn-glass" [disabled]="assistantReviewSubmitting" (click)="submitAssistantReview(false)">
-          Reject
+        <button pButton type="button" class="btn-glass assistant-review-btn assistant-review-btn--reject" [disabled]="assistantReviewSubmitting" (click)="submitAssistantReview(false)">
+          {{ assistantReviewDecision === 'reject' ? 'Rejecting...' : 'Reject' }}
         </button>
-        <button pButton type="button" class="btn-gradient" [disabled]="assistantReviewSubmitting" (click)="submitAssistantReview(true)">
-          Approve & Execute
+        <button pButton type="button" class="btn-gradient assistant-review-btn assistant-review-btn--approve" [disabled]="assistantReviewSubmitting" (click)="submitAssistantReview(true)">
+          {{ assistantReviewDecision === 'approve' ? 'Executing...' : 'Approve & Execute' }}
         </button>
       </ng-template>
     </p-dialog>
@@ -1821,6 +1954,28 @@
         <span class="layout-item__index">{{ index + 1 }}</span>
         <i class="pi" [class]="card.icon"></i>
         <span>{{ card.label }}</span>
+      </div>
+    </div>
+  </div>
+  <div class="layout-chart-section">
+    <h4>KPI cards</h4>
+    <p class="layout-section-copy">Reorder the KPI strip cards that appear at the top of the dashboard.</p>
+    <div
+      class="layout-order-list layout-order-list--compact"
+      cdkDropList
+      [cdkDropListData]="kpiDraft"
+      cdkDropListOrientation="vertical"
+      (cdkDropListDropped)="onKpiDraftDrop($event)"
+    >
+      <div class="layout-item-row" *ngFor="let kpi of kpiDraft; let index = index" cdkDrag>
+        <div class="layout-item layout-item--compact">
+          <button type="button" class="layout-item__drag" cdkDragHandle aria-label="Reorder KPI card">
+            <i class="pi pi-bars"></i>
+          </button>
+          <span class="layout-item__index">{{ index + 1 }}</span>
+          <i class="pi" [class]="kpi.icon"></i>
+          <span>{{ kpi.label }}</span>
+        </div>
       </div>
     </div>
   </div>

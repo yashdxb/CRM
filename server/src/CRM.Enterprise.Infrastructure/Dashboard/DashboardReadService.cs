@@ -2731,21 +2731,37 @@ public class DashboardReadService : IDashboardReadService
         DateTime? DueDateUtc,
         DateTime? CompletedDateUtc);
 
-    public async Task<SalesTeamPerformanceDto> GetSalesTeamPerformanceAsync(Guid? userId, CancellationToken cancellationToken)
+    public async Task<SalesTeamPerformanceDto> GetSalesTeamPerformanceAsync(
+        Guid? userId,
+        string? period = null,
+        DateTime? fromUtc = null,
+        DateTime? toUtc = null,
+        CancellationToken cancellationToken = default)
     {
-        var cacheKey = BuildUserScopedCacheKey("dashboard:team-performance", userId);
+        var (windowStartUtc, windowEndUtcExclusive) = ResolveDashboardWindow(period, fromUtc, toUtc);
+        var cacheWindowToken = $"{windowStartUtc:yyyyMMddHHmmss}-{windowEndUtcExclusive:yyyyMMddHHmmss}";
+        var cacheKey = BuildUserScopedCacheKey("dashboard:team-performance", userId, cacheWindowToken);
         return await _readModelCache.GetOrCreateAsync(
             cacheKey,
             TimeSpan.FromSeconds(Math.Max(5, _cacheOptions.SalesTeamPerformanceTtlSeconds)),
-            ct => GetSalesTeamPerformanceCoreAsync(userId, ct),
+            ct => GetSalesTeamPerformanceCoreAsync(userId, windowStartUtc, windowEndUtcExclusive, ct),
             cancellationToken);
     }
 
-    private async Task<SalesTeamPerformanceDto> GetSalesTeamPerformanceCoreAsync(Guid? userId, CancellationToken cancellationToken)
+    private async Task<SalesTeamPerformanceDto> GetSalesTeamPerformanceCoreAsync(
+        Guid? userId,
+        DateTime windowStartUtc,
+        DateTime windowEndUtcExclusive,
+        CancellationToken cancellationToken)
     {
-        var now = DateTime.UtcNow;
-        var periodStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-        var prevPeriodStart = periodStart.AddMonths(-1);
+        var periodStart = windowStartUtc;
+        var periodEnd = windowEndUtcExclusive;
+        var windowDuration = periodEnd - periodStart;
+        if (windowDuration <= TimeSpan.Zero)
+        {
+            windowDuration = TimeSpan.FromDays(1);
+        }
+        var prevPeriodStart = periodStart - windowDuration;
         var visibility = await ResolveVisibilityAsync(userId, cancellationToken);
 
         var closedQuery = _dbContext.Opportunities
@@ -2758,7 +2774,7 @@ public class DashboardReadService : IDashboardReadService
         }
 
         var closedDeals = await closedQuery
-            .Where(o => o.UpdatedAtUtc >= prevPeriodStart)
+            .Where(o => o.UpdatedAtUtc >= prevPeriodStart && o.UpdatedAtUtc < periodEnd)
             .Select(o => new
             {
                 o.OwnerId,
@@ -2766,7 +2782,7 @@ public class DashboardReadService : IDashboardReadService
                 o.IsWon,
                 o.CreatedAtUtc,
                 o.UpdatedAtUtc,
-                ClosedInCurrentPeriod = o.UpdatedAtUtc >= periodStart
+                ClosedInCurrentPeriod = o.UpdatedAtUtc >= periodStart && o.UpdatedAtUtc < periodEnd
             })
             .ToListAsync(cancellationToken);
 
@@ -2813,7 +2829,10 @@ public class DashboardReadService : IDashboardReadService
 
         var activityCounts = await _dbContext.Activities
             .AsNoTracking()
-            .Where(a => !a.IsDeleted && allRepIds.Contains(a.OwnerId) && a.CreatedAtUtc >= periodStart)
+            .Where(a => !a.IsDeleted
+                && allRepIds.Contains(a.OwnerId)
+                && a.CreatedAtUtc >= periodStart
+                && a.CreatedAtUtc < periodEnd)
             .GroupBy(a => a.OwnerId)
             .Select(g => new { OwnerId = g.Key, Count = g.Count() })
             .ToListAsync(cancellationToken);

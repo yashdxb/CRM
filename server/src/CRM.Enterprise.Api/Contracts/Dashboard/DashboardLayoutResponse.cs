@@ -7,5 +7,6 @@ public record DashboardLayoutResponse(
     IReadOnlyDictionary<string, string>? Sizes = null,
     IReadOnlyDictionary<string, DashboardCardDimensions>? Dimensions = null,
     IReadOnlyList<string>? HiddenCards = null,
+    IReadOnlyList<string>? KpiOrder = null,
     int? RoleLevel = null,
     string? PackName = null);

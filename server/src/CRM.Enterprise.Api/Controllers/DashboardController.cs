@@ -238,9 +238,15 @@ public class DashboardController : ControllerBase
     }
 
     [HttpGet("manager/team-performance")]
-    public async Task<ActionResult<SalesTeamPerformanceResponse>> GetSalesTeamPerformance(CancellationToken cancellationToken)
+    public async Task<ActionResult<SalesTeamPerformanceResponse>> GetSalesTeamPerformance(
+        [FromQuery] string? period,
+        [FromQuery] DateTime? fromUtc,
+        [FromQuery] DateTime? toUtc,
+        CancellationToken cancellationToken)
     {
-        var perf = await _mediator.Send(new GetSalesTeamPerformanceQuery(GetCurrentUserId()), cancellationToken);
+        var perf = await _mediator.Send(
+            new GetSalesTeamPerformanceQuery(GetCurrentUserId(), period, fromUtc, toUtc),
+            cancellationToken);
         var response = new SalesTeamPerformanceResponse(
             perf.TeamRevenue,
             perf.DealsClosed,
@@ -277,7 +283,7 @@ public class DashboardController : ControllerBase
         var dimensions = layout.Dimensions.ToDictionary(
             item => item.Key,
             item => new DashboardCardDimensionsResponse(item.Value.Width, item.Value.Height));
-        return Ok(new DashboardLayoutResponse(layout.CardOrder, layout.Sizes, dimensions, layout.HiddenCards, roleLevel, packName));
+        return Ok(new DashboardLayoutResponse(layout.CardOrder, layout.Sizes, dimensions, layout.HiddenCards, layout.KpiOrder, roleLevel, packName));
     }
 
     [HttpPut("layout")]
@@ -296,14 +302,14 @@ public class DashboardController : ControllerBase
             .ToDictionary(item => item.Key, item => new Application.Dashboard.DashboardCardDimensions(item.Value.Width, item.Value.Height))
             ?? new Dictionary<string, Application.Dashboard.DashboardCardDimensions>();
         var hidden = request.HiddenCards ?? new List<string>();
-        var state = new Application.Dashboard.DashboardLayoutState(request.CardOrder, sizes, dimensions, hidden);
+        var state = new Application.Dashboard.DashboardLayoutState(request.CardOrder, sizes, dimensions, hidden, request.KpiOrder);
         var updated = await _layoutService.UpdateLayoutAsync(userId.Value, state, cancellationToken);
         var responseDimensions = updated.Dimensions.ToDictionary(
             item => item.Key,
             item => new DashboardCardDimensionsResponse(item.Value.Width, item.Value.Height));
         var roleLevel = await GetCurrentUserRoleLevelAsync(userId.Value, cancellationToken);
         var packName = await ResolveDashboardPackNameAsync(userId.Value, roleLevel, cancellationToken);
-        return Ok(new DashboardLayoutResponse(updated.CardOrder, updated.Sizes, responseDimensions, updated.HiddenCards, roleLevel, packName));
+        return Ok(new DashboardLayoutResponse(updated.CardOrder, updated.Sizes, responseDimensions, updated.HiddenCards, updated.KpiOrder, roleLevel, packName));
     }
 
     [HttpGet("layout/default")]
@@ -326,7 +332,7 @@ public class DashboardController : ControllerBase
         var dimensions = layout.Dimensions.ToDictionary(
             item => item.Key,
             item => new DashboardCardDimensionsResponse(item.Value.Width, item.Value.Height));
-        return Ok(new DashboardLayoutResponse(layout.CardOrder, layout.Sizes, dimensions, layout.HiddenCards, targetLevel, packName));
+        return Ok(new DashboardLayoutResponse(layout.CardOrder, layout.Sizes, dimensions, layout.HiddenCards, layout.KpiOrder, targetLevel, packName));
     }
 
     [HttpPut("layout/default")]
@@ -345,7 +351,7 @@ public class DashboardController : ControllerBase
             .ToDictionary(item => item.Key, item => new Application.Dashboard.DashboardCardDimensions(item.Value.Width, item.Value.Height))
             ?? new Dictionary<string, Application.Dashboard.DashboardCardDimensions>();
         var hidden = request.HiddenCards ?? new List<string>();
-        var state = new Application.Dashboard.DashboardLayoutState(request.CardOrder, sizes, dimensions, hidden);
+        var state = new Application.Dashboard.DashboardLayoutState(request.CardOrder, sizes, dimensions, hidden, request.KpiOrder);
         var updated = await _layoutService.UpdateDefaultLayoutAsync(request.RoleLevel, state, cancellationToken);
         var packName = string.IsNullOrWhiteSpace(request.PackName)
             ? $"H{request.RoleLevel} Pack"
@@ -354,7 +360,7 @@ public class DashboardController : ControllerBase
         var responseDimensions = updated.Dimensions.ToDictionary(
             item => item.Key,
             item => new DashboardCardDimensionsResponse(item.Value.Width, item.Value.Height));
-        return Ok(new DashboardLayoutResponse(updated.CardOrder, updated.Sizes, responseDimensions, updated.HiddenCards, request.RoleLevel, packName));
+        return Ok(new DashboardLayoutResponse(updated.CardOrder, updated.Sizes, responseDimensions, updated.HiddenCards, updated.KpiOrder, request.RoleLevel, packName));
     }
 
     [HttpPost("layout/reset")]
@@ -372,7 +378,7 @@ public class DashboardController : ControllerBase
         var dimensions = layout.Dimensions.ToDictionary(
             item => item.Key,
             item => new DashboardCardDimensionsResponse(item.Value.Width, item.Value.Height));
-        return Ok(new DashboardLayoutResponse(layout.CardOrder, layout.Sizes, dimensions, layout.HiddenCards, roleLevel, packName));
+        return Ok(new DashboardLayoutResponse(layout.CardOrder, layout.Sizes, dimensions, layout.HiddenCards, layout.KpiOrder, roleLevel, packName));
     }
 
     [HttpGet("templates")]
@@ -407,7 +413,8 @@ public class DashboardController : ControllerBase
                     item => item.Key,
                     item => new Application.Dashboard.DashboardCardDimensions(item.Value.Width, item.Value.Height))
                 ?? new Dictionary<string, Application.Dashboard.DashboardCardDimensions>(),
-                request.HiddenCards ?? new List<string>()));
+                request.HiddenCards ?? new List<string>(),
+                request.KpiOrder));
 
         var created = await _layoutService.CreateTemplateAsync(state, cancellationToken);
         return CreatedAtAction(nameof(GetTemplates), new { id = created.Id }, ToTemplateResponse(created));
@@ -437,7 +444,8 @@ public class DashboardController : ControllerBase
                     item => item.Key,
                     item => new Application.Dashboard.DashboardCardDimensions(item.Value.Width, item.Value.Height))
                 ?? new Dictionary<string, Application.Dashboard.DashboardCardDimensions>(),
-                request.HiddenCards ?? new List<string>()));
+                request.HiddenCards ?? new List<string>(),
+                request.KpiOrder));
 
         var updated = await _layoutService.UpdateTemplateAsync(id, state, cancellationToken);
         return Ok(ToTemplateResponse(updated));
@@ -581,6 +589,7 @@ public class DashboardController : ControllerBase
             template.Layout.CardOrder,
             template.Layout.Sizes,
             dimensions,
-            template.Layout.HiddenCards);
+            template.Layout.HiddenCards,
+            template.Layout.KpiOrder);
     }
 }

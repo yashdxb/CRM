@@ -7,4 +7,5 @@ public record UpsertDashboardTemplateRequest(
     IReadOnlyDictionary<string, string>? Sizes,
     IReadOnlyDictionary<string, DashboardCardDimensions>? Dimensions,
     IReadOnlyList<string>? HiddenCards,
+    IReadOnlyList<string>? KpiOrder,
     bool? IsDefault);

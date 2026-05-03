@@ -136,8 +136,22 @@ export class DashboardDataService {
     );
   }
 
-  getSalesTeamPerformance() {
+  getSalesTeamPerformance(
+    period?: 'today' | 'week' | 'month' | 'range',
+    fromUtc?: string,
+    toUtc?: string
+  ) {
     const url = `${environment.apiUrl}/api/dashboard/manager/team-performance`;
+    let params = new HttpParams();
+    if (period) {
+      params = params.set('period', period);
+    }
+    if (fromUtc) {
+      params = params.set('fromUtc', fromUtc);
+    }
+    if (toUtc) {
+      params = params.set('toUtc', toUtc);
+    }
     const empty: SalesTeamPerformance = {
       teamRevenue: 0,
       dealsClosed: 0,
@@ -149,7 +163,7 @@ export class DashboardDataService {
       avgCycleDaysPrevious: 0,
       reps: []
     };
-    return this.http.get<SalesTeamPerformance>(url).pipe(
+    return this.http.get<SalesTeamPerformance>(url, { params }).pipe(
       retryTransient(),
       catchError((err) => {
         console.error('Failed to load sales team performance', err);
@@ -225,6 +239,7 @@ export class DashboardDataService {
         sizes?: Record<string, 'sm' | 'md' | 'lg'>;
         dimensions?: Record<string, { width: number; height: number }>;
         hiddenCards?: string[];
+        kpiOrder?: string[];
         roleLevel?: number | null;
         packName?: string | null;
       }>(url)
@@ -232,7 +247,7 @@ export class DashboardDataService {
         retryTransient(),
         catchError((err) => {
           console.error('Failed to load dashboard layout', err);
-          return of({ cardOrder: [], sizes: {}, dimensions: {}, hiddenCards: [], roleLevel: null, packName: null });
+          return of({ cardOrder: [], sizes: {}, dimensions: {}, hiddenCards: [], kpiOrder: [], roleLevel: null, packName: null });
         })
       );
   }
@@ -242,6 +257,7 @@ export class DashboardDataService {
     sizes: Record<string, 'sm' | 'md' | 'lg'>;
     dimensions: Record<string, { width: number; height: number }>;
     hiddenCards: string[];
+    kpiOrder: string[];
   }) {
     const url = `${environment.apiUrl}/api/dashboard/layout`;
     return this.http.put<{
@@ -249,6 +265,7 @@ export class DashboardDataService {
       sizes?: Record<string, 'sm' | 'md' | 'lg'>;
       dimensions?: Record<string, { width: number; height: number }>;
       hiddenCards?: string[];
+      kpiOrder?: string[];
       roleLevel?: number | null;
       packName?: string | null;
     }>(url, payload);
@@ -261,6 +278,7 @@ export class DashboardDataService {
       sizes?: Record<string, 'sm' | 'md' | 'lg'>;
       dimensions?: Record<string, { width: number; height: number }>;
       hiddenCards?: string[];
+      kpiOrder?: string[];
       roleLevel?: number | null;
       packName?: string | null;
     }>(url).pipe(retryTransient());
@@ -273,6 +291,7 @@ export class DashboardDataService {
       sizes?: Record<string, 'sm' | 'md' | 'lg'>;
       dimensions?: Record<string, { width: number; height: number }>;
       hiddenCards?: string[];
+      kpiOrder?: string[];
       roleLevel?: number | null;
       packName?: string | null;
     }>(url, { params: { level } }).pipe(retryTransient());
@@ -285,6 +304,7 @@ export class DashboardDataService {
       sizes?: Record<string, 'sm' | 'md' | 'lg'>;
       dimensions?: Record<string, { width: number; height: number }>;
       hiddenCards?: string[];
+      kpiOrder?: string[];
       roleLevel?: number | null;
       packName?: string | null;
     }>(url, {});
@@ -297,6 +317,7 @@ export class DashboardDataService {
     sizes: Record<string, 'sm' | 'md' | 'lg'>;
     dimensions: Record<string, { width: number; height: number }>;
     hiddenCards: string[];
+    kpiOrder?: string[];
   }) {
     const url = `${environment.apiUrl}/api/dashboard/layout/default`;
     return this.http.put<{
@@ -304,6 +325,7 @@ export class DashboardDataService {
       sizes?: Record<string, 'sm' | 'md' | 'lg'>;
       dimensions?: Record<string, { width: number; height: number }>;
       hiddenCards?: string[];
+      kpiOrder?: string[];
       roleLevel?: number | null;
       packName?: string | null;
     }>(url, payload);
@@ -320,6 +342,7 @@ export class DashboardDataService {
       sizes?: Record<string, 'sm' | 'md' | 'lg'>;
       dimensions?: Record<string, { width: number; height: number }>;
       hiddenCards?: string[];
+      kpiOrder?: string[];
     }[]>(url);
   }
 
@@ -330,6 +353,7 @@ export class DashboardDataService {
     sizes: Record<string, 'sm' | 'md' | 'lg'>;
     dimensions: Record<string, { width: number; height: number }>;
     hiddenCards: string[];
+    kpiOrder?: string[];
     isDefault?: boolean | null;
   }) {
     const url = `${environment.apiUrl}/api/dashboard/templates`;
@@ -342,6 +366,7 @@ export class DashboardDataService {
       sizes?: Record<string, 'sm' | 'md' | 'lg'>;
       dimensions?: Record<string, { width: number; height: number }>;
       hiddenCards?: string[];
+      kpiOrder?: string[];
     }>(url, payload);
   }
 
@@ -352,6 +377,7 @@ export class DashboardDataService {
     sizes: Record<string, 'sm' | 'md' | 'lg'>;
     dimensions: Record<string, { width: number; height: number }>;
     hiddenCards: string[];
+    kpiOrder?: string[];
     isDefault?: boolean | null;
   }) {
     const url = `${environment.apiUrl}/api/dashboard/templates/${templateId}`;
@@ -364,6 +390,7 @@ export class DashboardDataService {
       sizes?: Record<string, 'sm' | 'md' | 'lg'>;
       dimensions?: Record<string, { width: number; height: number }>;
       hiddenCards?: string[];
+      kpiOrder?: string[];
     }>(url, payload);
   }
 
@@ -378,6 +405,7 @@ export class DashboardDataService {
       sizes?: Record<string, 'sm' | 'md' | 'lg'>;
       dimensions?: Record<string, { width: number; height: number }>;
       hiddenCards?: string[];
+      kpiOrder?: string[];
     }>(url, {});
   }
 }
