@@ -100,6 +100,10 @@ export class CrmEventsService {
     return this.featureFlags?.[flag] === true;
   }
 
+  isConnected(): boolean {
+    return this.connection?.state === HubConnectionState.Connected;
+  }
+
   joinRecordPresence(entityType: string, recordId: string) {
     if (!this.isValidRecordId(recordId)) {
       return;

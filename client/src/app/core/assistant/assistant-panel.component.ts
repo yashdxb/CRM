@@ -90,7 +90,10 @@ export class AssistantPanelComponent {
     this.assistantInfo.set(null);
     this.assistantInput.set('');
 
-    const streamEnabled = this.crmEventsService.isFeatureEnabled('realtime.assistantStreaming');
+    // Only use the event-driven path when SignalR is already connected. Otherwise
+    // the normal response path prevents an orphaned placeholder on cold starts.
+    const streamEnabled = this.crmEventsService.isFeatureEnabled('realtime.assistantStreaming')
+      && this.crmEventsService.isConnected();
     const conversationId = streamEnabled ? this.buildLocalId('conversation') : undefined;
     if (conversationId) {
       const assistantMessage: AssistantUiMessage = {
