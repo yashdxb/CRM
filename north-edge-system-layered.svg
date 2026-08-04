@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="700" height="580" viewBox="0 0 700 580"
+     role="img" aria-labelledby="logoTitle logoDesc">
+  <title id="logoTitle">North Edge System logo</title>
+  <desc id="logoDesc">Layered vector recreation prepared for web animation.</desc>
+
+  <defs>
+    <linearGradient id="navyGradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0A4F8A"/>
+      <stop offset="55%" stop-color="#073B70"/>
+      <stop offset="100%" stop-color="#062A55"/>
+    </linearGradient>
+    <linearGradient id="cyanGradient" x1="0" y1="0" x2="0.9" y2="1">
+      <stop offset="0%" stop-color="#18D5F6"/>
+      <stop offset="100%" stop-color="#00A8E8"/>
+    </linearGradient>
+    <linearGradient id="ringHighlight" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0A3B72"/>
+      <stop offset="50%" stop-color="#10558E"/>
+      <stop offset="100%" stop-color="#062D58"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="1.6" flood-color="#001A33" flood-opacity=".45"/>
+    </filter>
+    <style>
+      .outline { stroke:#001A34; stroke-width:2; stroke-linejoin:round; }
+      .navy-fill { fill:url(#navyGradient); }
+      .cyan-fill { fill:url(#cyanGradient); }
+      .anim-part { transform-box:fill-box; transform-origin:center; }
+      text { font-family: Montserrat, Arial, Helvetica, sans-serif; }
+    </style>
+  </defs>
+
+  <!-- SYMBOL -->
+  <g id="symbol" class="anim-part" filter="url(#softShadow)">
+
+    <!-- Outer segmented ring -->
+    <g id="outer-ring" class="anim-part" fill="none" stroke="url(#ringHighlight)" stroke-width="25" stroke-linecap="butt">
+      <path id="ring-segment-top" class="anim-part" d="M217 108 A165 165 0 0 1 459 70"/>
+      <path id="ring-segment-right-top" class="anim-part" d="M480 88 A165 165 0 0 1 531 150"/>
+      <path id="ring-segment-right-mid" class="anim-part" d="M542 172 A165 165 0 0 1 536 264"/>
+      <path id="ring-segment-right-bottom" class="anim-part" d="M526 286 A165 165 0 0 1 462 346"/>
+      <path id="ring-segment-bottom" class="anim-part" d="M443 355 A165 165 0 0 1 250 337"/>
+      <path id="ring-segment-left-bottom" class="anim-part" d="M231 323 A165 165 0 0 1 197 262"/>
+      <path id="ring-segment-left-mid" class="anim-part" d="M191 241 A165 165 0 0 1 193 170"/>
+      <path id="ring-segment-left-top" class="anim-part" d="M199 147 A165 165 0 0 1 215 117"/>
+    </g>
+
+    <!-- Inner upper arc -->
+    <path id="inner-top-arc" class="anim-part"
+          d="M269 88 A130 130 0 0 1 442 82"
+          fill="none" stroke="url(#navyGradient)" stroke-width="18" stroke-linecap="butt"
+          class="anim-part outline"/>
+
+    <!-- Inner lower swoosh -->
+    <path id="inner-lower-swoosh" class="anim-part"
+          d="M283 294 C335 338 420 332 469 285 C448 332 384 357 326 338 C307 332 290 322 276 310 Z"
+          fill="url(#cyanGradient)" class="outline"/>
+
+    <!-- Left circuit traces -->
+    <g id="left-circuits" class="anim-part" fill="none" stroke="url(#navyGradient)" stroke-width="13" stroke-linecap="square">
+      <path id="left-trace-top" class="anim-part" d="M197 108 H252 L310 164"/>
+      <path id="left-trace-middle" class="anim-part" d="M188 147 H230 V190 H193"/>
+      <path id="left-trace-bottom" class="anim-part" d="M194 254 H247 L289 297"/>
+    </g>
+
+    <!-- Right circuit traces -->
+    <g id="right-circuits" class="anim-part" fill="none" stroke="url(#navyGradient)" stroke-width="13" stroke-linecap="square">
+      <path id="right-trace-top" class="anim-part" d="M447 95 H455"/>
+      <path id="right-trace-middle" class="anim-part" d="M480 146 H533"/>
+      <path id="right-trace-lower" class="anim-part" d="M487 199 H541"/>
+      <path id="right-trace-bottom" class="anim-part" d="M446 300 H476 L500 278 H533"/>
+    </g>
+
+    <!-- Circuit nodes -->
+    <g id="circuit-nodes" class="anim-part" stroke="#001A34" stroke-width="2">
+      <circle id="node-left-top" class="anim-part navy-fill" cx="255" cy="108" r="14"/>
+      <circle id="node-left-bottom" class="anim-part cyan-fill" cx="247" cy="254" r="13"/>
+      <circle id="node-top" class="anim-part cyan-fill" cx="455" cy="96" r="12"/>
+      <circle id="node-right-top" class="anim-part navy-fill" cx="491" cy="146" r="14"/>
+      <circle id="node-right-mid" class="anim-part cyan-fill" cx="497" cy="199" r="15"/>
+    </g>
+
+    <!-- NE monogram -->
+    <g id="monogram" class="anim-part">
+      <path id="letter-n" class="anim-part navy-fill outline"
+            d="M273 101 H305 L374 194 V101 H407 V284 H377 L306 190 V284 H273 Z"/>
+      <path id="letter-n-diagonal-accent" class="anim-part navy-fill outline"
+            d="M244 116 H270 L374 220 V258 L347 258 Z"/>
+      <path id="letter-e" class="anim-part cyan-fill outline"
+            d="M372 101 H414 V130 H469 V158 H414 V183 H466 V211 H414 V255 H472 V284 H372 Z"/>
+    </g>
+
+    <!-- Small base accent -->
+    <path id="base-accent" class="anim-part"
+          d="M230 318 L257 340 L244 352 L218 332 Z"
+          fill="#174A7D" opacity=".75"/>
+  </g>
+
+  <!-- TITLE -->
+  <g id="title" class="anim-part" fill="url(#navyGradient)" stroke="#001A34" stroke-width="1.1">
+    <text id="title-N" class="anim-part" x="24"  y="484" font-size="93" font-weight="800">N</text>
+    <text id="title-O" class="anim-part" x="91"  y="484" font-size="93" font-weight="800">O</text>
+    <text id="title-R" class="anim-part" x="163" y="484" font-size="93" font-weight="800">R</text>
+    <text id="title-T" class="anim-part" x="228" y="484" font-size="93" font-weight="800">T</text>
+    <text id="title-H" class="anim-part" x="287" y="484" font-size="93" font-weight="800">H</text>
+    <text id="title-E" class="anim-part" x="389" y="484" font-size="93" font-weight="800">E</text>
+    <text id="title-D" class="anim-part" x="448" y="484" font-size="93" font-weight="800">D</text>
+    <text id="title-G" class="anim-part" x="516" y="484" font-size="93" font-weight="800">G</text>
+    <text id="title-E2" class="anim-part" x="600" y="484" font-size="93" font-weight="800">E</text>
+  </g>
+
+  <!-- SUBTITLE -->
+  <g id="subtitle" class="anim-part">
+    <line id="subtitle-line-left" class="anim-part" x1="91" y1="526" x2="197" y2="526"
+          stroke="url(#cyanGradient)" stroke-width="4"/>
+    <line id="subtitle-line-right" class="anim-part" x1="503" y1="526" x2="611" y2="526"
+          stroke="url(#cyanGradient)" stroke-width="4"/>
+
+    <g id="subtitle-letters" fill="url(#cyanGradient)">
+      <text id="subtitle-S" class="anim-part" x="218" y="548" font-size="50" font-weight="700">S</text>
+      <text id="subtitle-Y" class="anim-part" x="270" y="548" font-size="50" font-weight="700">Y</text>
+      <text id="subtitle-S2" class="anim-part" x="324" y="548" font-size="50" font-weight="700">S</text>
+      <text id="subtitle-T" class="anim-part" x="376" y="548" font-size="50" font-weight="700">T</text>
+      <text id="subtitle-E" class="anim-part" x="424" y="548" font-size="50" font-weight="700">E</text>
+      <text id="subtitle-M" class="anim-part" x="473" y="548" font-size="50" font-weight="700">M</text>
+    </g>
+  </g>
+</svg>

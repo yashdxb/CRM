@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
+using System.Collections.Concurrent;
 
 namespace CRM.Enterprise.Infrastructure.AI;
 
@@ -10,6 +11,7 @@ public sealed class FoundryAgentClient
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly HttpClient _httpClient;
     private readonly FoundryAgentOptions _options;
+    private readonly ConcurrentDictionary<string, string> _modelMessages = new();
 
     public FoundryAgentClient(HttpClient httpClient, FoundryAgentOptions options)
     {
@@ -19,7 +21,7 @@ public sealed class FoundryAgentClient
 
     public bool IsConfigured => !string.IsNullOrWhiteSpace(_options.Endpoint)
                                 && !string.IsNullOrWhiteSpace(_options.ApiKey)
-                                && !string.IsNullOrWhiteSpace(_options.AgentId);
+                                && (!string.IsNullOrWhiteSpace(_options.AgentId) || !string.IsNullOrWhiteSpace(_options.Deployment));
 
     /// <summary>
     /// Streams tokens from the assistant using SSE streaming run.
@@ -29,6 +31,12 @@ public sealed class FoundryAgentClient
         string threadId,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        if (!string.IsNullOrWhiteSpace(_options.Deployment))
+        {
+            yield return await RunModelCompletionAsync(threadId, cancellationToken);
+            yield break;
+        }
+
         var runBody = new { assistant_id = _options.AgentId, stream = true };
         using var runRequest = new HttpRequestMessage(HttpMethod.Post, $"openai/threads/{threadId}/runs?api-version={_options.ApiVersion}");
         runRequest.Headers.Add("api-key", _options.ApiKey);
@@ -123,6 +131,11 @@ public sealed class FoundryAgentClient
 
     public async Task<string> CreateThreadAsync(CancellationToken cancellationToken)
     {
+        if (!string.IsNullOrWhiteSpace(_options.Deployment))
+        {
+            return Guid.NewGuid().ToString("N");
+        }
+
         using var request = new HttpRequestMessage(HttpMethod.Post, $"openai/threads?api-version={_options.ApiVersion}");
         request.Headers.Add("api-key", _options.ApiKey);
         request.Content = new StringContent("{}", Encoding.UTF8, "application/json");
@@ -145,6 +158,15 @@ public sealed class FoundryAgentClient
 
     public async Task AddMessageAsync(string threadId, string role, string content, CancellationToken cancellationToken)
     {
+        if (!string.IsNullOrWhiteSpace(_options.Deployment))
+        {
+            if (string.Equals(role, "user", StringComparison.OrdinalIgnoreCase))
+            {
+                _modelMessages[threadId] = content;
+            }
+            return;
+        }
+
         var body = new { role, content };
         using var request = new HttpRequestMessage(HttpMethod.Post, $"openai/threads/{threadId}/messages?api-version={_options.ApiVersion}");
         request.Headers.Add("api-key", _options.ApiKey);
@@ -160,6 +182,11 @@ public sealed class FoundryAgentClient
 
     public async Task<string> RunAndGetReplyAsync(string threadId, CancellationToken cancellationToken)
     {
+        if (!string.IsNullOrWhiteSpace(_options.Deployment))
+        {
+            return await RunModelCompletionAsync(threadId, cancellationToken);
+        }
+
         var runId = await CreateRunAsync(threadId, cancellationToken);
         var runAttempts = 0;
         var startedAt = DateTime.UtcNow;
@@ -223,6 +250,40 @@ public sealed class FoundryAgentClient
         }
 
         throw new InvalidOperationException("Foundry run failed after retry attempts.");
+    }
+
+    private async Task<string> RunModelCompletionAsync(string threadId, CancellationToken cancellationToken)
+    {
+        if (!_modelMessages.TryGetValue(threadId, out var message) || string.IsNullOrWhiteSpace(message))
+        {
+            throw new InvalidOperationException("Foundry model message is empty.");
+        }
+
+        var body = new
+        {
+            model = _options.Deployment,
+            messages = new[]
+            {
+                new { role = "system", content = "You are the CRM Enterprise assistant. Give concise, evidence-based answers using the provided CRM context. Never invent records or actions." },
+                new { role = "user", content = message }
+            },
+            temperature = 0.2,
+            max_tokens = 800
+        };
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"models/chat/completions?api-version={_options.ApiVersion}");
+        request.Headers.Add("api-key", _options.ApiKey);
+        request.Content = new StringContent(JsonSerializer.Serialize(body, JsonOptions), Encoding.UTF8, "application/json");
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+        var payload = await response.Content.ReadAsStringAsync(cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new InvalidOperationException($"Foundry model completion failed: {response.StatusCode} {payload}");
+        }
+
+        using var document = JsonDocument.Parse(payload);
+        var reply = document.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString();
+        return string.IsNullOrWhiteSpace(reply) ? "The assistant returned an empty response." : reply;
     }
 
     private async Task<string> CreateRunAsync(string threadId, CancellationToken cancellationToken)

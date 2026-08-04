@@ -8,6 +8,7 @@ public sealed class FoundryAgentOptions
     public string ApiKey { get; set; } = string.Empty;
     public string ApiVersion { get; set; } = "2024-05-01-preview";
     public string AgentId { get; set; } = string.Empty;
+    public string Deployment { get; set; } = string.Empty;
     public int PollAttempts { get; set; } = 20;
     public int PollDelayMs { get; set; } = 750;
 }
