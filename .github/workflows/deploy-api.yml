@@ -67,8 +67,8 @@ jobs:
       - name: Deploy to Azure Web App
         run: |
           az webapp deploy \
-            --resource-group rg-crm-dev-ca \
-            --name crm-enterprise-api-dev-01122345 \
+            --resource-group rg-crm-dev-ce \
+            --name crm-enterprise-api-ce-01122345 \
             --src-path ./artifacts/api.zip \
             --type zip \
             --async true \
@@ -81,22 +81,22 @@ jobs:
       - name: Set Azure Web App environment to Production
         run: |
           az webapp config appsettings set \
-            --resource-group rg-crm-dev-ca \
-            --name crm-enterprise-api-dev-01122345 \
+            --resource-group rg-crm-dev-ce \
+            --name crm-enterprise-api-ce-01122345 \
             --settings \
               ASPNETCORE_ENVIRONMENT=Production
 
       - name: Configure Azure Web App runtime and startup command
         run: |
           az webapp config set \
-            --resource-group rg-crm-dev-ca \
-            --name crm-enterprise-api-dev-01122345 \
+            --resource-group rg-crm-dev-ce \
+            --name crm-enterprise-api-ce-01122345 \
             --linux-fx-version "DOTNETCORE|10.0" \
             --startup-file ""
 
       - name: Post-deploy health verification
         run: |
-          API_URL="https://crm-enterprise-api-dev-01122345.azurewebsites.net"
+          API_URL="https://crm-enterprise-api-ce-01122345.azurewebsites.net"
           echo "Waiting 90s for App Service to restart after deployment..."
           sleep 90
 
@@ -135,16 +135,16 @@ jobs:
 
           # Verify startup command is empty (deployment guardrail)
           STARTUP_CMD=$(az webapp config show \
-            --resource-group rg-crm-dev-ca \
-            --name crm-enterprise-api-dev-01122345 \
+            --resource-group rg-crm-dev-ce \
+            --name crm-enterprise-api-ce-01122345 \
             --query appCommandLine -o tsv)
           if [ -z "$STARTUP_CMD" ]; then
             echo "✅ appCommandLine is empty (correct)"
           else
             echo "❌ appCommandLine is '$STARTUP_CMD' — must be empty! Clearing..."
             az webapp config set \
-              --resource-group rg-crm-dev-ca \
-              --name crm-enterprise-api-dev-01122345 \
+              --resource-group rg-crm-dev-ce \
+              --name crm-enterprise-api-ce-01122345 \
               --startup-file ""
           fi
 

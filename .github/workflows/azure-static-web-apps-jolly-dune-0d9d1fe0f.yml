@@ -51,7 +51,7 @@ jobs:
 
       - name: Post-deploy API connectivity check
         run: |
-          API_URL="https://crm-enterprise-api-dev-01122345.azurewebsites.net"
+          API_URL="https://crm-enterprise-api-ce-01122345.azurewebsites.net"
           SWA_URL="https://jolly-dune-0d9d1fe0f.2.azurestaticapps.net"
 
           echo "Verifying API is reachable from CI (simulates SWA → API connectivity)..."

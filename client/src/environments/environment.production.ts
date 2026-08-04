@@ -6,7 +6,7 @@ const resolveApiUrl = () => {
       return 'http://localhost:5014';
     }
   }
-  return 'https://crm-enterprise-api-dev-01122345.azurewebsites.net';
+  return 'https://crm-enterprise-api-ce-01122345.azurewebsites.net';
 };
 
 export const environment = {
