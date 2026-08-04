@@ -33,6 +33,7 @@ export class AssistantPanelComponent {
   private readonly router = inject(Router);
   private activeConversationId: string | null = null;
   private activeConversationMessageId: string | null = null;
+  private activeRequestStartedAtMs: number | null = null;
 
   private readonly emptyAssistantInsights: AssistantInsights = {
     scope: 'Self',
@@ -78,6 +79,8 @@ export class AssistantPanelComponent {
       return;
     }
 
+    const requestStartedAt = Date.now();
+    this.activeRequestStartedAtMs = requestStartedAt;
     const userMessage: AssistantUiMessage = {
       id: this.buildLocalId('user'),
       role: 'user',
@@ -117,6 +120,8 @@ export class AssistantPanelComponent {
 
         const reply = response.reply ?? '';
         const existingMessageId = this.activeConversationMessageId;
+        const responseAtUtc = new Date().toISOString();
+        const responseDurationMs = this.responseDurationMs(requestStartedAt);
         const assistantMessage: AssistantUiMessage = existingMessageId
           ? {
               id: existingMessageId,
@@ -124,7 +129,9 @@ export class AssistantPanelComponent {
               content: reply,
               displayContent: '',
               isTyping: true,
-              createdAtUtc: new Date().toISOString()
+              createdAtUtc: responseAtUtc,
+              responseAtUtc,
+              responseDurationMs
             }
           : {
               id: this.buildLocalId('assistant'),
@@ -132,7 +139,9 @@ export class AssistantPanelComponent {
               content: reply,
               displayContent: '',
               isTyping: true,
-              createdAtUtc: new Date().toISOString()
+              createdAtUtc: responseAtUtc,
+              responseAtUtc,
+              responseDurationMs
             };
         if (existingMessageId) {
           this.updateMessage(existingMessageId, assistantMessage);
@@ -141,6 +150,7 @@ export class AssistantPanelComponent {
         }
         this.activeConversationId = null;
         this.activeConversationMessageId = null;
+        this.activeRequestStartedAtMs = null;
         this.assistantSending.set(false);
         this.runTypewriter(assistantMessage.id, reply);
         this.refreshInsights();
@@ -156,6 +166,7 @@ export class AssistantPanelComponent {
           : 'Assistant is unavailable right now. Please try again.';
         this.assistantError.set(fallback);
         this.assistantSending.set(false);
+        this.activeRequestStartedAtMs = null;
       }
     });
   }
@@ -171,9 +182,10 @@ export class AssistantPanelComponent {
     this.historyLoading.set(true);
     this.assistantChatService.getHistory().subscribe({
       next: messages => {
-        this.assistantMessages.set((messages ?? []).map((message) => ({
-          ...message
-        })));
+        this.assistantMessages.set((messages ?? [])
+          .slice()
+          .sort((a, b) => new Date(a.createdAtUtc).getTime() - new Date(b.createdAtUtc).getTime())
+          .map(message => ({ ...message })));
         this.historyLoaded.set(true);
         this.historyLoading.set(false);
         this.refreshInsights();
@@ -365,6 +377,22 @@ export class AssistantPanelComponent {
       .join('');
   }
 
+  protected formatMessageTime(value: string | undefined): string {
+    if (!value) return '';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? '' : date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }
+
+  protected responseTimingLabel(message: AssistantUiMessage): string {
+    const responseTime = message.responseAtUtc ?? message.createdAtUtc;
+    const time = this.formatMessageTime(responseTime);
+    if (typeof message.responseDurationMs !== 'number') return time;
+    const seconds = message.responseDurationMs >= 1000
+      ? `${(message.responseDurationMs / 1000).toFixed(1)}s`
+      : `${message.responseDurationMs}ms`;
+    return `${time} · ${seconds}`;
+  }
+
   protected assistantResponseSections(content: string): AssistantResponseSections {
     const normalized = (content ?? '').replace(/\r\n/g, '\n').trim();
     if (!normalized) {
@@ -486,6 +514,10 @@ export class AssistantPanelComponent {
     );
   }
 
+  private responseDurationMs(startedAtMs: number): number {
+    return Math.max(0, Date.now() - startedAtMs);
+  }
+
   private removeMessage(id: string): void {
     this.assistantMessages.update(messages => messages.filter(message => message.id !== id));
   }
@@ -526,10 +558,15 @@ export class AssistantPanelComponent {
       const content = String(event.payload['content'] ?? '');
       const current = this.assistantMessages().find((message) => message.id === messageId);
       const resolved = content || current?.displayContent || current?.content || '';
-      this.updateMessage(messageId, { displayContent: resolved, content: resolved, isTyping: false });
+      const responseAtUtc = new Date().toISOString();
+      const responseDurationMs = this.activeRequestStartedAtMs === null
+        ? undefined
+        : this.responseDurationMs(this.activeRequestStartedAtMs);
+      this.updateMessage(messageId, { displayContent: resolved, content: resolved, isTyping: false, responseAtUtc, responseDurationMs, createdAtUtc: responseAtUtc });
       this.assistantSending.set(false);
       this.activeConversationId = null;
       this.activeConversationMessageId = null;
+      this.activeRequestStartedAtMs = null;
       this.refreshInsights();
       return;
     }
@@ -544,6 +581,7 @@ export class AssistantPanelComponent {
       this.assistantSending.set(false);
       this.activeConversationId = null;
       this.activeConversationMessageId = null;
+      this.activeRequestStartedAtMs = null;
     }
   }
 
@@ -591,6 +629,8 @@ export class AssistantPanelComponent {
 interface AssistantUiMessage extends AssistantChatMessage {
   displayContent?: string;
   isTyping?: boolean;
+  responseAtUtc?: string;
+  responseDurationMs?: number;
 }
 
 type AssistantResponseSectionKey = 'summary' | 'actions' | 'risks' | 'sources';

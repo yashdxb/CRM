@@ -239,6 +239,20 @@ ul.assistant-list {
   margin-bottom: 4px;
 }
 
+.assistant-message-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.assistant-message-time {
+  color: rgba(177, 195, 229, 0.66);
+  font-size: 0.68rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
 .assistant-status {
   display: flex;
   align-items: flex-start;

@@ -40,7 +40,12 @@
           *ngFor="let message of assistantMessages()"
           [class.user]="message.role === 'user'"
         >
-          <span class="assistant-role">{{ message.role === 'user' ? 'You' : 'Assistant' }}</span>
+          <div class="assistant-message-heading">
+            <span class="assistant-role">{{ message.role === 'user' ? 'You' : 'Assistant' }}</span>
+            <span class="assistant-message-time">
+              {{ message.role === 'user' ? formatMessageTime(message.createdAtUtc) : responseTimingLabel(message) }}
+            </span>
+          </div>
           <ng-container *ngIf="assistantResponseSections(message.displayContent ?? message.content) as response">
             <div class="assistant-content assistant-answer" *ngIf="response.answer" [innerHTML]="formatAssistantMessage(response.answer)"></div>
             <div class="assistant-response-sections" *ngIf="response.sections.length">
