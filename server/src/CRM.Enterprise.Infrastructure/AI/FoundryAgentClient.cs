@@ -268,7 +268,7 @@ public sealed class FoundryAgentClient
                 new { role = "user", content = message }
             },
             temperature = 0.2,
-            max_tokens = 800
+            max_completion_tokens = 800
         };
 
         using var request = new HttpRequestMessage(HttpMethod.Post, $"models/chat/completions?api-version={_options.ApiVersion}");
