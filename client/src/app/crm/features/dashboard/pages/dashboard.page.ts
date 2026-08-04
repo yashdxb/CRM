@@ -643,19 +643,19 @@ export class DashboardPage implements OnInit {
     const percentage = Math.max(0, Math.min(100, metric.percentage ?? 0));
     switch (metric.id) {
       case 'raw-pipeline':
-        return 'Open value currently in motion';
+        return 'Open pipeline';
       case 'at-risk':
-        return `${percentage}% of open deals need recovery`;
+        return `${percentage}% need recovery`;
       case 'no-next-step':
-        return `${percentage}% of open deals need a next action`;
+        return `${percentage}% need next action`;
       case 'tasks-due':
-        return `${percentage}% of visible work is due today`;
+        return `${percentage}% due today`;
       case 'overdue-activities':
-        return `${percentage}% of visible work is overdue`;
+        return `${percentage}% overdue`;
       case 'new-leads':
-        return `${percentage}% of the lead pool is newly assigned`;
+        return `${percentage}% need follow-up`;
       default:
-        return `${percentage}% of the monitored workload`;
+        return `${percentage}% monitored`;
     }
   }
 
