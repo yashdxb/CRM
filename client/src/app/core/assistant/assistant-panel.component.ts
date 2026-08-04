@@ -53,6 +53,7 @@ export class AssistantPanelComponent {
   protected readonly historyLoading = signal(false);
   protected readonly assistantInsights = signal<AssistantInsights>(this.emptyAssistantInsights);
   protected readonly assistantActions = computed(() => this.assistantInsights().actions ?? []);
+  protected readonly assistantActionsVisible = signal(true);
   protected assistantReviewDialogOpen = false;
   protected assistantReviewNote = '';
   protected assistantReviewSubmitting = false;
@@ -67,6 +68,10 @@ export class AssistantPanelComponent {
 
   protected toggleAssistantCollapsed(): void {
     this.assistantService.toggleCollapsed();
+  }
+
+  protected toggleAssistantActions(): void {
+    this.assistantActionsVisible.update(visible => !visible);
   }
 
   protected hideAssistant(): void {

@@ -75,7 +75,13 @@
         </div>
 
         <section class="assistant-actions" *ngIf="assistantActions().length">
-          <div class="assistant-actions-title">Suggested actions</div>
+          <div class="assistant-actions-heading">
+            <div class="assistant-actions-title">Suggested actions</div>
+            <button type="button" class="assistant-actions-toggle" (click)="toggleAssistantActions()">
+              {{ assistantActionsVisible() ? 'Hide' : 'Show' }}
+            </button>
+          </div>
+          <ng-container *ngIf="assistantActionsVisible()">
           <article class="assistant-action-item" *ngFor="let action of assistantActions()">
             <div class="assistant-action-content">
               <h4>{{ action.title }}</h4>
@@ -89,6 +95,7 @@
               {{ assistantActionLabel(action) }}
             </button>
           </article>
+          </ng-container>
         </section>
       </div>
   <div class="assistant-input">

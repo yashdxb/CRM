@@ -409,6 +409,24 @@ ul.assistant-list {
   text-transform: uppercase;
 }
 
+.assistant-actions-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-2;
+}
+
+.assistant-actions-toggle {
+  border: 1px solid rgba(130, 170, 255, 0.28);
+  border-radius: 999px;
+  padding: 3px 9px;
+  background: rgba(20, 28, 54, 0.72);
+  color: rgba(211, 226, 255, 0.9);
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .assistant-action-item {
   display: flex;
   gap: $space-2;
