@@ -143,6 +143,9 @@ export class AssistantPanelComponent {
         this.refreshInsights();
       },
       error: err => {
+        if (this.activeConversationMessageId) {
+          this.removeMessage(this.activeConversationMessageId);
+        }
         this.activeConversationId = null;
         this.activeConversationMessageId = null;
         const fallback = typeof err?.error?.error === 'string'
@@ -480,6 +483,10 @@ export class AssistantPanelComponent {
     );
   }
 
+  private removeMessage(id: string): void {
+    this.assistantMessages.update(messages => messages.filter(message => message.id !== id));
+  }
+
   private buildLocalId(prefix: string): string {
     return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
   }
@@ -526,7 +533,9 @@ export class AssistantPanelComponent {
 
     if (event.eventType === 'assistant.chat.failed') {
       const messageId = this.activeConversationMessageId;
-      this.updateMessage(messageId, { isTyping: false });
+      if (messageId) {
+        this.removeMessage(messageId);
+      }
       const error = String(event.payload['error'] ?? 'Assistant is unavailable right now. Please try again.');
       this.assistantError.set(error);
       this.assistantSending.set(false);
