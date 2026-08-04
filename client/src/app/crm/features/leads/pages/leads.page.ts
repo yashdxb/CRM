@@ -78,6 +78,17 @@ const CQVS_FACTOR_GROUPS: Array<{ code: CqvsCode; title: string; factorMatchers:
   { code: 'S', title: CQVS_TITLES.S, factorMatchers: ['economic buyer'] }
 ];
 
+const TRUCKING_LEAD_PROFILE_FIELD_KEYS = {
+  shipperType: 'trucking.shipperTypes',
+  freightMode: 'trucking.freightModes',
+  equipmentType: 'trucking.equipmentTypes',
+  commodity: 'trucking.commodities',
+  originRegion: 'trucking.originRegions',
+  destinationRegion: 'trucking.destinationRegions',
+  shipmentFrequency: 'trucking.shipmentFrequencyBands',
+  annualFreightSpend: 'trucking.annualFreightSpendBands'
+} as const;
+
 @Component({
   selector: 'app-leads-page',
   standalone: true,
@@ -416,6 +427,49 @@ export class LeadsPage {
           this.loading.set(false);
         }
       });
+  }
+
+  protected freightProfileHighlights(lead: Lead): string[] {
+    const chips = [
+      this.customFactorChip(lead, TRUCKING_LEAD_PROFILE_FIELD_KEYS.shipperType, 'Shipper'),
+      this.customFactorChip(lead, TRUCKING_LEAD_PROFILE_FIELD_KEYS.freightMode, 'Mode'),
+      this.customFactorChip(lead, TRUCKING_LEAD_PROFILE_FIELD_KEYS.equipmentType, 'Equipment'),
+      this.customFactorChip(lead, TRUCKING_LEAD_PROFILE_FIELD_KEYS.originRegion, 'Origin'),
+      this.customFactorChip(lead, TRUCKING_LEAD_PROFILE_FIELD_KEYS.destinationRegion, 'Destination'),
+      this.customFactorChip(lead, TRUCKING_LEAD_PROFILE_FIELD_KEYS.annualFreightSpend, 'Spend')
+    ].filter((value): value is string => !!value);
+
+    return chips.slice(0, 4);
+  }
+
+  protected hasFreightProfile(lead: Lead): boolean {
+    return this.freightProfileHighlights(lead).length > 0;
+  }
+
+  protected freightFitLabel(lead: Lead): string {
+    const score = this.freightFitScore(lead);
+    if (score >= 75) {
+      return 'Strong lane fit';
+    }
+    if (score >= 50) {
+      return 'Developing lane fit';
+    }
+    return 'Incomplete lane fit';
+  }
+
+  protected freightFitScoreLabel(lead: Lead): string {
+    return `${this.freightFitScore(lead)}/100`;
+  }
+
+  protected freightFitTone(lead: Lead): 'strong' | 'developing' | 'incomplete' {
+    const score = this.freightFitScore(lead);
+    if (score >= 75) {
+      return 'strong';
+    }
+    if (score >= 50) {
+      return 'developing';
+    }
+    return 'incomplete';
   }
 
   protected leadPresenceCount(leadId: string): number {
@@ -1486,5 +1540,79 @@ export class LeadsPage {
       firstTouchedAtUtc: lead.firstTouchedAtUtc ?? null,
       status: lead.status
     };
+  }
+
+  private customFactorChip(lead: Lead, key: string, label: string): string | null {
+    const value = (lead.customQualificationFactors ?? [])
+      .find((factor) => factor.key === key)
+      ?.value
+      ?.trim();
+
+    return value ? `${label}: ${value}` : null;
+  }
+
+  private customFactorValue(lead: Lead, key: string): string | null {
+    return (lead.customQualificationFactors ?? [])
+      .find((factor) => factor.key === key)
+      ?.value
+      ?.trim() || null;
+  }
+
+  private freightFitScore(lead: Lead): number {
+    const freightMode = this.customFactorValue(lead, TRUCKING_LEAD_PROFILE_FIELD_KEYS.freightMode);
+    const equipmentType = this.customFactorValue(lead, TRUCKING_LEAD_PROFILE_FIELD_KEYS.equipmentType);
+    const originRegion = this.customFactorValue(lead, TRUCKING_LEAD_PROFILE_FIELD_KEYS.originRegion);
+    const destinationRegion = this.customFactorValue(lead, TRUCKING_LEAD_PROFILE_FIELD_KEYS.destinationRegion);
+    const commodity = this.customFactorValue(lead, TRUCKING_LEAD_PROFILE_FIELD_KEYS.commodity);
+    const shipperType = this.customFactorValue(lead, TRUCKING_LEAD_PROFILE_FIELD_KEYS.shipperType);
+    const frequency = this.customFactorValue(lead, TRUCKING_LEAD_PROFILE_FIELD_KEYS.shipmentFrequency);
+    const spend = this.customFactorValue(lead, TRUCKING_LEAD_PROFILE_FIELD_KEYS.annualFreightSpend);
+
+    return Math.min(100,
+      (freightMode ? 10 : 0)
+      + (equipmentType ? 10 : 0)
+      + (originRegion ? 10 : 0)
+      + (destinationRegion ? 10 : 0)
+      + (commodity ? 10 : 0)
+      + (shipperType ? 10 : 0)
+      + this.freightFrequencyScore(frequency)
+      + this.freightSpendScore(spend));
+  }
+
+  private freightFrequencyScore(value: string | null): number {
+    const normalized = (value ?? '').toLowerCase();
+    if (normalized.includes('dedicated') || normalized.includes('daily')) {
+      return 20;
+    }
+    if (normalized.includes('several')) {
+      return 16;
+    }
+    if (normalized.includes('weekly')) {
+      return 10;
+    }
+    if (normalized.includes('ad hoc') || normalized.includes('spot')) {
+      return 4;
+    }
+    return value ? 8 : 0;
+  }
+
+  private freightSpendScore(value: string | null): number {
+    const normalized = (value ?? '').toLowerCase();
+    if (normalized.startsWith('$15m')) {
+      return 20;
+    }
+    if (normalized.startsWith('$5m')) {
+      return 16;
+    }
+    if (normalized.startsWith('$1m')) {
+      return 12;
+    }
+    if (normalized.startsWith('$250k')) {
+      return 8;
+    }
+    if (normalized.startsWith('under')) {
+      return 4;
+    }
+    return value ? 8 : 0;
   }
 }

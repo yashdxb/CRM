@@ -94,6 +94,10 @@ public class TenantContextController : ControllerBase
         var featureFlags = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase)
         {
             ["properties"] = string.Equals(tenant.IndustryPreset, VerticalPresetIds.RealEstateBrokerage, StringComparison.OrdinalIgnoreCase),
+            ["logistics.console"] = string.Equals(tenant.IndustryPreset, VerticalPresetIds.TruckingCarrierBroker, StringComparison.OrdinalIgnoreCase),
+            ["logistics.quotes"] = string.Equals(tenant.IndustryPreset, VerticalPresetIds.TruckingCarrierBroker, StringComparison.OrdinalIgnoreCase),
+            ["logistics.lanes"] = string.Equals(tenant.IndustryPreset, VerticalPresetIds.TruckingCarrierBroker, StringComparison.OrdinalIgnoreCase),
+            ["logistics.exceptions"] = string.Equals(tenant.IndustryPreset, VerticalPresetIds.TruckingCarrierBroker, StringComparison.OrdinalIgnoreCase),
             ["marketing.campaigns"] = marketingEnabled,
             ["mailbox.enabled"] = false,
             ["helpdesk.enabled"] = helpDeskEnabled,

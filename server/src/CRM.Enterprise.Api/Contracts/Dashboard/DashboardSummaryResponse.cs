@@ -50,7 +50,8 @@ public record DashboardSummaryResponse(
     decimal MyPipelineValueTotal,
     decimal MyConfidenceWeightedPipelineValue,
     decimal? MyQuotaTarget,
-    IEnumerable<ForecastScenarioItem> ForecastScenarios);
+    IEnumerable<ForecastScenarioItem> ForecastScenarios,
+    TruckingDashboardItem TruckingDashboard);
 
 public record ChartDataPoint(string Label, decimal Value);
 
@@ -121,3 +122,26 @@ public record ForecastScenarioItem(
     decimal Value,
     int DealCount,
     decimal DeltaFromBase);
+
+public record TruckingDashboardItem(
+    bool IsEnabled,
+    int StrongFitLeads,
+    int DevelopingFitLeads,
+    int IncompleteFitLeads,
+    int MissingFreightProfileLeads,
+    int HighFitOpenLeads,
+    int StaleFreightLeads,
+    IEnumerable<TruckingDashboardLeadItem> HighFitLeads,
+    IEnumerable<TruckingDashboardLeadItem> MissingProfileLeads,
+    IEnumerable<TruckingDashboardLeadItem> StaleLeads);
+
+public record TruckingDashboardLeadItem(
+    Guid Id,
+    string Name,
+    string Company,
+    string Status,
+    int LaneFitScore,
+    string LaneFitLabel,
+    IEnumerable<string> MissingFields,
+    DateTime CreatedAtUtc,
+    DateTime? FirstTouchDueAtUtc);

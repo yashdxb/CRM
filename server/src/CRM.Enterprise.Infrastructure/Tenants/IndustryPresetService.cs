@@ -197,7 +197,11 @@ public sealed class IndustryPresetService : IIndustryPresetService
                         ? presetConfig.Vocabulary.QualificationGuidance
                         : existing.Vocabulary.QualificationGuidance
                 },
-                BrokerageLeadProfileCatalog = MergeCatalog(existing.BrokerageLeadProfileCatalog, presetConfig.BrokerageLeadProfileCatalog),
+                LeadProfileCatalog = VerticalPresetDefaults.MergeCatalog(
+                    existing.LeadProfileCatalog,
+                    existing.BrokerageLeadProfileCatalog,
+                    presetConfig.LeadProfileCatalog),
+                BrokerageLeadProfileCatalog = null,
                 DashboardPackDefaults = existing.DashboardPackDefaults.Count == 0 ? presetConfig.DashboardPackDefaults : existing.DashboardPackDefaults,
                 ReportLibraryHighlights = existing.ReportLibraryHighlights.Count == 0 ? presetConfig.ReportLibraryHighlights : existing.ReportLibraryHighlights,
                 WorkflowTemplateHighlights = existing.WorkflowTemplateHighlights.Count == 0 ? presetConfig.WorkflowTemplateHighlights : existing.WorkflowTemplateHighlights
@@ -209,18 +213,6 @@ public sealed class IndustryPresetService : IIndustryPresetService
         {
             return JsonSerializer.Serialize(presetConfig, JsonOptions);
         }
-    }
-
-    private static BrokerageLeadProfileCatalog MergeCatalog(BrokerageLeadProfileCatalog existing, BrokerageLeadProfileCatalog fallback)
-    {
-        return new BrokerageLeadProfileCatalog(
-            existing.BuyerTypes.Count == 0 ? fallback.BuyerTypes : existing.BuyerTypes,
-            existing.MotivationUrgencies.Count == 0 ? fallback.MotivationUrgencies : existing.MotivationUrgencies,
-            existing.FinancingReadinessOptions.Count == 0 ? fallback.FinancingReadinessOptions : existing.FinancingReadinessOptions,
-            existing.PreApprovalStatuses.Count == 0 ? fallback.PreApprovalStatuses : existing.PreApprovalStatuses,
-            existing.PreferredAreas.Count == 0 ? fallback.PreferredAreas : existing.PreferredAreas,
-            existing.PropertyTypes.Count == 0 ? fallback.PropertyTypes : existing.PropertyTypes,
-            existing.BudgetBands.Count == 0 ? fallback.BudgetBands : existing.BudgetBands);
     }
 
     private static bool LooksLikeCoreDefaults(IReadOnlyList<OpportunityStage> stages)

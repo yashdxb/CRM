@@ -55,11 +55,11 @@ import { TooltipModule } from 'primeng/tooltip';
 import { PhoneTypeReference, ReferenceDataService } from '../../../../core/services/reference-data.service';
 import { WorkspaceSettingsService } from '../../settings/services/workspace-settings.service';
 import {
-  BrokerageLeadProfileCatalog,
   LeadDispositionPolicy,
   QualificationFactorDefinition,
   QualificationPolicy,
   SupportingDocumentPolicy,
+  VerticalLeadProfileCatalog,
   VerticalPresetConfiguration
 } from '../../settings/models/workspace-settings.model';
 import { AttachmentDataService, AttachmentItem } from '../../../../shared/services/attachment-data.service';
@@ -129,6 +129,26 @@ interface OptionItem {
 
 type QualificationFactorKey = 'budget' | 'readiness' | 'timeline' | 'problem' | 'economicBuyer' | 'icpFit';
 
+const VERTICAL_LEAD_PROFILE_FIELD_KEYS = {
+  brokerageBuyerTypes: 'brokerage.buyerTypes',
+  brokerageMotivationUrgencies: 'brokerage.motivationUrgencies',
+  brokerageFinancingReadinessOptions: 'brokerage.financingReadinessOptions',
+  brokeragePreApprovalStatuses: 'brokerage.preApprovalStatuses',
+  brokeragePreferredAreas: 'brokerage.preferredAreas',
+  brokeragePropertyTypes: 'brokerage.propertyTypes',
+  brokerageBudgetBands: 'brokerage.budgetBands',
+  truckingShipperTypes: 'trucking.shipperTypes',
+  truckingFreightModes: 'trucking.freightModes',
+  truckingEquipmentTypes: 'trucking.equipmentTypes',
+  truckingCommodities: 'trucking.commodities',
+  truckingOriginRegions: 'trucking.originRegions',
+  truckingDestinationRegions: 'trucking.destinationRegions',
+  truckingShipmentFrequencyBands: 'trucking.shipmentFrequencyBands',
+  truckingAnnualFreightSpendBands: 'trucking.annualFreightSpendBands',
+  truckingServiceSensitivityLevels: 'trucking.serviceSensitivityLevels',
+  truckingPricingSensitivityLevels: 'trucking.pricingSensitivityLevels'
+} as const;
+
 interface PhoneTypeOption {
   label: string;
   value: string;
@@ -166,6 +186,26 @@ interface QualificationFactorCard {
   evidence: string | null;
   valueOptions: OptionItem[];
   evidenceOptions: OptionItem[];
+}
+
+interface LeadProfileFieldOption {
+  label: string;
+  value: string;
+}
+
+interface TruckingLeadProfileFieldDefinition {
+  key: string;
+  label: string;
+  placeholder: string;
+  options: WritableSignal<LeadProfileFieldOption[]>;
+}
+
+interface TruckingLaneFitSummary {
+  score: number;
+  label: string;
+  tone: 'strong' | 'developing' | 'incomplete';
+  guidance: string;
+  blockers: string[];
 }
 
 interface LeadOperationalHistoryItem {
@@ -338,6 +378,14 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     { label: 'Buyer verbally supportive', value: 'Buyer verbally supportive', icon: 'pi pi-check-circle', tone: 'verified' },
     { label: 'Buyer explicitly not involved', value: 'Buyer explicitly not involved', icon: 'pi pi-times-circle', tone: 'invalid' }
   ];
+  protected readonly truckingDecisionMakerOptions: OptionItem[] = [
+    { label: 'Unknown / not identified', value: 'Unknown / not identified', icon: 'pi pi-question-circle', tone: 'unknown' },
+    { label: 'Influencer identified', value: 'Influencer identified', icon: 'pi pi-info-circle', tone: 'assumed' },
+    { label: 'Decision maker identified, not engaged', value: 'Buyer identified, not engaged', icon: 'pi pi-info-circle', tone: 'assumed' },
+    { label: 'Decision maker engaged in discussion', value: 'Buyer engaged in discussion', icon: 'pi pi-check-circle', tone: 'verified' },
+    { label: 'Decision maker verbally supportive', value: 'Buyer verbally supportive', icon: 'pi pi-check-circle', tone: 'verified' },
+    { label: 'Decision maker explicitly not involved', value: 'Buyer explicitly not involved', icon: 'pi pi-times-circle', tone: 'invalid' }
+  ];
   protected readonly icpFitOptions: OptionItem[] = [
     { label: 'Unknown / not assessed', value: 'Unknown / not assessed', icon: 'pi pi-question-circle', tone: 'unknown' },
     { label: 'Partial ICP fit', value: 'Partial ICP fit', icon: 'pi pi-info-circle', tone: 'assumed' },
@@ -354,6 +402,16 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   protected readonly preferredAreaOptions = signal<Array<{ label: string; value: string }>>([]);
   protected readonly propertyTypeOptions = signal<Array<{ label: string; value: string }>>([]);
   protected readonly budgetBandOptions = signal<Array<{ label: string; value: string }>>([]);
+  protected readonly truckingShipperTypeOptions = signal<LeadProfileFieldOption[]>([]);
+  protected readonly truckingFreightModeOptions = signal<LeadProfileFieldOption[]>([]);
+  protected readonly truckingEquipmentTypeOptions = signal<LeadProfileFieldOption[]>([]);
+  protected readonly truckingCommodityOptions = signal<LeadProfileFieldOption[]>([]);
+  protected readonly truckingOriginRegionOptions = signal<LeadProfileFieldOption[]>([]);
+  protected readonly truckingDestinationRegionOptions = signal<LeadProfileFieldOption[]>([]);
+  protected readonly truckingShipmentFrequencyOptions = signal<LeadProfileFieldOption[]>([]);
+  protected readonly truckingAnnualFreightSpendOptions = signal<LeadProfileFieldOption[]>([]);
+  protected readonly truckingServiceSensitivityOptions = signal<LeadProfileFieldOption[]>([]);
+  protected readonly truckingPricingSensitivityOptions = signal<LeadProfileFieldOption[]>([]);
   protected readonly verticalPresetConfiguration = signal<VerticalPresetConfiguration | null>(null);
   protected readonly tenantIndustryPreset = signal<string | null>(null);
   protected readonly tenantPropertiesFeatureEnabled = signal(false);
@@ -2945,12 +3003,179 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     const presetId = this.verticalPresetConfiguration()?.presetId
       ?? this.tenantIndustryPreset()
       ?? 'CoreCRM';
+    if (LeadFormPage.normalizePresetId(presetId) === LeadFormPage.normalizePresetId('TruckingCarrierBroker')) {
+      return false;
+    }
+
     return this.tenantPropertiesFeatureEnabled()
       || LeadFormPage.normalizePresetId(presetId) === LeadFormPage.normalizePresetId('RealEstateBrokerage');
   }
 
   protected qualificationSectionTitle(): string {
-    return this.isBrokeragePreset() ? 'Buyer Readiness Summary' : 'Qualification Summary';
+    if (this.isBrokeragePreset()) {
+      return 'Buyer Readiness Summary';
+    }
+
+    return this.isTruckingPreset() ? 'Freight Qualification Summary' : 'Qualification Summary';
+  }
+
+  protected qualificationSummaryDescription(): string {
+    if (this.isTruckingPreset()) {
+      return 'Review freight readiness, lane blockers, and decision-maker evidence before moving the shipper forward.';
+    }
+
+    return 'Review readiness, close the blockers, and move the lead forward with defensible evidence.';
+  }
+
+  protected isTruckingPreset(): boolean {
+    const presetId = this.verticalPresetConfiguration()?.presetId
+      ?? this.tenantIndustryPreset()
+      ?? 'CoreCRM';
+    return LeadFormPage.normalizePresetId(presetId) === LeadFormPage.normalizePresetId('TruckingCarrierBroker');
+  }
+
+  protected truckingLeadProfileFields(): TruckingLeadProfileFieldDefinition[] {
+    return [
+      {
+        key: VERTICAL_LEAD_PROFILE_FIELD_KEYS.truckingShipperTypes,
+        label: 'Shipper type',
+        placeholder: 'Select shipper type',
+        options: this.truckingShipperTypeOptions
+      },
+      {
+        key: VERTICAL_LEAD_PROFILE_FIELD_KEYS.truckingFreightModes,
+        label: 'Freight mode',
+        placeholder: 'Select freight mode',
+        options: this.truckingFreightModeOptions
+      },
+      {
+        key: VERTICAL_LEAD_PROFILE_FIELD_KEYS.truckingEquipmentTypes,
+        label: 'Equipment type',
+        placeholder: 'Select equipment type',
+        options: this.truckingEquipmentTypeOptions
+      },
+      {
+        key: VERTICAL_LEAD_PROFILE_FIELD_KEYS.truckingCommodities,
+        label: 'Commodity',
+        placeholder: 'Select commodity',
+        options: this.truckingCommodityOptions
+      },
+      {
+        key: VERTICAL_LEAD_PROFILE_FIELD_KEYS.truckingOriginRegions,
+        label: 'Origin region',
+        placeholder: 'Select origin region',
+        options: this.truckingOriginRegionOptions
+      },
+      {
+        key: VERTICAL_LEAD_PROFILE_FIELD_KEYS.truckingDestinationRegions,
+        label: 'Destination region',
+        placeholder: 'Select destination region',
+        options: this.truckingDestinationRegionOptions
+      },
+      {
+        key: VERTICAL_LEAD_PROFILE_FIELD_KEYS.truckingShipmentFrequencyBands,
+        label: 'Shipment frequency',
+        placeholder: 'Select shipment frequency',
+        options: this.truckingShipmentFrequencyOptions
+      },
+      {
+        key: VERTICAL_LEAD_PROFILE_FIELD_KEYS.truckingAnnualFreightSpendBands,
+        label: 'Annual freight spend',
+        placeholder: 'Select annual freight spend',
+        options: this.truckingAnnualFreightSpendOptions
+      },
+      {
+        key: VERTICAL_LEAD_PROFILE_FIELD_KEYS.truckingServiceSensitivityLevels,
+        label: 'Service sensitivity',
+        placeholder: 'Select service sensitivity',
+        options: this.truckingServiceSensitivityOptions
+      },
+      {
+        key: VERTICAL_LEAD_PROFILE_FIELD_KEYS.truckingPricingSensitivityLevels,
+        label: 'Pricing sensitivity',
+        placeholder: 'Select pricing sensitivity',
+        options: this.truckingPricingSensitivityOptions
+      }
+    ];
+  }
+
+  protected freightProfileSummaryChips(): string[] {
+    const chips = [
+      this.freightProfileChip(VERTICAL_LEAD_PROFILE_FIELD_KEYS.truckingShipperTypes, 'Shipper'),
+      this.freightProfileChip(VERTICAL_LEAD_PROFILE_FIELD_KEYS.truckingFreightModes, 'Mode'),
+      this.freightProfileChip(VERTICAL_LEAD_PROFILE_FIELD_KEYS.truckingEquipmentTypes, 'Equipment'),
+      this.freightProfileChip(VERTICAL_LEAD_PROFILE_FIELD_KEYS.truckingOriginRegions, 'Origin'),
+      this.freightProfileChip(VERTICAL_LEAD_PROFILE_FIELD_KEYS.truckingDestinationRegions, 'Destination'),
+      this.freightProfileChip(VERTICAL_LEAD_PROFILE_FIELD_KEYS.truckingAnnualFreightSpendBands, 'Spend')
+    ].filter((value): value is string => !!value);
+
+    return chips.slice(0, 6);
+  }
+
+  protected hasFreightProfileSummary(): boolean {
+    return this.freightProfileSummaryChips().length > 0;
+  }
+
+  protected truckingLaneFitSummary(): TruckingLaneFitSummary {
+    const freightMode = this.truckingFactorValue(VERTICAL_LEAD_PROFILE_FIELD_KEYS.truckingFreightModes);
+    const equipmentType = this.truckingFactorValue(VERTICAL_LEAD_PROFILE_FIELD_KEYS.truckingEquipmentTypes);
+    const originRegion = this.truckingFactorValue(VERTICAL_LEAD_PROFILE_FIELD_KEYS.truckingOriginRegions);
+    const destinationRegion = this.truckingFactorValue(VERTICAL_LEAD_PROFILE_FIELD_KEYS.truckingDestinationRegions);
+    const commodity = this.truckingFactorValue(VERTICAL_LEAD_PROFILE_FIELD_KEYS.truckingCommodities);
+    const shipperType = this.truckingFactorValue(VERTICAL_LEAD_PROFILE_FIELD_KEYS.truckingShipperTypes);
+    const frequency = this.truckingFactorValue(VERTICAL_LEAD_PROFILE_FIELD_KEYS.truckingShipmentFrequencyBands);
+    const spend = this.truckingFactorValue(VERTICAL_LEAD_PROFILE_FIELD_KEYS.truckingAnnualFreightSpendBands);
+
+    const blockers = [
+      !freightMode ? 'Confirm freight mode' : null,
+      !equipmentType ? 'Confirm equipment type' : null,
+      !originRegion ? 'Capture origin region' : null,
+      !destinationRegion ? 'Capture destination region' : null,
+      !frequency ? 'Confirm shipment frequency' : null,
+      !spend ? 'Confirm annual freight spend' : null
+    ].filter((item): item is string => !!item);
+
+    const score = Math.min(100,
+      (freightMode ? 10 : 0)
+      + (equipmentType ? 10 : 0)
+      + (originRegion ? 10 : 0)
+      + (destinationRegion ? 10 : 0)
+      + (commodity ? 10 : 0)
+      + (shipperType ? 10 : 0)
+      + this.truckingFrequencyScore(frequency)
+      + this.truckingSpendScore(spend));
+
+    if (score >= 75 && blockers.length === 0) {
+      return {
+        score,
+        label: 'Strong lane fit',
+        tone: 'strong',
+        guidance: 'Prioritize a rate request or lane review. The freight profile has enough signal for a focused trucking qualification conversation.',
+        blockers
+      };
+    }
+
+    if (score >= 50) {
+      return {
+        score,
+        label: 'Developing lane fit',
+        tone: 'developing',
+        guidance: 'Complete the missing freight details before moving to quote or tender discussions.',
+        blockers
+      };
+    }
+
+    return {
+      score,
+      label: 'Incomplete lane fit',
+      tone: 'incomplete',
+      guidance: 'Capture the core lane, equipment, volume, and spend signals before treating this as a qualified trucking opportunity.',
+      blockers
+    };
+  }
+
+  protected truckingLaneFitBlockers(): string[] {
+    return this.truckingLaneFitSummary().blockers.slice(0, 4);
   }
 
   protected qualificationGuidanceText(): string {
@@ -2960,18 +3185,32 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
 
   private applyVerticalPresetConfiguration(config: VerticalPresetConfiguration | null) {
     this.verticalPresetConfiguration.set(config);
-    const catalog = config?.brokerageLeadProfileCatalog;
-    this.buyerTypeOptions.set(this.mapCatalogOptions(catalog?.buyerTypes));
-    this.motivationUrgencyOptions.set(this.mapCatalogOptions(catalog?.motivationUrgencies));
-    this.financingReadinessOptions.set(this.mapCatalogOptions(catalog?.financingReadinessOptions));
-    this.preApprovalStatusOptions.set(this.mapCatalogOptions(catalog?.preApprovalStatuses));
-    this.preferredAreaOptions.set(this.mapCatalogOptions(catalog?.preferredAreas));
-    this.propertyTypeOptions.set(this.mapCatalogOptions(catalog?.propertyTypes));
-    this.budgetBandOptions.set(this.mapCatalogOptions(catalog?.budgetBands));
+    const catalog = this.resolveLeadProfileCatalog(config);
+    this.buyerTypeOptions.set(this.mapCatalogOptions(catalog, VERTICAL_LEAD_PROFILE_FIELD_KEYS.brokerageBuyerTypes));
+    this.motivationUrgencyOptions.set(this.mapCatalogOptions(catalog, VERTICAL_LEAD_PROFILE_FIELD_KEYS.brokerageMotivationUrgencies));
+    this.financingReadinessOptions.set(this.mapCatalogOptions(catalog, VERTICAL_LEAD_PROFILE_FIELD_KEYS.brokerageFinancingReadinessOptions));
+    this.preApprovalStatusOptions.set(this.mapCatalogOptions(catalog, VERTICAL_LEAD_PROFILE_FIELD_KEYS.brokeragePreApprovalStatuses));
+    this.preferredAreaOptions.set(this.mapCatalogOptions(catalog, VERTICAL_LEAD_PROFILE_FIELD_KEYS.brokeragePreferredAreas));
+    this.propertyTypeOptions.set(this.mapCatalogOptions(catalog, VERTICAL_LEAD_PROFILE_FIELD_KEYS.brokeragePropertyTypes));
+    this.budgetBandOptions.set(this.mapCatalogOptions(catalog, VERTICAL_LEAD_PROFILE_FIELD_KEYS.brokerageBudgetBands));
+    this.truckingShipperTypeOptions.set(this.mapCatalogOptions(catalog, VERTICAL_LEAD_PROFILE_FIELD_KEYS.truckingShipperTypes));
+    this.truckingFreightModeOptions.set(this.mapCatalogOptions(catalog, VERTICAL_LEAD_PROFILE_FIELD_KEYS.truckingFreightModes));
+    this.truckingEquipmentTypeOptions.set(this.mapCatalogOptions(catalog, VERTICAL_LEAD_PROFILE_FIELD_KEYS.truckingEquipmentTypes));
+    this.truckingCommodityOptions.set(this.mapCatalogOptions(catalog, VERTICAL_LEAD_PROFILE_FIELD_KEYS.truckingCommodities));
+    this.truckingOriginRegionOptions.set(this.mapCatalogOptions(catalog, VERTICAL_LEAD_PROFILE_FIELD_KEYS.truckingOriginRegions));
+    this.truckingDestinationRegionOptions.set(this.mapCatalogOptions(catalog, VERTICAL_LEAD_PROFILE_FIELD_KEYS.truckingDestinationRegions));
+    this.truckingShipmentFrequencyOptions.set(this.mapCatalogOptions(catalog, VERTICAL_LEAD_PROFILE_FIELD_KEYS.truckingShipmentFrequencyBands));
+    this.truckingAnnualFreightSpendOptions.set(this.mapCatalogOptions(catalog, VERTICAL_LEAD_PROFILE_FIELD_KEYS.truckingAnnualFreightSpendBands));
+    this.truckingServiceSensitivityOptions.set(this.mapCatalogOptions(catalog, VERTICAL_LEAD_PROFILE_FIELD_KEYS.truckingServiceSensitivityLevels));
+    this.truckingPricingSensitivityOptions.set(this.mapCatalogOptions(catalog, VERTICAL_LEAD_PROFILE_FIELD_KEYS.truckingPricingSensitivityLevels));
     if (LeadFormPage.normalizePresetId(config?.presetId) === LeadFormPage.normalizePresetId('RealEstateBrokerage')) {
       this.overviewAccordionOpenPanels.update((items) => items.includes('buyer-profile') ? items : [...items, 'buyer-profile']);
     }
+    if (LeadFormPage.normalizePresetId(config?.presetId) === LeadFormPage.normalizePresetId('TruckingCarrierBroker')) {
+      this.overviewAccordionOpenPanels.update((items) => items.includes('freight-profile') ? items : [...items, 'freight-profile']);
+    }
     this.ensureBrokerageSelectionsRemainVisible();
+    this.ensureTruckingSelectionsRemainVisible();
   }
 
   private loadTenantContext() {
@@ -2984,6 +3223,9 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
           if (LeadFormPage.normalizePresetId(context.industryPreset ?? context.verticalPresetConfiguration?.presetId) === LeadFormPage.normalizePresetId('RealEstateBrokerage')) {
             this.overviewAccordionOpenPanels.update((items) => items.includes('buyer-profile') ? items : [...items, 'buyer-profile']);
           }
+          if (LeadFormPage.normalizePresetId(context.industryPreset ?? context.verticalPresetConfiguration?.presetId) === LeadFormPage.normalizePresetId('TruckingCarrierBroker')) {
+            this.overviewAccordionOpenPanels.update((items) => items.includes('freight-profile') ? items : [...items, 'freight-profile']);
+          }
         },
         error: () => {
           this.tenantIndustryPreset.set(null);
@@ -2992,8 +3234,28 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
       });
   }
 
-  private mapCatalogOptions(values: readonly string[] | null | undefined): Array<{ label: string; value: string }> {
-    return (values ?? [])
+  private resolveLeadProfileCatalog(config: VerticalPresetConfiguration | null): VerticalLeadProfileCatalog {
+    const leadProfileCatalog = config?.leadProfileCatalog;
+    if (leadProfileCatalog?.fields && Object.keys(leadProfileCatalog.fields).length > 0) {
+      return leadProfileCatalog;
+    }
+
+    const legacyCatalog = config?.brokerageLeadProfileCatalog;
+    return {
+      fields: {
+        [VERTICAL_LEAD_PROFILE_FIELD_KEYS.brokerageBuyerTypes]: legacyCatalog?.buyerTypes ?? [],
+        [VERTICAL_LEAD_PROFILE_FIELD_KEYS.brokerageMotivationUrgencies]: legacyCatalog?.motivationUrgencies ?? [],
+        [VERTICAL_LEAD_PROFILE_FIELD_KEYS.brokerageFinancingReadinessOptions]: legacyCatalog?.financingReadinessOptions ?? [],
+        [VERTICAL_LEAD_PROFILE_FIELD_KEYS.brokeragePreApprovalStatuses]: legacyCatalog?.preApprovalStatuses ?? [],
+        [VERTICAL_LEAD_PROFILE_FIELD_KEYS.brokeragePreferredAreas]: legacyCatalog?.preferredAreas ?? [],
+        [VERTICAL_LEAD_PROFILE_FIELD_KEYS.brokeragePropertyTypes]: legacyCatalog?.propertyTypes ?? [],
+        [VERTICAL_LEAD_PROFILE_FIELD_KEYS.brokerageBudgetBands]: legacyCatalog?.budgetBands ?? []
+      }
+    };
+  }
+
+  private mapCatalogOptions(catalog: VerticalLeadProfileCatalog | null | undefined, fieldKey: string): Array<{ label: string; value: string }> {
+    return (catalog?.fields?.[fieldKey] ?? [])
       .map((value) => (value ?? '').trim())
       .filter((value, index, all) => value.length > 0 && all.findIndex((candidate) => candidate.toLowerCase() === value.toLowerCase()) === index)
       .map((value) => ({ label: value, value }));
@@ -3014,6 +3276,12 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     this.ensureOptionIncludesSelection(this.preferredAreaOptions, this.form.preferredArea);
     this.ensureOptionIncludesSelection(this.propertyTypeOptions, this.form.preferredPropertyType);
     this.ensureOptionIncludesSelection(this.budgetBandOptions, this.form.budgetBand);
+  }
+
+  private ensureTruckingSelectionsRemainVisible() {
+    for (const field of this.truckingLeadProfileFields()) {
+      this.ensureOptionIncludesSelection(field.options, this.customFactorValue(field.key));
+    }
   }
 
   private ensureOptionIncludesSelection(
@@ -4105,6 +4373,23 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   }
 
   protected qualificationFactorCategoryLabel(key: string): string {
+    if (this.isTruckingPreset()) {
+      switch (key) {
+        case 'budget':
+          return 'Freight spend';
+        case 'readiness':
+          return 'Shipping intent';
+        case 'timeline':
+          return 'Tender timing';
+        case 'problem':
+          return 'Logistics pain';
+        case 'economicBuyer':
+          return 'Decision access';
+        case 'icpFit':
+          return 'Shipper alignment';
+      }
+    }
+
     switch (key) {
       case 'budget':
         return 'Financial signal';
@@ -4124,6 +4409,23 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   }
 
   protected qualificationFactorPlaceholder(key: string): string {
+    if (this.isTruckingPreset()) {
+      switch (key) {
+        case 'budget':
+          return 'Unknown / freight spend not discussed';
+        case 'readiness':
+          return 'Unknown / shipping need unclear';
+        case 'timeline':
+          return 'Unknown / tender timing not discussed';
+        case 'problem':
+          return 'Unknown / lane pain not validated';
+        case 'economicBuyer':
+          return 'Unknown / decision maker not identified';
+        case 'icpFit':
+          return 'Unknown / shipper fit not assessed';
+      }
+    }
+
     switch (key) {
       case 'budget':
         return 'Unknown / not yet discussed';
@@ -4190,7 +4492,7 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     if (!evidence || evidence === 'No evidence yet') {
       return this.requiresEvidenceBeforeQualified() ? 'Evidence required' : 'No evidence added';
     }
-    return evidence;
+    return this.displayEvidenceLabel(evidence);
   }
 
   protected evidenceSummaryTone(key: string): 'missing' | 'captured' | 'optional' {
@@ -4338,6 +4640,7 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
 
   protected scoreBreakdownRows(): ScoreBreakdownRow[] {
     const key = [
+      this.isTruckingPreset() ? 'trucking' : 'standard',
       this.scoreBreakdown().map((item) => `${item.factor}:${item.score}:${item.maxScore}`).join('|'),
       this.form.budgetAvailability ?? '',
       this.form.budgetEvidence ?? '',
@@ -4361,61 +4664,61 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     const value: ScoreBreakdownRow[] = [
       {
         cqvs: 'Q',
-        factor: 'Budget',
+        factor: this.qualificationFactorLabel('budget', 'Budget'),
         weight: 25,
-        selectedValue: this.form.budgetAvailability ?? 'Unknown / not yet discussed',
+        selectedValue: this.displayOptionLabel(this.form.budgetAvailability, this.budgetOptions, 'Unknown / not yet discussed'),
         confidence: this.getConfidenceForValue(this.form.budgetAvailability, this.budgetOptions),
-        evidence: this.form.budgetEvidence ?? 'No evidence yet',
+        evidence: this.displayEvidenceLabel(this.form.budgetEvidence ?? 'No evidence yet'),
         score: scoreByFactor.get('Budget')?.score ?? 0,
         maxScore: scoreByFactor.get('Budget')?.maxScore ?? 25
       },
       {
         cqvs: 'Q',
-        factor: 'Readiness',
+        factor: this.qualificationFactorLabel('readiness', 'Readiness'),
         weight: 20,
-        selectedValue: this.form.readinessToSpend ?? 'Unknown / unclear',
+        selectedValue: this.displayOptionLabel(this.form.readinessToSpend, this.readinessOptions, 'Unknown / unclear'),
         confidence: this.getConfidenceForValue(this.form.readinessToSpend, this.readinessOptions),
-        evidence: this.form.readinessEvidence ?? 'No evidence yet',
+        evidence: this.displayEvidenceLabel(this.form.readinessEvidence ?? 'No evidence yet'),
         score: scoreByFactor.get('Readiness')?.score ?? 0,
         maxScore: scoreByFactor.get('Readiness')?.maxScore ?? 20
       },
       {
         cqvs: 'Q',
-        factor: 'Timeline',
+        factor: this.qualificationFactorLabel('timeline', 'Timeline'),
         weight: 15,
-        selectedValue: this.form.buyingTimeline ?? 'Unknown / not discussed',
+        selectedValue: this.displayOptionLabel(this.form.buyingTimeline, this.timelineOptions, 'Unknown / not discussed'),
         confidence: this.getConfidenceForValue(this.form.buyingTimeline, this.timelineOptions),
-        evidence: this.form.timelineEvidence ?? 'No evidence yet',
+        evidence: this.displayEvidenceLabel(this.form.timelineEvidence ?? 'No evidence yet'),
         score: scoreByFactor.get('Timeline')?.score ?? 0,
         maxScore: scoreByFactor.get('Timeline')?.maxScore ?? 15
       },
       {
         cqvs: 'V',
-        factor: 'Problem',
+        factor: this.qualificationFactorLabel('problem', 'Problem'),
         weight: 20,
-        selectedValue: this.form.problemSeverity ?? 'Unknown / not validated',
+        selectedValue: this.displayOptionLabel(this.form.problemSeverity, this.problemOptions, 'Unknown / not validated'),
         confidence: this.getConfidenceForValue(this.form.problemSeverity, this.problemOptions),
-        evidence: this.form.problemEvidence ?? 'No evidence yet',
+        evidence: this.displayEvidenceLabel(this.form.problemEvidence ?? 'No evidence yet'),
         score: scoreByFactor.get('Problem')?.score ?? 0,
         maxScore: scoreByFactor.get('Problem')?.maxScore ?? 20
       },
       {
         cqvs: 'S',
-        factor: 'Economic Buyer',
+        factor: this.qualificationFactorLabel('economicBuyer', 'Economic Buyer'),
         weight: 10,
-        selectedValue: this.form.economicBuyer ?? 'Unknown / not identified',
-        confidence: this.getConfidenceForValue(this.form.economicBuyer, this.economicBuyerOptions),
-        evidence: this.form.economicBuyerEvidence ?? 'No evidence yet',
+        selectedValue: this.displayOptionLabel(this.form.economicBuyer, this.optionsForFactor('economicBuyer'), 'Unknown / not identified'),
+        confidence: this.getConfidenceForValue(this.form.economicBuyer, this.optionsForFactor('economicBuyer')),
+        evidence: this.displayEvidenceLabel(this.form.economicBuyerEvidence ?? 'No evidence yet'),
         score: scoreByFactor.get('Economic Buyer')?.score ?? 0,
         maxScore: scoreByFactor.get('Economic Buyer')?.maxScore ?? 10
       },
       {
         cqvs: 'C',
-        factor: 'ICP Fit',
+        factor: this.qualificationFactorLabel('icpFit', 'ICP Fit'),
         weight: 10,
-        selectedValue: this.form.icpFit ?? 'Unknown / not assessed',
+        selectedValue: this.displayOptionLabel(this.form.icpFit, this.icpFitOptions, 'Unknown / not assessed'),
         confidence: this.getConfidenceForValue(this.form.icpFit, this.icpFitOptions),
-        evidence: this.form.icpFitEvidence ?? 'No evidence yet',
+        evidence: this.displayEvidenceLabel(this.form.icpFitEvidence ?? 'No evidence yet'),
         score: scoreByFactor.get('ICP Fit')?.score ?? 0,
         maxScore: scoreByFactor.get('ICP Fit')?.maxScore ?? 10
       }
@@ -4427,22 +4730,23 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
 
   protected cqvsGroupRows(): CqvsGroupRow[] {
     const factorRows = this.scoreBreakdownRows();
-    const key = factorRows.map((row) => `${row.factor}:${row.score}:${row.maxScore}`).join('|');
+    const key = [
+      this.isTruckingPreset() ? 'trucking' : 'standard',
+      factorRows.map((row) => `${row.factor}:${row.score}:${row.maxScore}`).join('|')
+    ].join('::');
     if (this.cqvsGroupRowsCache?.key === key) {
       return this.cqvsGroupRowsCache.value;
     }
 
-    const byFactor = new Map(factorRows.map((row) => [row.factor, row] as const));
     const value = CQVS_GROUP_DEFINITIONS.map((group) => {
-      const groupRows = group.factors
-        .map((factor) => byFactor.get(factor))
-        .filter((row): row is ScoreBreakdownRow => !!row);
+      const groupRows = factorRows.filter((row) => row.cqvs === group.code);
       const score = groupRows.reduce((sum, row) => sum + row.score, 0);
       const maxScore = groupRows.reduce((sum, row) => sum + row.maxScore, 0);
+      const labels = this.cqvsGroupCopy(group.code);
       return {
         code: group.code,
-        title: group.title,
-        description: group.description,
+        title: labels.title ?? group.title,
+        description: labels.description ?? group.description,
         weight: group.weight,
         score,
         maxScore
@@ -4451,6 +4755,23 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
 
     this.cqvsGroupRowsCache = { key, value };
     return value;
+  }
+
+  private cqvsGroupCopy(code: 'C' | 'Q' | 'V' | 'S'): Partial<Pick<CqvsGroupRow, 'title' | 'description'>> {
+    if (!this.isTruckingPreset()) {
+      return {};
+    }
+
+    switch (code) {
+      case 'C':
+        return { title: 'Shipper Fit', description: 'Lane, account, and network alignment.' };
+      case 'Q':
+        return { title: 'Freight Readiness', description: 'Spend, shipping intent, and tender timing.' };
+      case 'V':
+        return { title: 'Logistics Pain', description: 'Operational urgency and service impact.' };
+      case 'S':
+        return { title: 'Decision Access', description: 'Freight decision-maker engagement.' };
+    }
   }
 
   protected cqvsGroupPercent(group: CqvsGroupRow): number {
@@ -4462,6 +4783,19 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     const groups = this.cqvsGroupRows();
     const dataPoints = groups.map((g) => this.cqvsGroupPercent(g));
     const compactLabels = groups.map((g) => {
+      if (this.isTruckingPreset()) {
+        switch (g.code) {
+          case 'C':
+            return 'C - Shipper';
+          case 'Q':
+            return 'Q - Freight';
+          case 'V':
+            return 'V - Pain';
+          case 'S':
+            return 'S - Decision';
+        }
+      }
+
       switch (g.code) {
         case 'C':
           return 'C - Fit';
@@ -4726,7 +5060,10 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   }
 
   protected qualificationFactorLabel(key: string, fallback: string): string {
-    return this.allQualificationFactors().find((factor) => factor.key === key)?.displayLabel ?? fallback;
+    return this.displayLabelForQualificationFactor(
+      key,
+      this.allQualificationFactors().find((factor) => factor.key === key)?.displayLabel ?? fallback
+    );
   }
 
   protected minimumRequiredQualificationFactors(): number {
@@ -4802,7 +5139,34 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
       }));
 
     return [...mergedDefaults, ...custom]
+      .map((factor) => ({
+        ...factor,
+        displayLabel: this.displayLabelForQualificationFactor(factor.key, factor.displayLabel)
+      }))
       .sort((a, b) => a.order - b.order || a.displayLabel.localeCompare(b.displayLabel));
+  }
+
+  private displayLabelForQualificationFactor(key: string, fallback: string): string {
+    if (!this.isTruckingPreset()) {
+      return fallback;
+    }
+
+    switch (key) {
+      case 'budget':
+        return 'Freight spend availability';
+      case 'readiness':
+        return 'Shipping readiness';
+      case 'timeline':
+        return 'Tender timeline';
+      case 'problem':
+        return 'Logistics pain severity';
+      case 'economicBuyer':
+        return 'Shipping decision maker';
+      case 'icpFit':
+        return 'Shipper fit';
+      default:
+        return fallback;
+    }
   }
 
   private formValueForFactor(key: string): string | null {
@@ -4880,7 +5244,7 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
       case 'problem':
         return this.problemOptions;
       case 'economicBuyer':
-        return this.economicBuyerOptions;
+        return this.isTruckingPreset() ? this.truckingDecisionMakerOptions : this.economicBuyerOptions;
       case 'icpFit':
         return this.icpFitOptions;
       default:
@@ -4969,11 +5333,33 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
       .filter((value) => value.length > 0);
 
     if (!allowed.length) {
-      return this.evidenceOptions;
+      return this.displayEvidenceOptionsForPreset(this.evidenceOptions);
     }
 
     const filtered = this.evidenceOptions.filter((option) => allowed.includes(option.value.toLowerCase()));
-    return filtered.length ? filtered : this.evidenceOptions;
+    return this.displayEvidenceOptionsForPreset(filtered.length ? filtered : this.evidenceOptions);
+  }
+
+  private displayEvidenceOptionsForPreset(options: OptionItem[]): OptionItem[] {
+    if (!this.isTruckingPreset()) {
+      return options;
+    }
+
+    return options.map((option) => ({
+      ...option,
+      label: this.displayEvidenceLabel(option.label)
+    }));
+  }
+
+  private displayEvidenceLabel(label: string): string {
+    switch (label.toLowerCase()) {
+      case 'email from buyer':
+        return 'Email from freight decision maker';
+      case 'buyer email':
+        return 'Decision-maker email';
+      default:
+        return label;
+    }
   }
 
   protected customFactorValue(key: string): string | null {
@@ -5010,6 +5396,56 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     return factor.key;
   }
 
+  protected trackTruckingLeadProfileField(_index: number, field: TruckingLeadProfileFieldDefinition): string {
+    return field.key;
+  }
+
+  private freightProfileChip(key: string, label: string): string | null {
+    const value = this.customFactorValue(key)?.trim();
+    return value ? `${label}: ${value}` : null;
+  }
+
+  private truckingFactorValue(key: string): string | null {
+    return this.customFactorValue(key)?.trim() || null;
+  }
+
+  private truckingFrequencyScore(value: string | null): number {
+    const normalized = (value ?? '').toLowerCase();
+    if (normalized.includes('dedicated') || normalized.includes('daily')) {
+      return 20;
+    }
+    if (normalized.includes('several')) {
+      return 16;
+    }
+    if (normalized.includes('weekly')) {
+      return 10;
+    }
+    if (normalized.includes('ad hoc') || normalized.includes('spot')) {
+      return 4;
+    }
+    return value ? 8 : 0;
+  }
+
+  private truckingSpendScore(value: string | null): number {
+    const normalized = (value ?? '').toLowerCase();
+    if (normalized.startsWith('$15m')) {
+      return 20;
+    }
+    if (normalized.startsWith('$5m')) {
+      return 16;
+    }
+    if (normalized.startsWith('$1m')) {
+      return 12;
+    }
+    if (normalized.startsWith('$250k')) {
+      return 8;
+    }
+    if (normalized.startsWith('under')) {
+      return 4;
+    }
+    return value ? 8 : 0;
+  }
+
   protected isCustomTextFactor(factor: QualificationFactorDefinition): boolean {
     return factor.valueType === 'text';
   }
@@ -5025,6 +5461,23 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   }
 
   private qualificationFactorHelperText(key: string): string {
+    if (this.isTruckingPreset()) {
+      switch (key) {
+        case 'budget':
+          return 'Confirm annual freight spend, available lane budget, and margin expectations.';
+        case 'readiness':
+          return 'Capture whether the shipper has active lanes, spot needs, or an onboarding trigger.';
+        case 'timeline':
+          return 'Document quote deadline, tender timing, or expected first-load window.';
+        case 'problem':
+          return 'Measure how urgent the service, capacity, claims, or cost problem is.';
+        case 'economicBuyer':
+          return 'Confirm who controls freight awards and whether that decision maker is engaged.';
+        case 'icpFit':
+          return 'Assess lane, equipment, commodity, region, and service fit for the network.';
+      }
+    }
+
     switch (key) {
       case 'budget':
         return 'Confirm spending capacity and whether budget is explicitly documented.';
@@ -5428,29 +5881,54 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   private buildNextEvidenceSuggestions(label: string | null): string[] {
     switch (label) {
       case 'Budget availability':
+      case 'Freight spend availability':
         return [
-          'Capture budget range and approval owner.',
-          'Ask for confirmation of funding source and timeline.'
+          this.isTruckingPreset()
+            ? 'Capture expected lane spend and margin expectations.'
+            : 'Capture budget range and approval owner.',
+          this.isTruckingPreset()
+            ? 'Ask for confirmation of freight budget ownership and quote timing.'
+            : 'Ask for confirmation of funding source and timeline.'
         ];
       case 'Readiness to spend':
+      case 'Shipping readiness':
         return [
-          'Confirm internal priority vs competing initiatives.',
-          'Ask for target decision date and blockers.'
+          this.isTruckingPreset()
+            ? 'Confirm active lanes, spot needs, or onboarding trigger.'
+            : 'Confirm internal priority vs competing initiatives.',
+          this.isTruckingPreset()
+            ? 'Ask for first-load target and operational blockers.'
+            : 'Ask for target decision date and blockers.'
         ];
       case 'Buying timeline':
+      case 'Tender timeline':
         return [
-          'Document target go-live date and procurement steps.',
-          'Confirm key milestones and dependencies.'
+          this.isTruckingPreset()
+            ? 'Document quote deadline, tender date, or bid cycle.'
+            : 'Document target go-live date and procurement steps.',
+          this.isTruckingPreset()
+            ? 'Confirm lane award milestones and routing-guide dependencies.'
+            : 'Confirm key milestones and dependencies.'
         ];
       case 'Problem severity':
+      case 'Logistics pain severity':
         return [
-          'Capture quantified impact (time/cost/risk).',
-          'Ask for a recent example or incident.'
+          this.isTruckingPreset()
+            ? 'Capture quantified impact from service failures, claims, cost, or capacity gaps.'
+            : 'Capture quantified impact (time/cost/risk).',
+          this.isTruckingPreset()
+            ? 'Ask for a recent late pickup, missed delivery, or exception example.'
+            : 'Ask for a recent example or incident.'
         ];
       case 'Economic buyer':
+      case 'Shipping decision maker':
         return [
-          'Identify budget owner and approval chain.',
-          'Confirm who signs and who influences.'
+          this.isTruckingPreset()
+            ? 'Identify freight award owner and approval chain.'
+            : 'Identify budget owner and approval chain.',
+          this.isTruckingPreset()
+            ? 'Confirm who awards lanes and who influences carrier selection.'
+            : 'Confirm who signs and who influences.'
         ];
       case 'ICP fit':
         return [
@@ -5539,6 +6017,15 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   private getConfidenceForValue(value: string | null | undefined, options: OptionItem[]): string {
     const tone = this.resolveTone(value, options);
     return this.toneLabel(tone);
+  }
+
+  private displayOptionLabel(value: string | null | undefined, options: OptionItem[], fallback: string): string {
+    const normalized = (value ?? '').trim();
+    if (!normalized) {
+      return fallback;
+    }
+
+    return options.find((option) => option.value === normalized)?.label ?? normalized;
   }
 
   private getWeakestFactor(factors: Array<{ label: string; state: string; weight: number }>) {

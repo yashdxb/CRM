@@ -16,7 +16,10 @@ export interface TenantContext {
       pipelineLabel: string;
       qualificationGuidance: string;
     };
-    brokerageLeadProfileCatalog: {
+    leadProfileCatalog: {
+      fields: Record<string, string[]>;
+    };
+    brokerageLeadProfileCatalog?: {
       buyerTypes: string[];
       motivationUrgencies: string[];
       financingReadinessOptions: string[];

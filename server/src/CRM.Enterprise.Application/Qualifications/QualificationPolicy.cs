@@ -430,7 +430,9 @@ public static class QualificationPolicyDefaults
         }
 
         var chars = key.Trim()
-            .Select(ch => char.IsLetterOrDigit(ch) ? char.ToLowerInvariant(ch) : '_')
+            .Select(ch => char.IsLetterOrDigit(ch) || ch is '.' or '_'
+                ? char.ToLowerInvariant(ch)
+                : '_')
             .ToArray();
         var normalized = new string(chars);
         while (normalized.Contains("__", StringComparison.Ordinal))

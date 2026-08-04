@@ -63,14 +63,8 @@ let mockWorkspaceSettings: WorkspaceSettings = {
       pipelineLabel: 'Deal pipeline',
       qualificationGuidance: 'Validate fit, timeline, economic buyer, and urgency before progressing this lead.'
     },
-    brokerageLeadProfileCatalog: {
-      buyerTypes: [],
-      motivationUrgencies: [],
-      financingReadinessOptions: [],
-      preApprovalStatuses: [],
-      preferredAreas: [],
-      propertyTypes: [],
-      budgetBands: []
+    leadProfileCatalog: {
+      fields: {}
     },
     dashboardPackDefaults: ['Revenue Intelligence'],
     reportLibraryHighlights: ['Pipeline by Stage', 'Open Opportunities by Owner', 'Lead Conversion Summary'],
@@ -973,7 +967,19 @@ export function buildDashboardSummary(
       { key: 'base', label: 'Base forecast', value: pipelineValueTotal * 0.68, dealCount: openOpportunities, deltaFromBase: 0 },
       { key: 'conservative', label: 'Conservative', value: pipelineValueTotal * 0.52, dealCount: Math.floor(openOpportunities * 0.8), deltaFromBase: pipelineValueTotal * -0.16 },
       { key: 'commit', label: 'Commit only', value: pipelineValueTotal * 0.3, dealCount: Math.floor(openOpportunities * 0.35), deltaFromBase: pipelineValueTotal * -0.38 }
-    ]
+    ],
+    truckingDashboard: {
+      isEnabled: false,
+      strongFitLeads: 0,
+      developingFitLeads: 0,
+      incompleteFitLeads: 0,
+      missingFreightProfileLeads: 0,
+      highFitOpenLeads: 0,
+      staleFreightLeads: 0,
+      highFitLeads: [],
+      missingProfileLeads: [],
+      staleLeads: []
+    }
   };
 }
 

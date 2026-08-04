@@ -13,7 +13,7 @@ import { Subject, switchMap } from 'rxjs';
 import { debounceTime, filter } from 'rxjs/operators';
 
 import { DashboardDataService } from '../services/dashboard-data.service';
-import { AssistantInsights, AssistantInsightsAction, DashboardSummary, ManagerPipelineHealth, ManagerReviewDeal, RiskIntelligenceItem, SalesTeamPerformance } from '../models/dashboard.model';
+import { AssistantInsights, AssistantInsightsAction, DashboardSummary, ManagerPipelineHealth, ManagerReviewDeal, RiskIntelligenceItem, SalesTeamPerformance, TruckingDashboardLead } from '../models/dashboard.model';
 import { Customer } from '../../customers/models/customer.model';
 import { Activity } from '../../activities/models/activity.model';
 import { OpportunityDataService } from '../../opportunities/services/opportunity-data.service';
@@ -171,7 +171,19 @@ export class DashboardPage implements OnInit {
     myPipelineValueTotal: 0,
     myConfidenceWeightedPipelineValue: 0,
     myQuotaTarget: null,
-    forecastScenarios: []
+    forecastScenarios: [],
+    truckingDashboard: {
+      isEnabled: false,
+      strongFitLeads: 0,
+      developingFitLeads: 0,
+      incompleteFitLeads: 0,
+      missingFreightProfileLeads: 0,
+      highFitOpenLeads: 0,
+      staleFreightLeads: 0,
+      highFitLeads: [],
+      missingProfileLeads: [],
+      staleLeads: []
+    }
   };
   private readonly summarySignal = signal<DashboardSummary>(this.emptySummary);
   private readonly emptyManagerHealth: ManagerPipelineHealth = {
@@ -661,6 +673,17 @@ export class DashboardPage implements OnInit {
   protected readonly topPerformers = computed(() => this.summary()?.topPerformers ?? []);
   protected readonly newlyAssignedLeads = computed(() => this.summary()?.newlyAssignedLeads?.slice(0, 6) ?? []);
   protected readonly atRiskDeals = computed(() => this.summary()?.atRiskDeals?.slice(0, 6) ?? []);
+  protected readonly truckingDashboard = computed(() => this.summary()?.truckingDashboard ?? this.emptySummary.truckingDashboard);
+  protected readonly truckingPriorityLeads = computed(() => {
+    const trucking = this.truckingDashboard();
+    if (trucking.highFitLeads.length > 0) {
+      return trucking.highFitLeads;
+    }
+    if (trucking.staleLeads.length > 0) {
+      return trucking.staleLeads;
+    }
+    return trucking.missingProfileLeads;
+  });
   protected readonly myQuotaTarget = computed(() => this.summary()?.myQuotaTarget ?? null);
   protected readonly myQuotaProgress = computed(() => {
     const quota = this.myQuotaTarget();
@@ -942,7 +965,17 @@ export class DashboardPage implements OnInit {
 
   protected layoutOrder: string[] = [];
   protected get renderedLayoutOrder(): string[] {
-    return this.layoutOrder.filter((id) => !this.uiSuppressedCardIds.has(id));
+    const visible = this.layoutOrder.filter((id) =>
+      !this.uiSuppressedCardIds.has(id)
+      && (id !== 'trucking-intelligence' || this.truckingDashboard().isEnabled));
+    if (!this.truckingDashboard().isEnabled || visible.includes('trucking-intelligence')) {
+      return visible;
+    }
+
+    const riskIndex = visible.indexOf('risk-register');
+    const next = [...visible];
+    next.splice(riskIndex >= 0 ? riskIndex + 1 : next.length, 0, 'trucking-intelligence');
+    return next;
   }
   protected layoutDialogOpen = false;
   protected layoutDraft: Array<{ id: string; label: string; icon: string }> = [];
@@ -962,6 +995,7 @@ export class DashboardPage implements OnInit {
     pipeline: 'lg',
     'truth-metrics': 'md',
     'risk-register': 'md',
+    'trucking-intelligence': 'md',
     'execution-guide': 'sm',
     'confidence-forecast': 'sm',
     'forecast-scenarios': 'sm',
@@ -2483,6 +2517,64 @@ export class DashboardPage implements OnInit {
     filter: 'all' | 'overdue' | 'today' | 'decisions' | 'new-leads' | 'at-risk' | 'no-next-step'
   ): void {
     this.priorityFilter.set(this.priorityFilter() === filter ? 'all' : filter);
+  }
+
+  protected truckingFitTone(lead: TruckingDashboardLead): 'strong' | 'developing' | 'incomplete' {
+    if (lead.laneFitScore >= 75 && lead.missingFields.length === 0) {
+      return 'strong';
+    }
+    return lead.laneFitScore >= 50 ? 'developing' : 'incomplete';
+  }
+
+  protected openTruckingLead(lead: TruckingDashboardLead): void {
+    this.router.navigate(['/app/leads', lead.id, 'edit']);
+  }
+
+  protected logTruckingFirstTouch(lead: TruckingDashboardLead, event?: Event): void {
+    event?.stopPropagation();
+    const nextStepDue = this.defaultNextBusinessActionDueIso(1);
+    this.router.navigate(['/app/activities/new'], {
+      queryParams: {
+        relatedType: 'Lead',
+        relatedId: lead.id,
+        type: 'Call',
+        subject: `First touch: ${lead.name}`,
+        description: `Call ${lead.company || lead.name} to validate shipping need, lane urgency, and next decision step.`,
+        outcome: 'Initial trucking outreach started from dashboard lane-fit queue.',
+        nextStepSubject: `Complete freight profile: ${lead.name}`,
+        nextStepDueDateUtc: nextStepDue,
+        leadFirstTouchDueAtUtc: lead.firstTouchDueAtUtc ?? undefined
+      }
+    });
+  }
+
+  protected createTruckingRateRequest(lead: TruckingDashboardLead, event?: Event): void {
+    event?.stopPropagation();
+    this.router.navigate(['/app/activities/new'], {
+      queryParams: {
+        relatedType: 'Lead',
+        relatedId: lead.id,
+        type: 'Task',
+        subject: `Rate request: ${lead.name}`,
+        description: `Prepare rate request from trucking lane-fit dashboard. Confirm origin, destination, equipment, commodity, frequency, spend, accessorials, and target pickup window before quoting.`,
+        outcome: 'Rate request task created from trucking dashboard lane-fit signal.',
+        nextStepSubject: `Review rate response: ${lead.name}`,
+        nextStepDueDateUtc: this.defaultNextBusinessActionDueIso(2),
+        leadFirstTouchDueAtUtc: lead.firstTouchDueAtUtc ?? undefined
+      }
+    });
+  }
+
+  protected completeTruckingFreightProfile(lead: TruckingDashboardLead, event?: Event): void {
+    event?.stopPropagation();
+    this.openTruckingLead(lead);
+  }
+
+  private defaultNextBusinessActionDueIso(daysFromNow: number): string {
+    const due = new Date();
+    due.setDate(due.getDate() + daysFromNow);
+    due.setHours(17, 0, 0, 0);
+    return due.toISOString();
   }
 
   protected onPriorityComplete(item: PriorityStreamItem): void {

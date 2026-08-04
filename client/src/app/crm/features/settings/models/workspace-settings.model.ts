@@ -60,7 +60,8 @@ export interface ApplyVerticalPresetRequest {
 export interface VerticalPresetConfiguration {
   presetId: string;
   vocabulary: VerticalVocabulary;
-  brokerageLeadProfileCatalog: BrokerageLeadProfileCatalog;
+  leadProfileCatalog: VerticalLeadProfileCatalog;
+  brokerageLeadProfileCatalog?: BrokerageLeadProfileCatalog | null;
   dashboardPackDefaults: string[];
   reportLibraryHighlights: string[];
   workflowTemplateHighlights: string[];
@@ -72,6 +73,10 @@ export interface VerticalVocabulary {
   opportunityPluralLabel: string;
   pipelineLabel: string;
   qualificationGuidance: string;
+}
+
+export interface VerticalLeadProfileCatalog {
+  fields: Record<string, string[]>;
 }
 
 export interface BrokerageLeadProfileCatalog {

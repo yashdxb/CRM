@@ -63,17 +63,34 @@ export class NavigationService {
       return false;
     };
 
+    const hasAllowedPreset = (link: NavLink) => {
+      const excluded = link.excludedIndustryPresets ?? [];
+      if (!excluded.length) return true;
+
+      const currentPreset = this.normalizePresetId(
+        this.tenantContext()?.industryPreset
+          ?? this.tenantContext()?.verticalPresetConfiguration?.presetId
+          ?? null
+      );
+
+      return !excluded
+        .map((preset) => this.normalizePresetId(preset))
+        .includes(currentPreset);
+    };
+
     const filterChildren = (
       items?: NavLink[],
       inheritedPermission = true,
-      inheritedFeatureFlag = true
+      inheritedFeatureFlag = true,
+      inheritedPresetAllowed = true
     ) =>
       items?.reduce<NavLink[]>((acc, item) => {
         const permissionAllowed = inheritedPermission && hasPermission(item);
         const featureAllowed = inheritedFeatureFlag && hasFeatureFlag(item);
-        const nestedChildren = filterChildren(item.children, permissionAllowed, featureAllowed);
+        const presetAllowed = inheritedPresetAllowed && hasAllowedPreset(item);
+        const nestedChildren = filterChildren(item.children, permissionAllowed, featureAllowed, presetAllowed);
         const hasAnyChildren = (nestedChildren.length ?? 0) > 0;
-        const allowed = permissionAllowed && featureAllowed;
+        const allowed = permissionAllowed && featureAllowed && presetAllowed;
         if (!allowed && !hasAnyChildren) return acc;
         acc.push({ ...item, children: nestedChildren });
         return acc;
@@ -82,8 +99,9 @@ export class NavigationService {
     return this.navLinks().reduce<NavLink[]>((acc, link) => {
       const permissionAllowed = hasPermission(link);
       const featureAllowed = hasFeatureFlag(link);
-      const children = filterChildren(link.children, permissionAllowed, featureAllowed);
-      if ((!permissionAllowed || !featureAllowed) && children.length === 0) return acc;
+      const presetAllowed = hasAllowedPreset(link);
+      const children = filterChildren(link.children, permissionAllowed, featureAllowed, presetAllowed);
+      if ((!permissionAllowed || !featureAllowed || !presetAllowed) && children.length === 0) return acc;
       acc.push({ ...link, children });
       return acc;
     }, []);
@@ -124,6 +142,10 @@ export class NavigationService {
       next: (context) => this.tenantContext.set(context),
       error: () => this.tenantContext.set(null)
     });
+  }
+
+  private normalizePresetId(value: string | null | undefined): string {
+    return (value ?? '').trim().toLowerCase();
   }
 
   private loadCollapsedState(): boolean {

@@ -76,9 +76,10 @@ export const NAV_LINKS: NavLink[] = [
     path: '/app/properties',
     permission: PERMISSION_KEYS.propertiesView,
     featureFlag: 'properties',
+    excludedIndustryPresets: ['TruckingCarrierBroker'],
     children: [
-      { label: 'All Properties', icon: 'pi-list', path: '/app/properties', permission: PERMISSION_KEYS.propertiesView, featureFlag: 'properties' },
-      { label: 'Add Property', icon: 'pi-plus', path: '/app/properties/new', permission: PERMISSION_KEYS.propertiesManage, featureFlag: 'properties' }
+      { label: 'All Properties', icon: 'pi-list', path: '/app/properties', permission: PERMISSION_KEYS.propertiesView, featureFlag: 'properties', excludedIndustryPresets: ['TruckingCarrierBroker'] },
+      { label: 'Add Property', icon: 'pi-plus', path: '/app/properties/new', permission: PERMISSION_KEYS.propertiesManage, featureFlag: 'properties', excludedIndustryPresets: ['TruckingCarrierBroker'] }
     ]
   },
   { 

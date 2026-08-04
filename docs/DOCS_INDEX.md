@@ -95,6 +95,7 @@ Important:
 | `docs/REDIS_READ_MODEL_CACHING_RUNBOOK.md` | Operational Guide | No | Active | Engineering | Redis placement, cached endpoints, keys, TTLs, and fail-open behavior for CRM read models |
 | `docs/TELERIK_EMBEDDED_REPORTING_RUNBOOK.md` | Operational Guide | No | Active | Engineering | Embedded Telerik report library/workspace architecture, runtime patching, and Azure notes |
 | `docs/TENANT_BRANDING_ROLLOUT_RUNBOOK.md` | Operational Guide | No | Active | Engineering | Tenant branding (logo) rollout: API endpoints, Blob Storage, frontend integration, deployment steps |
+| `docs/SALESFORCE_CDC_INTEGRATION_RUNBOOK.md` | Operational Guide | No | Active | Engineering | Salesforce client-credentials auth, REST verification, CDC CometD subscription, and integration notes |
 | `docs/SCM_BACKLOG.md` | Roadmap / Backlog Planning | No | Active | Product | SCM backlog planning |
 | `docs/CLICKUP_TENANT_BRANDING_SYNC.md` | Sync / Audit Snapshot | No | Active | Engineering/Product | ClickUp sync snapshot for tenant branding epic and stories |
 | `docs/CLICKUP_AI_ASSISTANT_ACTION_EXECUTION_SYNC.md` | Sync / Audit Snapshot | No | Active | Engineering/Product | ClickUp sync snapshot for AI action execution |

@@ -452,6 +452,13 @@ public class WorkspaceController : ControllerBase
         {
             defaults["properties"] = true;
         }
+        if (string.Equals(tenant.IndustryPreset, VerticalPresetIds.TruckingCarrierBroker, StringComparison.OrdinalIgnoreCase))
+        {
+            defaults["logistics.console"] = true;
+            defaults["logistics.quotes"] = true;
+            defaults["logistics.lanes"] = true;
+            defaults["logistics.exceptions"] = true;
+        }
 
         defaults["mailbox.enabled"] = false;
         defaults["helpdesk.enabled"] = false;

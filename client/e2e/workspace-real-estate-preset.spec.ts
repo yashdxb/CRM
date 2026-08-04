@@ -50,20 +50,29 @@ test('real estate preset updates workspace preview and lead form catalogs', asyn
     });
     expect(presetResponse.ok()).toBeTruthy();
 
+    const updatedSettingsResponse = await request.get(`${API_BASE_URL}/api/workspace`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'X-Tenant-Key': 'default'
+      }
+    });
+    const updatedSettings = await updatedSettingsResponse.json();
+    expect(updatedSettings.verticalPresetConfiguration?.leadProfileCatalog?.fields?.['brokerage.buyerTypes']?.length ?? 0).toBeGreaterThan(0);
+    expect(updatedSettings.verticalPresetConfiguration?.leadProfileCatalog?.fields?.['brokerage.propertyTypes']?.length ?? 0).toBeGreaterThan(0);
+
     await page.goto('/app/settings/workspace');
     await page.waitForLoadState('networkidle');
-    await expect(page.getByRole('combobox', { name: 'Real Estate Brokerage' })).toBeVisible();
-    await expect(page.locator('.field-preview').getByText('Buyer readiness')).toBeVisible();
-    await expect(page.locator('.token-list').getByText('Offer Pipeline Summary', { exact: true })).toBeVisible();
-    await expect(page.locator('.token-list').getByText('Showing Follow-up Automation', { exact: true })).toBeVisible();
+    await expect(page.getByText('Modules and industry preset are managed in Tenant Configuration')).toBeVisible();
+    await expect(page.getByText('RealEstateBrokerage', { exact: true })).toBeVisible();
+    await expect(page.getByText('Operational settings below respect this module scope.')).toBeVisible();
 
     await page.goto('/app/leads/new');
     await page.waitForLoadState('networkidle');
-    await expect(page.getByRole('combobox', { name: 'Select buyer type' })).toBeVisible();
-    await expect(page.getByRole('combobox', { name: 'Select financing readiness' })).toBeVisible();
-    await expect(page.getByRole('combobox', { name: 'Select pre-approval status' })).toBeVisible();
-    await expect(page.getByRole('combobox', { name: 'Select property type' })).toBeVisible();
-    await expect(page.getByRole('combobox', { name: 'Select budget band' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Buyer Profile' })).toBeVisible();
+    await expect(page.getByLabel('Buyer type')).toBeVisible();
+    await expect(page.getByLabel('Preferred area')).toBeVisible();
+    await expect(page.getByLabel('Property type')).toBeVisible();
+    await expect(page.getByLabel('Budget band')).toBeVisible();
   } finally {
     await request.put(`${API_BASE_URL}/api/workspace`, {
       headers: {

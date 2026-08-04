@@ -358,6 +358,14 @@
                   Conversation: {{ conversationScoreLabel(lead) }}
                 </span>
               </div>
+              <div class="lead-freight-profile" *ngIf="hasFreightProfile(lead)">
+                <span class="lead-freight-profile__chip lead-freight-profile__chip--fit" [attr.data-tone]="freightFitTone(lead)">
+                  {{ freightFitLabel(lead) }} / {{ freightFitScoreLabel(lead) }}
+                </span>
+                <span class="lead-freight-profile__chip" *ngFor="let chip of freightProfileHighlights(lead)">
+                  {{ chip }}
+                </span>
+              </div>
             </div>
             <div class="lead-related" *ngIf="hasConvertedLinks(lead)" (click)="$event.stopPropagation()">
               <span class="lead-related-label">Converted to</span>
@@ -491,6 +499,14 @@
                             tooltipPosition="top"
                           >
                             Readiness: {{ lead.conversionReadiness?.label || 'Not assessed' }}
+                          </span>
+                        </div>
+                        <div class="lead-freight-profile" *ngIf="hasFreightProfile(lead)">
+                          <span class="lead-freight-profile__chip lead-freight-profile__chip--fit" [attr.data-tone]="freightFitTone(lead)">
+                            {{ freightFitLabel(lead) }} / {{ freightFitScoreLabel(lead) }}
+                          </span>
+                          <span class="lead-freight-profile__chip" *ngFor="let chip of freightProfileHighlights(lead)">
+                            {{ chip }}
                           </span>
                         </div>
                         <div class="lead-sla" *ngIf="lead.firstTouchDueAtUtc || lead.firstTouchedAtUtc">

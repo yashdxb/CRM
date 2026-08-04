@@ -676,6 +676,104 @@
           </div>
         </ng-container>
 
+        <ng-container *ngSwitchCase="'trucking-intelligence'">
+          <div class="card-header">
+            <div class="trucking-intelligence-title">
+              <h3 class="card-title">
+                <i class="pi pi-truck"></i>
+                Trucking Intelligence
+              </h3>
+              <span class="trucking-intelligence-subtitle">Lane fit, missing freight profile fields, and stale shipper follow-up.</span>
+            </div>
+            <div class="card-actions">
+              <span class="card-badge">{{ truckingDashboard().highFitOpenLeads }} high-fit open</span>
+              <ng-container *ngTemplateOutlet="cardControls; context: { $implicit: cardId }"></ng-container>
+            </div>
+          </div>
+          <div class="card-body trucking-intelligence-body">
+            <div class="trucking-fit-grid">
+              <div class="trucking-fit-stat trucking-fit-stat--strong">
+                <span class="trucking-fit-label">Strong</span>
+                <strong>{{ truckingDashboard().strongFitLeads }}</strong>
+                <span>Ready for quote/rate action</span>
+              </div>
+              <div class="trucking-fit-stat trucking-fit-stat--developing">
+                <span class="trucking-fit-label">Developing</span>
+                <strong>{{ truckingDashboard().developingFitLeads }}</strong>
+                <span>Needs profile completion</span>
+              </div>
+              <div class="trucking-fit-stat trucking-fit-stat--incomplete">
+                <span class="trucking-fit-label">Incomplete</span>
+                <strong>{{ truckingDashboard().incompleteFitLeads }}</strong>
+                <span>Missing core lane data</span>
+              </div>
+            </div>
+
+            <div class="trucking-alert-grid">
+              <div class="trucking-alert-card">
+                <span>Missing freight profile</span>
+                <strong>{{ truckingDashboard().missingFreightProfileLeads }}</strong>
+              </div>
+              <div class="trucking-alert-card trucking-alert-card--warning">
+                <span>Stale freight follow-up</span>
+                <strong>{{ truckingDashboard().staleFreightLeads }}</strong>
+              </div>
+            </div>
+
+            <div class="trucking-priority-list" *ngIf="truckingPriorityLeads().length; else emptyTruckingIntelligence">
+              <div class="trucking-priority-header">
+                <span>Priority shippers</span>
+                <small>Click a row to complete profile or start follow-up.</small>
+              </div>
+              <button
+                type="button"
+                class="trucking-priority-row"
+                *ngFor="let lead of truckingPriorityLeads()"
+                (click)="openTruckingLead(lead)"
+              >
+                <span class="trucking-priority-main">
+                  <strong>{{ lead.name }}</strong>
+                  <small>{{ lead.company || 'No company captured' }}</small>
+                </span>
+                <span class="trucking-priority-meta">
+                  <span class="trucking-priority-fit" [ngClass]="truckingFitTone(lead)">
+                    {{ lead.laneFitScore }}/100
+                  </span>
+                  <span class="trucking-priority-actions">
+                    <button
+                      type="button"
+                      class="trucking-action-btn"
+                      (click)="logTruckingFirstTouch(lead, $event)"
+                    >
+                      Log first touch
+                    </button>
+                    <button
+                      type="button"
+                      class="trucking-action-btn trucking-action-btn--primary"
+                      (click)="createTruckingRateRequest(lead, $event)"
+                    >
+                      Create rate request
+                    </button>
+                    <button
+                      type="button"
+                      class="trucking-action-btn"
+                      (click)="completeTruckingFreightProfile(lead, $event)"
+                    >
+                      Complete profile
+                    </button>
+                  </span>
+                </span>
+              </button>
+            </div>
+            <ng-template #emptyTruckingIntelligence>
+              <div class="empty-state compact">
+                <i class="pi pi-truck"></i>
+                <span>No trucking follow-up gaps in this dashboard range.</span>
+              </div>
+            </ng-template>
+          </div>
+        </ng-container>
+
         <ng-container *ngSwitchCase="'risk-register'">
           <div class="card-header">
             <div class="risk-intelligence-title-block">

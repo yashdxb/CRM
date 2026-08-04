@@ -3252,6 +3252,251 @@
   color: $text-muted;
 }
 
+.trucking-intelligence-title {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+  min-width: 0;
+}
+
+.trucking-intelligence-subtitle {
+  color: $text-muted;
+  font-size: $font-size-xs;
+  line-height: 1.4;
+}
+
+.trucking-intelligence-body {
+  display: flex;
+  flex-direction: column;
+  gap: $space-4;
+}
+
+.trucking-fit-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: $space-3;
+
+  @include respond-to('mobile') {
+    grid-template-columns: 1fr;
+  }
+}
+
+.trucking-fit-stat {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+  padding: $space-3;
+  border-radius: $radius-xl;
+  border: 1px solid rgba($primary, 0.12);
+  background: linear-gradient(135deg, rgba($primary, 0.08), rgba(255, 255, 255, 0.62));
+
+  strong {
+    color: $text-primary;
+    font-size: $font-size-2xl;
+    line-height: 1;
+  }
+
+  span:last-child {
+    color: $text-muted;
+    font-size: $font-size-xs;
+  }
+}
+
+.trucking-fit-stat--strong {
+  border-color: rgba($success, 0.24);
+  background: linear-gradient(135deg, rgba($success, 0.14), rgba(255, 255, 255, 0.68));
+}
+
+.trucking-fit-stat--developing {
+  border-color: rgba($warning, 0.26);
+  background: linear-gradient(135deg, rgba($warning, 0.16), rgba(255, 255, 255, 0.68));
+}
+
+.trucking-fit-stat--incomplete {
+  border-color: rgba($danger, 0.18);
+  background: linear-gradient(135deg, rgba($danger, 0.11), rgba(255, 255, 255, 0.68));
+}
+
+.trucking-fit-label {
+  color: $text-secondary;
+  font-size: $font-size-xs;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.trucking-alert-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $space-3;
+
+  @include respond-to('mobile') {
+    grid-template-columns: 1fr;
+  }
+}
+
+.trucking-alert-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-3;
+  padding: $space-3;
+  border-radius: $radius-lg;
+  background: rgba($cyan, 0.08);
+  border: 1px solid rgba($cyan, 0.16);
+
+  span {
+    color: $text-secondary;
+    font-size: $font-size-xs;
+    font-weight: 700;
+  }
+
+  strong {
+    color: $text-primary;
+    font-size: $font-size-xl;
+  }
+}
+
+.trucking-alert-card--warning {
+  background: rgba($warning, 0.1);
+  border-color: rgba($warning, 0.22);
+}
+
+.trucking-priority-list {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+}
+
+.trucking-priority-header {
+  display: flex;
+  justify-content: space-between;
+  gap: $space-3;
+  color: $text-secondary;
+  font-size: $font-size-sm;
+  font-weight: 800;
+
+  small {
+    color: $text-muted;
+    font-size: $font-size-xs;
+    font-weight: 500;
+    text-align: right;
+  }
+}
+
+.trucking-priority-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-3;
+  width: 100%;
+  padding: $space-3;
+  border: 1px solid rgba($primary, 0.12);
+  border-radius: $radius-lg;
+  background: rgba(255, 255, 255, 0.74);
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: transform $transition-fast, box-shadow $transition-fast, border-color $transition-fast;
+
+  &:hover {
+    border-color: rgba($primary, 0.28);
+    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.12);
+    transform: translateY(-1px);
+  }
+}
+
+.trucking-priority-main {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+  min-width: 0;
+
+  strong,
+  small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  strong {
+    color: $text-primary;
+    font-size: $font-size-sm;
+  }
+
+  small {
+    color: $text-muted;
+    font-size: $font-size-xs;
+  }
+}
+
+.trucking-priority-meta {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  flex: 0 0 auto;
+
+  @include respond-to('mobile') {
+    align-items: flex-end;
+    flex-direction: column;
+  }
+}
+
+.trucking-priority-fit {
+  flex: 0 0 auto;
+  padding: $space-1 $space-2;
+  border-radius: $radius-full;
+  font-size: $font-size-xs;
+  font-weight: 800;
+
+  &.strong {
+    color: #15803d;
+    background: rgba($success, 0.14);
+  }
+
+  &.developing {
+    color: #92400e;
+    background: rgba($warning, 0.18);
+  }
+
+  &.incomplete {
+    color: #b91c1c;
+    background: rgba($danger, 0.12);
+  }
+}
+
+.trucking-priority-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: $space-1;
+}
+
+.trucking-action-btn {
+  border: 1px solid rgba($primary, 0.16);
+  border-radius: $radius-full;
+  background: rgba(255, 255, 255, 0.76);
+  color: $text-secondary;
+  cursor: pointer;
+  font-size: 0.69rem;
+  font-weight: 800;
+  line-height: 1;
+  padding: 0.43rem 0.62rem;
+  transition: background $transition-fast, border-color $transition-fast, color $transition-fast;
+
+  &:hover {
+    background: rgba($primary, 0.08);
+    border-color: rgba($primary, 0.32);
+    color: $primary;
+  }
+}
+
+.trucking-action-btn--primary {
+  background: rgba($primary, 0.1);
+  color: $primary;
+}
+
 .risk-intelligence-body {
   padding-top: $space-1;
 }

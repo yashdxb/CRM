@@ -53,6 +53,7 @@ export interface DashboardSummary {
   myConfidenceWeightedPipelineValue: number;
   myQuotaTarget?: number | null;
   forecastScenarios: ForecastScenario[];
+  truckingDashboard: TruckingDashboard;
 }
 
 export interface ChartDataPoint {
@@ -139,6 +140,31 @@ export interface ForecastScenario {
   value: number;
   dealCount: number;
   deltaFromBase: number;
+}
+
+export interface TruckingDashboard {
+  isEnabled: boolean;
+  strongFitLeads: number;
+  developingFitLeads: number;
+  incompleteFitLeads: number;
+  missingFreightProfileLeads: number;
+  highFitOpenLeads: number;
+  staleFreightLeads: number;
+  highFitLeads: TruckingDashboardLead[];
+  missingProfileLeads: TruckingDashboardLead[];
+  staleLeads: TruckingDashboardLead[];
+}
+
+export interface TruckingDashboardLead {
+  id: string;
+  name: string;
+  company: string;
+  status: string;
+  laneFitScore: number;
+  laneFitLabel: string;
+  missingFields: string[];
+  createdAtUtc: string;
+  firstTouchDueAtUtc?: string;
 }
 
 export interface ManagerPipelineHealth {

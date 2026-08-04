@@ -60,6 +60,25 @@ public class DashboardReadService : IDashboardReadService
         string? IcpFit,
         string? IcpFitEvidence,
         DateTime? IcpFitValidatedAtUtc);
+    private sealed record TruckingLeadRow(
+        Guid Id,
+        string FirstName,
+        string LastName,
+        string? CompanyName,
+        string Status,
+        DateTime CreatedAtUtc,
+        DateTime? UpdatedAtUtc,
+        DateTime? FirstTouchDueAtUtc,
+        DateTime? FirstTouchedAtUtc,
+        string? CustomQualificationFactorsJson);
+    private sealed record TruckingLaneFitResult(int Score, string Label, IReadOnlyList<string> MissingFields);
+
+    private sealed class DashboardCustomFactor
+    {
+        public string? Key { get; init; }
+        public string? Value { get; init; }
+    }
+
     private sealed record DueActivityRow(
         Guid Id,
         ActivityType Type,
@@ -153,6 +172,7 @@ public class DashboardReadService : IDashboardReadService
         }
 
         var leads = await leadsQuery.CountAsync(cancellationToken);
+        var truckingDashboard = await BuildTruckingDashboardAsync(leadsQuery, now, cancellationToken);
 
         var opportunitiesQuery = _dbContext.Opportunities.AsNoTracking()
             .Where(o => !o.IsDeleted
@@ -1179,7 +1199,218 @@ public class DashboardReadService : IDashboardReadService
             Math.Round(myPipelineValueTotal, 2),
             Math.Round(myConfidenceWeightedPipelineValue, 2),
             myQuotaTarget,
-            forecastScenarios);
+            forecastScenarios,
+            truckingDashboard);
+    }
+
+    private async Task<TruckingDashboardDto> BuildTruckingDashboardAsync(
+        IQueryable<Lead> leadsQuery,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        var presetId = await _dbContext.Tenants
+            .AsNoTracking()
+            .Where(t => t.Id == _tenantProvider.TenantId)
+            .Select(t => t.IndustryPreset)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (!string.Equals(VerticalPresetIds.Normalize(presetId), VerticalPresetIds.TruckingCarrierBroker, StringComparison.Ordinal))
+        {
+            return EmptyTruckingDashboard(false);
+        }
+
+        var rows = await leadsQuery
+            .Select(l => new TruckingLeadRow(
+                l.Id,
+                l.FirstName,
+                l.LastName,
+                l.CompanyName,
+                l.Status != null ? l.Status.Name : "New",
+                l.CreatedAtUtc,
+                l.UpdatedAtUtc,
+                l.FirstTouchDueAtUtc,
+                l.FirstTouchedAtUtc,
+                l.CustomQualificationFactorsJson))
+            .ToListAsync(cancellationToken);
+
+        if (rows.Count == 0)
+        {
+            return EmptyTruckingDashboard(true);
+        }
+
+        var leadSummaries = rows
+            .Select(row =>
+            {
+                var laneFit = ComputeTruckingLaneFit(row.CustomQualificationFactorsJson);
+                var lead = new TruckingDashboardLeadDto(
+                    row.Id,
+                    BuildLeadDisplayName(row.FirstName, row.LastName),
+                    row.CompanyName ?? string.Empty,
+                    row.Status,
+                    laneFit.Score,
+                    laneFit.Label,
+                    laneFit.MissingFields,
+                    row.CreatedAtUtc,
+                    row.FirstTouchDueAtUtc);
+                return new
+                {
+                    Lead = lead,
+                    IsOpen = IsOpenLeadStatus(row.Status),
+                    LastTouchedAt = row.UpdatedAtUtc ?? row.CreatedAtUtc,
+                    row.FirstTouchDueAtUtc,
+                    row.FirstTouchedAtUtc
+                };
+            })
+            .ToList();
+
+        var strongFitLeads = leadSummaries.Count(item =>
+            item.Lead.LaneFitScore >= 75 && item.Lead.MissingFields.Count == 0);
+        var developingFitLeads = leadSummaries.Count(item =>
+            item.Lead.LaneFitScore >= 50 && item.Lead.LaneFitScore < 75);
+        var incompleteFitLeads = leadSummaries.Count(item =>
+            item.Lead.LaneFitScore < 50 || item.Lead.MissingFields.Count > 0 && item.Lead.LaneFitScore >= 75);
+        var missingFreightProfileLeads = leadSummaries.Count(item => item.Lead.MissingFields.Count > 0);
+        var highFitOpen = leadSummaries
+            .Where(item => item.IsOpen && item.Lead.LaneFitScore >= 50)
+            .ToList();
+        var staleFreight = highFitOpen
+            .Where(item =>
+                (!item.FirstTouchedAtUtc.HasValue && item.FirstTouchDueAtUtc.HasValue && item.FirstTouchDueAtUtc.Value < now)
+                || item.LastTouchedAt <= now.AddDays(-14))
+            .ToList();
+
+        return new TruckingDashboardDto(
+            true,
+            strongFitLeads,
+            developingFitLeads,
+            incompleteFitLeads,
+            missingFreightProfileLeads,
+            highFitOpen.Count,
+            staleFreight.Count,
+            highFitOpen
+                .OrderByDescending(item => item.Lead.LaneFitScore)
+                .ThenByDescending(item => item.Lead.CreatedAtUtc)
+                .Take(5)
+                .Select(item => item.Lead)
+                .ToList(),
+            leadSummaries
+                .Where(item => item.Lead.MissingFields.Count > 0)
+                .OrderByDescending(item => item.Lead.MissingFields.Count)
+                .ThenByDescending(item => item.Lead.CreatedAtUtc)
+                .Take(5)
+                .Select(item => item.Lead)
+                .ToList(),
+            staleFreight
+                .OrderByDescending(item => item.Lead.LaneFitScore)
+                .ThenBy(item => item.LastTouchedAt)
+                .Take(5)
+                .Select(item => item.Lead)
+                .ToList());
+    }
+
+    private static TruckingDashboardDto EmptyTruckingDashboard(bool isEnabled) =>
+        new(isEnabled, 0, 0, 0, 0, 0, 0, [], [], []);
+
+    private static TruckingLaneFitResult ComputeTruckingLaneFit(string? customFactorsJson)
+    {
+        var factors = ParseCustomFactors(customFactorsJson);
+        var freightMode = GetFactorValue(factors, VerticalLeadProfileFieldKeys.TruckingFreightModes);
+        var equipmentType = GetFactorValue(factors, VerticalLeadProfileFieldKeys.TruckingEquipmentTypes);
+        var originRegion = GetFactorValue(factors, VerticalLeadProfileFieldKeys.TruckingOriginRegions);
+        var destinationRegion = GetFactorValue(factors, VerticalLeadProfileFieldKeys.TruckingDestinationRegions);
+        var commodity = GetFactorValue(factors, VerticalLeadProfileFieldKeys.TruckingCommodities);
+        var shipperType = GetFactorValue(factors, VerticalLeadProfileFieldKeys.TruckingShipperTypes);
+        var frequency = GetFactorValue(factors, VerticalLeadProfileFieldKeys.TruckingShipmentFrequencyBands);
+        var spend = GetFactorValue(factors, VerticalLeadProfileFieldKeys.TruckingAnnualFreightSpendBands);
+
+        var missing = new List<string>();
+        if (string.IsNullOrWhiteSpace(freightMode)) missing.Add("Freight mode");
+        if (string.IsNullOrWhiteSpace(equipmentType)) missing.Add("Equipment type");
+        if (string.IsNullOrWhiteSpace(originRegion)) missing.Add("Origin region");
+        if (string.IsNullOrWhiteSpace(destinationRegion)) missing.Add("Destination region");
+        if (string.IsNullOrWhiteSpace(frequency)) missing.Add("Shipment frequency");
+        if (string.IsNullOrWhiteSpace(spend)) missing.Add("Annual freight spend");
+
+        var score = Math.Min(100,
+            (!string.IsNullOrWhiteSpace(freightMode) ? 10 : 0)
+            + (!string.IsNullOrWhiteSpace(equipmentType) ? 10 : 0)
+            + (!string.IsNullOrWhiteSpace(originRegion) ? 10 : 0)
+            + (!string.IsNullOrWhiteSpace(destinationRegion) ? 10 : 0)
+            + (!string.IsNullOrWhiteSpace(commodity) ? 10 : 0)
+            + (!string.IsNullOrWhiteSpace(shipperType) ? 10 : 0)
+            + ComputeTruckingFrequencyScore(frequency)
+            + ComputeTruckingSpendScore(spend));
+
+        var label = score >= 75 && missing.Count == 0
+            ? "Strong lane fit"
+            : score >= 50
+                ? "Developing lane fit"
+                : "Incomplete lane fit";
+
+        return new TruckingLaneFitResult(score, label, missing);
+    }
+
+    private static Dictionary<string, string> ParseCustomFactors(string? customFactorsJson)
+    {
+        if (string.IsNullOrWhiteSpace(customFactorsJson))
+        {
+            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<List<DashboardCustomFactor>>(customFactorsJson, JsonOptions)?
+                .Where(factor => !string.IsNullOrWhiteSpace(factor.Key) && !string.IsNullOrWhiteSpace(factor.Value))
+                .GroupBy(factor => factor.Key!, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group.Last().Value!.Trim(),
+                    StringComparer.OrdinalIgnoreCase)
+                ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        }
+        catch (JsonException)
+        {
+            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        }
+    }
+
+    private static string? GetFactorValue(IReadOnlyDictionary<string, string> factors, string key) =>
+        factors.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value) ? value.Trim() : null;
+
+    private static int ComputeTruckingFrequencyScore(string? value)
+    {
+        var normalized = (value ?? string.Empty).ToLowerInvariant();
+        if (normalized.Contains("dedicated", StringComparison.Ordinal) || normalized.Contains("daily", StringComparison.Ordinal)) return 20;
+        if (normalized.Contains("several", StringComparison.Ordinal)) return 16;
+        if (normalized.Contains("weekly", StringComparison.Ordinal)) return 10;
+        if (normalized.Contains("ad hoc", StringComparison.Ordinal) || normalized.Contains("spot", StringComparison.Ordinal)) return 4;
+        return string.IsNullOrWhiteSpace(value) ? 0 : 8;
+    }
+
+    private static int ComputeTruckingSpendScore(string? value)
+    {
+        var normalized = (value ?? string.Empty).ToLowerInvariant();
+        if (normalized.StartsWith("$15m", StringComparison.Ordinal)) return 20;
+        if (normalized.StartsWith("$5m", StringComparison.Ordinal)) return 16;
+        if (normalized.StartsWith("$1m", StringComparison.Ordinal)) return 12;
+        if (normalized.StartsWith("$250k", StringComparison.Ordinal)) return 8;
+        if (normalized.StartsWith("under", StringComparison.Ordinal)) return 4;
+        return string.IsNullOrWhiteSpace(value) ? 0 : 8;
+    }
+
+    private static bool IsOpenLeadStatus(string? status)
+    {
+        var normalized = (status ?? string.Empty).Trim();
+        return !normalized.Equals("Qualified", StringComparison.OrdinalIgnoreCase)
+               && !normalized.Equals("Converted", StringComparison.OrdinalIgnoreCase)
+               && !normalized.Equals("Lost", StringComparison.OrdinalIgnoreCase)
+               && !normalized.Equals("Disqualified", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string BuildLeadDisplayName(string? firstName, string? lastName)
+    {
+        var name = $"{firstName} {lastName}".Trim();
+        return string.IsNullOrWhiteSpace(name) ? "Unnamed lead" : name;
     }
 
     public async Task<ManagerPipelineHealthDto> GetManagerPipelineHealthAsync(Guid? userId, CancellationToken cancellationToken)

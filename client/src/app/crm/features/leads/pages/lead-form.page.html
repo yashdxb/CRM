@@ -442,6 +442,16 @@
         </div>
       </section>
 
+      <section class="related-summary related-summary--freight" *ngIf="isEditMode() && hasFreightProfileSummary()">
+        <div class="related-summary-label">Freight profile</div>
+        <div class="related-summary-links">
+          <span class="related-summary-link related-summary-link--readonly" *ngFor="let chip of freightProfileSummaryChips()">
+            <i class="pi pi-truck"></i>
+            {{ chip }}
+          </span>
+        </div>
+      </section>
+
       <main class="form-container">
         <form class="lead-form" (ngSubmit)="onSave()">
           <fieldset class="form-fieldset" [disabled]="isReadOnlyDueToEditing()">
@@ -826,6 +836,53 @@
               </p-accordion-content>
             </p-accordion-panel>
 
+            <p-accordion-panel value="freight-profile" *ngIf="isTruckingPreset()">
+              <p-accordion-header>
+                <h2 class="section-title section-title--accordion">
+                  <i class="pi pi-truck"></i>
+                  Freight Profile
+                </h2>
+              </p-accordion-header>
+              <p-accordion-content>
+                <section class="form-section form-section--accordion-body">
+                  <div class="form-grid">
+                    <div class="form-field" *ngFor="let field of truckingLeadProfileFields(); trackBy: trackTruckingLeadProfileField">
+                      <label [attr.for]="'lead-' + field.key">{{ field.label }}</label>
+                      <p-select
+                        [inputId]="'lead-' + field.key"
+                        [name]="'lead-' + field.key"
+                        [options]="field.options()"
+                        optionLabel="label"
+                        optionValue="value"
+                        [placeholder]="field.placeholder"
+                        appendTo="body"
+                        styleClass="w-full"
+                        [ngModel]="customFactorValue(field.key)"
+                        (ngModelChange)="setCustomFactorValue(field.key, $event); onQualificationFactorChange()"
+                      ></p-select>
+                    </div>
+                  </div>
+
+                  <section class="freight-fit-card" [attr.data-tone]="truckingLaneFitSummary().tone">
+                    <div class="freight-fit-card__score">
+                      <span>Lane fit</span>
+                      <strong>{{ truckingLaneFitSummary().score }}</strong>
+                      <small>/100</small>
+                    </div>
+                    <div class="freight-fit-card__body">
+                      <div class="freight-fit-card__headline">
+                        <strong>{{ truckingLaneFitSummary().label }}</strong>
+                        <span>{{ truckingLaneFitSummary().guidance }}</span>
+                      </div>
+                      <div class="freight-fit-card__blockers" *ngIf="truckingLaneFitBlockers().length">
+                        <span *ngFor="let blocker of truckingLaneFitBlockers()">{{ blocker }}</span>
+                      </div>
+                    </div>
+                  </section>
+                </section>
+              </p-accordion-content>
+            </p-accordion-panel>
+
             <p-accordion-panel value="score">
               <p-accordion-header>
                 <h2 class="section-title section-title--accordion section-title--accordion-summary">
@@ -911,11 +968,11 @@
           <section class="qualification-scoring-shell" *ngIf="isEditMode()" aria-label="Qualification scoring">
             <header class="qualification-scoring-shell__header">
               <div class="qual-shell-title">
-                <span class="qual-shell-title__icon"><i class="pi pi-sitemap" aria-hidden="true"></i></span>
+                  <span class="qual-shell-title__icon"><i class="pi pi-sitemap" aria-hidden="true"></i></span>
                 <div>
                   <span class="qual-shell-title__eyebrow">Qualification Scoring</span>
-                  <h2>Qualification Summary</h2>
-                  <p>Review readiness, close the blockers, and move the lead forward with defensible evidence.</p>
+                  <h2>{{ qualificationSectionTitle() }}</h2>
+                  <p>{{ qualificationSummaryDescription() }}</p>
                 </div>
               </div>
               <div class="qual-shell-actions">

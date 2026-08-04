@@ -49,7 +49,8 @@ public record DashboardSummaryDto(
     decimal MyPipelineValueTotal,
     decimal MyConfidenceWeightedPipelineValue,
     decimal? MyQuotaTarget,
-    IReadOnlyList<ForecastScenarioDto> ForecastScenarios);
+    IReadOnlyList<ForecastScenarioDto> ForecastScenarios,
+    TruckingDashboardDto TruckingDashboard);
 
 public record RecentAccountDto(
     Guid Id,
@@ -141,3 +142,26 @@ public record ForecastScenarioDto(
     decimal Value,
     int DealCount,
     decimal DeltaFromBase);
+
+public record TruckingDashboardDto(
+    bool IsEnabled,
+    int StrongFitLeads,
+    int DevelopingFitLeads,
+    int IncompleteFitLeads,
+    int MissingFreightProfileLeads,
+    int HighFitOpenLeads,
+    int StaleFreightLeads,
+    IReadOnlyList<TruckingDashboardLeadDto> HighFitLeads,
+    IReadOnlyList<TruckingDashboardLeadDto> MissingProfileLeads,
+    IReadOnlyList<TruckingDashboardLeadDto> StaleLeads);
+
+public record TruckingDashboardLeadDto(
+    Guid Id,
+    string Name,
+    string Company,
+    string Status,
+    int LaneFitScore,
+    string LaneFitLabel,
+    IReadOnlyList<string> MissingFields,
+    DateTime CreatedAtUtc,
+    DateTime? FirstTouchDueAtUtc);

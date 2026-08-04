@@ -102,7 +102,8 @@ export class TenantsPage {
   /* ── Vertical preset ── */
   protected readonly verticalPresetOptions: Option[] = [
     { label: 'Core CRM', value: 'CoreCRM' },
-    { label: 'Real Estate Brokerage', value: 'RealEstateBrokerage' }
+    { label: 'Real Estate Brokerage', value: 'RealEstateBrokerage' },
+    { label: 'Trucking Carrier / Broker', value: 'TruckingCarrierBroker' }
   ];
   protected readonly activeVerticalPresetConfiguration = signal<VerticalPresetConfiguration | null>(null);
   protected readonly presetApplying = signal(false);
@@ -118,11 +119,9 @@ export class TenantsPage {
   });
   protected readonly industryPackCards = computed(() => [
     {
-      title: this.flagsForm.getRawValue().industryPreset === 'RealEstateBrokerage' ? 'Real Estate Brokerage' : 'Core CRM',
-      description: this.flagsForm.getRawValue().industryPreset === 'RealEstateBrokerage'
-        ? 'Brokerage vocabulary, property workflows, and vertical-ready defaults.'
-        : 'Standard CRM language, record defaults, and sales workflows.',
-      tone: this.flagsForm.getRawValue().industryPreset === 'RealEstateBrokerage' ? 'supply' : 'core'
+      title: this.verticalPresetMeta(this.flagsForm.getRawValue().industryPreset).title,
+      description: this.verticalPresetMeta(this.flagsForm.getRawValue().industryPreset).description,
+      tone: this.verticalPresetMeta(this.flagsForm.getRawValue().industryPreset).tone
     },
     ...this.enabledTenantModules()
       .filter((module) => module !== 'Core CRM')
@@ -442,6 +441,7 @@ export class TenantsPage {
 
   private buildIndustryModules(values: ReturnType<typeof this.flagsForm.getRawValue>): string[] {
     const modules = ['core-crm'];
+    if (values.industryPreset === 'TruckingCarrierBroker') modules.push('logistics');
     if (values.featureProperties) modules.push('properties');
     if (values.featureMarketingCampaigns) modules.push('marketing');
     if (values.featureMyMailbox) modules.push('mailbox');
@@ -453,6 +453,8 @@ export class TenantsPage {
 
   private moduleDescription(module: string): string {
     switch (module) {
+      case 'logistics':
+        return 'Trucking-focused pipeline defaults, freight workflows, and operational signal flags.';
       case 'Properties':
         return 'Property listings, brokerage inventory, and real estate workspace access.';
       case 'Marketing Campaigns':
@@ -463,6 +465,29 @@ export class TenantsPage {
         return 'Cases, intake, and support operations for service teams.';
       default:
         return 'Enabled as part of the active tenant scope.';
+    }
+  }
+
+  private verticalPresetMeta(presetId: string | null | undefined): { title: string; description: string; tone: 'core' | 'supply' } {
+    switch (presetId) {
+      case 'RealEstateBrokerage':
+        return {
+          title: 'Real Estate Brokerage',
+          description: 'Brokerage vocabulary, property workflows, and vertical-ready defaults.',
+          tone: 'supply'
+        };
+      case 'TruckingCarrierBroker':
+        return {
+          title: 'Trucking Carrier / Broker',
+          description: 'Freight pipeline vocabulary, trucking stages, and quote-to-tender operating defaults.',
+          tone: 'supply'
+        };
+      default:
+        return {
+          title: 'Core CRM',
+          description: 'Standard CRM language, record defaults, and sales workflows.',
+          tone: 'core'
+        };
     }
   }
 

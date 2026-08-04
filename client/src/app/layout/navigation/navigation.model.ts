@@ -7,6 +7,7 @@ export interface NavLink {
   permission?: string;
   featureFlag?: string;
   module?: string;
+  excludedIndustryPresets?: string[];
   iconColor?: string;
   children?: NavLink[];
 }

@@ -192,10 +192,33 @@ public class DashboardController : ControllerBase
                 scenario.Label,
                 scenario.Value,
                 scenario.DealCount,
-                scenario.DeltaFromBase)).ToList());
+                scenario.DeltaFromBase)).ToList(),
+            new TruckingDashboardItem(
+                summary.TruckingDashboard.IsEnabled,
+                summary.TruckingDashboard.StrongFitLeads,
+                summary.TruckingDashboard.DevelopingFitLeads,
+                summary.TruckingDashboard.IncompleteFitLeads,
+                summary.TruckingDashboard.MissingFreightProfileLeads,
+                summary.TruckingDashboard.HighFitOpenLeads,
+                summary.TruckingDashboard.StaleFreightLeads,
+                summary.TruckingDashboard.HighFitLeads.Select(MapTruckingDashboardLead).ToList(),
+                summary.TruckingDashboard.MissingProfileLeads.Select(MapTruckingDashboardLead).ToList(),
+                summary.TruckingDashboard.StaleLeads.Select(MapTruckingDashboardLead).ToList()));
 
         return Ok(response);
     }
+
+    private static TruckingDashboardLeadItem MapTruckingDashboardLead(TruckingDashboardLeadDto lead) =>
+        new(
+            lead.Id,
+            lead.Name,
+            lead.Company,
+            lead.Status,
+            lead.LaneFitScore,
+            lead.LaneFitLabel,
+            lead.MissingFields,
+            lead.CreatedAtUtc,
+            lead.FirstTouchDueAtUtc);
 
     [HttpGet("manager/pipeline-health")]
     public async Task<ActionResult<ManagerPipelineHealthResponse>> GetManagerPipelineHealth(CancellationToken cancellationToken)

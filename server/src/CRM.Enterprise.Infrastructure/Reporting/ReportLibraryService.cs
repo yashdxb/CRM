@@ -519,7 +519,28 @@ public sealed class ReportLibraryService : IReportLibraryService
 
     private static IReadOnlyList<ReportTemplateDefinition> ResolveTemplatesForPreset(string? presetId)
     {
-        if (VerticalPresetIds.Normalize(presetId) != VerticalPresetIds.RealEstateBrokerage)
+        var normalizedPresetId = VerticalPresetIds.Normalize(presetId);
+        if (normalizedPresetId == VerticalPresetIds.TruckingCarrierBroker)
+        {
+            return Templates.Select(template => template.Name switch
+            {
+                "Pipeline by Stage" => template with { Description = "Freight opportunities grouped by lane stage, quoted value, and awarded potential." },
+                "Open Opportunities by Owner" => template with { Description = "Active shipper and lane opportunities by rep, dispatcher, or account owner." },
+                "Pending Deal Approval" => template with { Description = "Quotes and freight awards awaiting margin, credit, or service exception approval." },
+                "Lead Conversion Summary" => template with { Description = "Shipper qualification, quote, and tender conversion by source and account executive." },
+                "Sales Activities by Owner" => template with { Description = "Calls, rate requests, check calls, and recovery tasks by owner." },
+                "Forecast Summary" => template with { Description = "Expected freight revenue and weighted opportunity value by stage and close window." },
+                "Pipeline Stage Mix" => template with { Description = "Visual mix of freight opportunities by stage, mode, and value share." },
+                "Revenue and Conversion Trend" => template with { Description = "Monthly awarded revenue, quote activity, and conversion trend by shipper segment." },
+                "Lead Quality vs Conversation Signal" => template with { Description = "Shipper qualification strength versus live conversation momentum and operating signal." },
+                "CQVS Readiness Heatmap" => template with { Description = "Lane-fit and shipper-readiness heatmap showing weak qualification signals by account." },
+                "Manager Pipeline Health" => template with { Description = "Freight pipeline health with stale quotes, thin margins, and service exception exposure." },
+                "Forecast Distribution" => template with { Description = "Forecast mix across open freight opportunities and expected award windows." },
+                _ => template
+            }).ToList();
+        }
+
+        if (normalizedPresetId != VerticalPresetIds.RealEstateBrokerage)
         {
             return Templates;
         }

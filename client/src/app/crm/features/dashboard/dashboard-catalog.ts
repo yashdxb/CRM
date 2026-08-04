@@ -9,6 +9,7 @@ export const DASHBOARD_CARD_CATALOG: DashboardCatalogItem[] = [
   { id: 'pipeline', label: 'Pipeline by Stage', icon: 'pi pi-filter' },
   { id: 'truth-metrics', label: 'Truth Metrics', icon: 'pi pi-verified' },
   { id: 'risk-register', label: 'Risk Intelligence', icon: 'pi pi-shield' },
+  { id: 'trucking-intelligence', label: 'Trucking Intelligence', icon: 'pi pi-truck' },
   { id: 'execution-guide', label: 'Operating Priorities', icon: 'pi pi-compass' },
   { id: 'confidence-forecast', label: 'Confidence Forecast', icon: 'pi pi-chart-line' },
   { id: 'forecast-scenarios', label: 'Forecast Scenarios', icon: 'pi pi-sliders-h' },

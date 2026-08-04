@@ -92,7 +92,19 @@ export class DashboardDataService {
       myPipelineValueTotal: 0,
       myConfidenceWeightedPipelineValue: 0,
       myQuotaTarget: null,
-      forecastScenarios: []
+      forecastScenarios: [],
+      truckingDashboard: {
+        isEnabled: false,
+        strongFitLeads: 0,
+        developingFitLeads: 0,
+        incompleteFitLeads: 0,
+        missingFreightProfileLeads: 0,
+        highFitOpenLeads: 0,
+        staleFreightLeads: 0,
+        highFitLeads: [],
+        missingProfileLeads: [],
+        staleLeads: []
+      }
     };
 
     return this.http.get<DashboardSummary>(url, { params }).pipe(

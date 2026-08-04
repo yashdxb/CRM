@@ -747,6 +747,10 @@ export class ActivityFormPage implements OnInit {
     const relatedType = this.route.snapshot.queryParamMap.get('relatedType') as UpsertActivityRequest['relatedEntityType'];
     const relatedId = this.route.snapshot.queryParamMap.get('relatedId') ?? undefined;
     const subject = this.route.snapshot.queryParamMap.get('subject') ?? undefined;
+    const description = this.route.snapshot.queryParamMap.get('description') ?? undefined;
+    const outcome = this.route.snapshot.queryParamMap.get('outcome') ?? undefined;
+    const nextStepSubject = this.route.snapshot.queryParamMap.get('nextStepSubject') ?? undefined;
+    const nextStepDueDateUtc = this.route.snapshot.queryParamMap.get('nextStepDueDateUtc') ?? undefined;
     const type = this.route.snapshot.queryParamMap.get('type') as ActivityType | null;
     const leadFirstTouchDueAtUtc = this.route.snapshot.queryParamMap.get('leadFirstTouchDueAtUtc');
 
@@ -763,6 +767,23 @@ export class ActivityFormPage implements OnInit {
 
     if (subject && !this.form.subject) {
       this.form.subject = subject;
+    }
+
+    if (description && !this.form.description) {
+      this.form.description = description;
+    }
+
+    if (outcome && !this.form.outcome) {
+      this.form.outcome = outcome;
+    }
+
+    if (nextStepSubject && !this.form.nextStepSubject) {
+      this.form.nextStepSubject = nextStepSubject;
+    }
+
+    const parsedNextStepDueDate = this.parseOptionalDate(nextStepDueDateUtc ?? null);
+    if (parsedNextStepDueDate && !this.form.nextStepDueDateUtc) {
+      this.form.nextStepDueDateUtc = parsedNextStepDueDate;
     }
 
     if (type && this.typeOptions.some((option) => option.value === type)) {

@@ -2356,6 +2356,508 @@ public class DatabaseInitializer : IDatabaseInitializer
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
+    private async Task SeedPropertyPortfolioAsync(CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantProvider.TenantId;
+        if (tenantId == Guid.Empty)
+        {
+            return;
+        }
+
+        if (await _dbContext.Properties.AnyAsync(p => p.TenantId == tenantId && !p.IsDeleted, cancellationToken))
+        {
+            return;
+        }
+
+        var users = await _dbContext.Users
+            .IgnoreQueryFilters()
+            .Where(u =>
+                u.TenantId == tenantId &&
+                u.IsActive &&
+                !u.IsDeleted &&
+                new[]
+                {
+                    "jordan.patel@crmenterprise.demo",
+                    "ava.chen@crmenterprise.demo",
+                    "leo.martin@crmenterprise.demo",
+                    "yasser.ahamed@live.com"
+                }.Contains(u.Email))
+            .OrderBy(u => u.CreatedAtUtc)
+            .ToListAsync(cancellationToken);
+
+        if (users.Count == 0)
+        {
+            return;
+        }
+
+        var ownerPool = users
+            .OrderByDescending(u => string.Equals(u.Email, "jordan.patel@crmenterprise.demo", StringComparison.OrdinalIgnoreCase))
+            .ThenByDescending(u => string.Equals(u.Email, "ava.chen@crmenterprise.demo", StringComparison.OrdinalIgnoreCase))
+            .ThenBy(u => u.FullName)
+            .ToList();
+
+        var sellerSeeds = new[]
+        {
+            new SellerSeed("Hartwell Family Trust", "seller.hartwell@northedgedemo.ca", "416-555-0190", "Rosedale private seller represented by family office."),
+            new SellerSeed("Nora Patel", "nora.patel@northedgedemo.ca", "647-555-0141", "Owner relocating to Calgary after closing."),
+            new SellerSeed("Mason & Cole Holdings", "leasing@masoncole.ca", "416-555-0188", "Investor-owned urban residential portfolio."),
+            new SellerSeed("Grace Holloway", "grace.holloway@northedgedemo.ca", "905-555-0172", "Growing family upsizing within Oakville."),
+            new SellerSeed("Harbourfront Asset Group", "assetmanagers@harbourfrontag.ca", "416-555-0166", "Mid-rise mixed-use investor divesting a stabilized asset."),
+            new SellerSeed("Elm Ridge Developments", "sales@elmridge.dev", "905-555-0137", "Builder selling shovel-ready infill land parcel."),
+            new SellerSeed("Davenport Commercial GP", "brokerdesk@davenportcommercial.ca", "416-555-0118", "Owner repositioning a small flex-industrial property."),
+            new SellerSeed("Theo Alvarez", "theo.alvarez@northedgedemo.ca", "647-555-0155", "Condo seller coordinating closing with pre-construction purchase.")
+        };
+
+        var accounts = new List<Account>();
+        var contacts = new List<Contact>();
+        var now = DateTime.UtcNow;
+
+        for (var index = 0; index < sellerSeeds.Length; index++)
+        {
+            var seed = sellerSeeds[index];
+            var owner = ownerPool[index % ownerPool.Count];
+            var account = new Account
+            {
+                Name = seed.AccountName,
+                AccountNumber = $"PROP-{1001 + index}",
+                Industry = "Real Estate",
+                Website = $"https://{seed.AccountName.ToLowerInvariant().Replace(" & ", "-").Replace(" ", string.Empty).Replace(".", string.Empty)}.example.com",
+                Phone = seed.Phone,
+                OwnerId = owner.Id,
+                LifecycleStage = "Customer",
+                Territory = "Greater Toronto Area",
+                Description = seed.Description,
+                AccountType = "Customer",
+                Rating = "Healthy",
+                AccountSource = "Referral",
+                BillingCountry = "Canada",
+                ShippingCountry = "Canada",
+                TenantId = tenantId,
+                CreatedAtUtc = now.AddDays(-120 + (index * 6)),
+                CreatedBy = "system"
+            };
+
+            var fullNameParts = seed.PrimaryContactName.Split(' ', 2, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            var contact = new Contact
+            {
+                FirstName = fullNameParts[0],
+                LastName = fullNameParts.Length > 1 ? fullNameParts[1] : "Owner",
+                Email = seed.Email,
+                Phone = seed.Phone,
+                Mobile = seed.Phone,
+                JobTitle = "Property Owner",
+                BuyingRole = "Decision Maker",
+                Account = account,
+                OwnerId = owner.Id,
+                LifecycleStage = "Customer",
+                City = "Toronto",
+                State = "ON",
+                Country = "Canada",
+                TenantId = tenantId,
+                CreatedAtUtc = now.AddDays(-118 + (index * 6)),
+                CreatedBy = "system"
+            };
+
+            accounts.Add(account);
+            contacts.Add(contact);
+        }
+
+        _dbContext.Accounts.AddRange(accounts);
+        _dbContext.Contacts.AddRange(contacts);
+
+        var propertySeeds = new[]
+        {
+            new PropertySeed(
+                "NEA24157",
+                "14 Crescent Road",
+                "Toronto",
+                "ON",
+                "M4W 1T5",
+                "Canada",
+                4895000m,
+                null,
+                "CAD",
+                now.AddDays(-19),
+                null,
+                PropertyStatus.Active,
+                PropertyType.Detached,
+                5,
+                5,
+                4210m,
+                6120m,
+                1928,
+                2,
+                "A fully renovated center-hall Rosedale residence with limestone terrace, home gym, and a detached two-car coach house garage.",
+                "Chef's kitchen; primary dressing room; radiant heated floors; wine cellar; landscaped rear garden; EV charger",
+                "https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=1200&q=80,https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=80",
+                "https://example.com/virtual-tours/nea24157",
+                4.50m,
+                2.25m,
+                2.25m,
+                "South Rosedale",
+                0),
+            new PropertySeed(
+                "NEA24161",
+                "88 Sumach Street Unit 1708",
+                "Toronto",
+                "ON",
+                "M5A 0C3",
+                "Canada",
+                899000m,
+                null,
+                "CAD",
+                now.AddDays(-11),
+                null,
+                PropertyStatus.Conditional,
+                PropertyType.Condo,
+                2,
+                2,
+                912m,
+                null,
+                2019,
+                1,
+                "Corner Canary District condo with protected skyline views, oversized balcony, and upgraded built-ins throughout the den and living room.",
+                "Corner suite; split-bedroom layout; balcony gas line; locker; premium parking stall; gym and rooftop terrace access",
+                "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80,https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80",
+                "https://example.com/virtual-tours/nea24161",
+                5.00m,
+                2.50m,
+                2.50m,
+                "Canary District",
+                1),
+            new PropertySeed(
+                "NEA24166",
+                "32 East Liberty Street Unit 1110",
+                "Toronto",
+                "ON",
+                "M6K 3P8",
+                "Canada",
+                729000m,
+                710000m,
+                "CAD",
+                now.AddDays(-38),
+                now.AddDays(-6),
+                PropertyStatus.Sold,
+                PropertyType.Condo,
+                1,
+                1,
+                648m,
+                null,
+                2016,
+                1,
+                "Well-executed Liberty Village one-bedroom with full-width balcony, custom media wall, and strong rental comps for investors.",
+                "Balcony; custom storage wall; concierge; party room; pet wash station; visitor parking",
+                "https://images.unsplash.com/photo-1484154218962-a197022b5858?auto=format&fit=crop&w=1200&q=80,https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80",
+                null,
+                5.00m,
+                2.50m,
+                2.50m,
+                "Liberty Village",
+                2),
+            new PropertySeed(
+                "NEA24172",
+                "244 Reynolds Street",
+                "Oakville",
+                "ON",
+                "L6J 3L5",
+                "Canada",
+                1475000m,
+                null,
+                "CAD",
+                now.AddDays(-14),
+                null,
+                PropertyStatus.Active,
+                PropertyType.Townhouse,
+                3,
+                3,
+                2165m,
+                2420m,
+                2008,
+                2,
+                "Freehold Old Oakville townhouse within walking distance of the GO station, featuring a private rooftop terrace and main-floor office.",
+                "Rooftop terrace; freehold; main-floor office; double garage; hardwood on upper levels; gas fireplace",
+                "https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=1200&q=80,https://images.unsplash.com/photo-1448630360428-65456885c650?auto=format&fit=crop&w=1200&q=80",
+                "https://example.com/virtual-tours/nea24172",
+                4.00m,
+                2.00m,
+                2.00m,
+                "Old Oakville",
+                3),
+            new PropertySeed(
+                "NEA24184",
+                "550 King Street West",
+                "Toronto",
+                "ON",
+                "M5V 1M3",
+                "Canada",
+                5250000m,
+                null,
+                "CAD",
+                now.AddDays(-28),
+                null,
+                PropertyStatus.Active,
+                PropertyType.Commercial,
+                null,
+                4,
+                6840m,
+                7120m,
+                1912,
+                4,
+                "Stabilized King West mixed-use asset with six boutique loft residences above two fully leased retail bays and recent common-area upgrades.",
+                "Two retail units; six loft apartments; new roof membrane; upgraded HVAC; rear lane loading; 94 walk score",
+                "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80,https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80",
+                null,
+                4.00m,
+                2.00m,
+                2.00m,
+                "King West",
+                4),
+            new PropertySeed(
+                "NEA24193",
+                "1095 Heritage Line",
+                "Oakville",
+                "ON",
+                "L6M 4M2",
+                "Canada",
+                2199000m,
+                null,
+                "CAD",
+                now.AddDays(-7),
+                null,
+                PropertyStatus.Active,
+                PropertyType.Land,
+                null,
+                null,
+                null,
+                13482m,
+                null,
+                0,
+                "Shovel-ready residential infill parcel with servicing at lot line and planning support for a pair of luxury detached homes.",
+                "Serviced lot line; planning memo available; tree inventory completed; clean phase-one environmental; corner exposure",
+                "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80",
+                null,
+                4.00m,
+                2.00m,
+                2.00m,
+                "Glenorchy",
+                5),
+            new PropertySeed(
+                "NEA24201",
+                "1250 Matheson Boulevard East",
+                "Mississauga",
+                "ON",
+                "L4W 1R2",
+                "Canada",
+                6840000m,
+                null,
+                "CAD",
+                now.AddDays(-24),
+                null,
+                PropertyStatus.Active,
+                PropertyType.Commercial,
+                null,
+                2,
+                12350m,
+                27890m,
+                2001,
+                18,
+                "Flex-industrial asset with showroom frontage, 24-foot clear height in warehouse bays, and immediate Highway 401 access.",
+                "24-foot clear; truck-level shipping; 3,000 SF showroom; fenced shipping court; heavy power; ESFR sprinklers",
+                "https://images.unsplash.com/photo-1511818966892-d7d671e672a2?auto=format&fit=crop&w=1200&q=80,https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=80",
+                null,
+                3.50m,
+                1.75m,
+                1.75m,
+                "Airport Corporate",
+                6),
+            new PropertySeed(
+                "NEA24208",
+                "45 Baseball Place Unit 903",
+                "Toronto",
+                "ON",
+                "M4M 0E8",
+                "Canada",
+                845000m,
+                832000m,
+                "CAD",
+                now.AddDays(-31),
+                now.AddDays(-3),
+                PropertyStatus.Sold,
+                PropertyType.Condo,
+                2,
+                2,
+                801m,
+                null,
+                2021,
+                1,
+                "A bright Riverside two-bedroom sold after multiple offers, anchored by a wide terrace and efficient split-bedroom plan.",
+                "Terrace; integrated appliances; locker; dog wash; coworking lounge; streetcar at doorstep",
+                "https://images.unsplash.com/photo-1460317442991-0ec209397118?auto=format&fit=crop&w=1200&q=80,https://images.unsplash.com/photo-1448630360428-65456885c650?auto=format&fit=crop&w=1200&q=80",
+                null,
+                5.00m,
+                2.50m,
+                2.50m,
+                "Riverside",
+                7)
+        };
+
+        var properties = new List<Property>();
+        var showings = new List<PropertyShowing>();
+        var propertyActivities = new List<PropertyActivity>();
+        var priceChanges = new List<PropertyPriceChange>();
+        var propertyEvents = new List<PropertyEvent>();
+
+        for (var index = 0; index < propertySeeds.Length; index++)
+        {
+            var seed = propertySeeds[index];
+            var sellerAccount = accounts[seed.SellerIndex];
+            var sellerContact = contacts[seed.SellerIndex];
+            var owner = ownerPool[index % ownerPool.Count];
+            var property = new Property
+            {
+                MlsNumber = seed.MlsNumber,
+                Address = seed.Address,
+                City = seed.City,
+                Province = seed.Province,
+                PostalCode = seed.PostalCode,
+                Country = seed.Country,
+                ListPrice = seed.ListPrice,
+                SalePrice = seed.SalePrice,
+                Currency = seed.Currency,
+                ListingDateUtc = seed.ListingDateUtc,
+                SoldDateUtc = seed.SoldDateUtc,
+                Status = seed.Status,
+                PropertyType = seed.PropertyType,
+                Bedrooms = seed.Bedrooms,
+                Bathrooms = seed.Bathrooms,
+                SquareFeet = seed.SquareFeet,
+                LotSizeSqFt = seed.LotSizeSqFt,
+                YearBuilt = seed.YearBuilt,
+                GarageSpaces = seed.GarageSpaces,
+                Description = seed.Description,
+                Features = seed.Features,
+                PhotoUrls = seed.PhotoUrls,
+                VirtualTourUrl = seed.VirtualTourUrl,
+                CommissionRate = seed.CommissionRate,
+                BuyerAgentCommission = seed.BuyerAgentCommission,
+                SellerAgentCommission = seed.SellerAgentCommission,
+                OwnerId = owner.Id,
+                Account = sellerAccount,
+                PrimaryContact = sellerContact,
+                Neighborhood = seed.Neighborhood,
+                TenantId = tenantId,
+                CreatedAtUtc = seed.ListingDateUtc?.AddDays(-6) ?? now.AddDays(-45),
+                CreatedBy = "system"
+            };
+
+            properties.Add(property);
+
+            if (seed.ListPrice is decimal listPrice && seed.Status != PropertyStatus.Draft)
+            {
+                var originalAsk = Math.Round(listPrice * 1.035m, 0);
+                if (originalAsk != listPrice)
+                {
+                    priceChanges.Add(new PropertyPriceChange
+                    {
+                        Property = property,
+                        PreviousPrice = originalAsk,
+                        NewPrice = listPrice,
+                        ChangedAtUtc = (seed.ListingDateUtc ?? now).AddDays(6),
+                        ChangedBy = owner.FullName,
+                        Reason = "Adjusted to align with feedback from broker open and early buyer traffic.",
+                        TenantId = tenantId,
+                        CreatedAtUtc = (seed.ListingDateUtc ?? now).AddDays(6),
+                        CreatedBy = "system"
+                    });
+                }
+            }
+
+            if (seed.Status == PropertyStatus.Sold && seed.SalePrice is decimal soldPrice && seed.ListPrice is decimal finalList)
+            {
+                priceChanges.Add(new PropertyPriceChange
+                {
+                    Property = property,
+                    PreviousPrice = finalList,
+                    NewPrice = soldPrice,
+                    ChangedAtUtc = seed.SoldDateUtc ?? now.AddDays(-2),
+                    ChangedBy = owner.FullName,
+                    Reason = "Accepted best and final offer after competitive bidding.",
+                    TenantId = tenantId,
+                    CreatedAtUtc = seed.SoldDateUtc ?? now.AddDays(-2),
+                    CreatedBy = "system"
+                });
+            }
+
+            showings.Add(new PropertyShowing
+            {
+                Property = property,
+                AgentId = owner.Id,
+                AgentName = owner.FullName,
+                VisitorName = $"Buyer Tour {index + 1}",
+                VisitorEmail = $"buyer.tour{index + 1}@northedgedemo.ca",
+                VisitorPhone = $"416-555-{1200 + index}",
+                ScheduledAtUtc = (seed.ListingDateUtc ?? now).AddDays(3).AddHours(18),
+                DurationMinutes = 45,
+                Feedback = seed.Status == PropertyStatus.Sold || seed.Status == PropertyStatus.Conditional
+                    ? "Strong showing. Buyers responded well to layout and finishes."
+                    : null,
+                Rating = seed.Status == PropertyStatus.Sold ? 5 : seed.Status == PropertyStatus.Conditional ? 4 : null,
+                Status = seed.Status == PropertyStatus.Sold || seed.Status == PropertyStatus.Conditional
+                    ? ShowingStatus.Completed
+                    : ShowingStatus.Scheduled,
+                TenantId = tenantId,
+                CreatedAtUtc = (seed.ListingDateUtc ?? now).AddDays(1),
+                CreatedBy = "system"
+            });
+
+            propertyActivities.Add(new PropertyActivity
+            {
+                Property = property,
+                Type = ActivityType.Task,
+                Subject = seed.Status == PropertyStatus.Active
+                    ? "Review showing feedback and pricing"
+                    : "Confirm closing and transition checklist",
+                Description = seed.Status == PropertyStatus.Active
+                    ? "Consolidate weekend traffic notes and confirm whether repositioning or new media is needed."
+                    : "Coordinate lawyer, deposit release, and final walk-through touchpoints.",
+                DueDate = now.AddDays(index + 1),
+                CompletedDate = seed.Status == PropertyStatus.Sold ? now.AddDays(-1) : null,
+                Status = seed.Status == PropertyStatus.Sold ? PropertyActivityStatus.Completed : PropertyActivityStatus.Open,
+                Priority = seed.Status == PropertyStatus.Active ? PropertyActivityPriority.High : PropertyActivityPriority.Medium,
+                AssignedToId = owner.Id,
+                AssignedToName = owner.FullName,
+                CreatedByName = "system",
+                TenantId = tenantId,
+                CreatedAtUtc = (seed.ListingDateUtc ?? now).AddDays(2),
+                CreatedBy = "system"
+            });
+
+            propertyEvents.Add(new PropertyEvent
+            {
+                Property = property,
+                EventType = "listing",
+                Label = seed.Status == PropertyStatus.Sold ? "Listing closed" : "Listing launched",
+                Description = seed.Status == PropertyStatus.Sold
+                    ? "Deal firmed and marked sold in the brokerage pipeline."
+                    : "Property published to agent network and external marketing channels.",
+                Icon = seed.Status == PropertyStatus.Sold ? "pi pi-check-circle" : "pi pi-megaphone",
+                Variant = seed.Status == PropertyStatus.Sold ? "success" : "info",
+                OccurredAtUtc = seed.Status == PropertyStatus.Sold ? seed.SoldDateUtc ?? now : seed.ListingDateUtc ?? now,
+                TenantId = tenantId,
+                CreatedAtUtc = seed.Status == PropertyStatus.Sold ? seed.SoldDateUtc ?? now : seed.ListingDateUtc ?? now,
+                CreatedBy = "system"
+            });
+        }
+
+        _dbContext.Properties.AddRange(properties);
+        _dbContext.PropertyShowings.AddRange(showings);
+        _dbContext.PropertyActivities.AddRange(propertyActivities);
+        _dbContext.PropertyPriceChanges.AddRange(priceChanges);
+        _dbContext.PropertyEvents.AddRange(propertyEvents);
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
     private async Task<Tenant> EnsureDefaultTenantAsync(CancellationToken cancellationToken)
     {
         var defaultKey = _configuration["Tenant:DefaultKey"] ?? "default";
@@ -2489,6 +2991,7 @@ public class DatabaseInitializer : IDatabaseInitializer
             await SeedOpportunityStagesAsync(cancellationToken);
             await SeedHelpDeskDefaultsAsync(cancellationToken);
             await SeedSampleDataAsync(cancellationToken);
+            await SeedPropertyPortfolioAsync(cancellationToken);
             await SeedActivityTypeDefinitionsAsync(cancellationToken);
         }
         finally
@@ -2649,6 +3152,47 @@ public class DatabaseInitializer : IDatabaseInitializer
 
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
+
+    private sealed record SellerSeed(string AccountName, string Email, string Phone, string Description)
+    {
+        public string PrimaryContactName => AccountName.Contains(' ', StringComparison.Ordinal)
+            ? AccountName.Replace("Family Trust", string.Empty, StringComparison.Ordinal)
+                .Replace("Holdings", string.Empty, StringComparison.Ordinal)
+                .Replace("Developments", string.Empty, StringComparison.Ordinal)
+                .Replace("Commercial GP", string.Empty, StringComparison.Ordinal)
+                .Trim()
+            : AccountName;
+    }
+
+    private sealed record PropertySeed(
+        string MlsNumber,
+        string Address,
+        string City,
+        string Province,
+        string PostalCode,
+        string Country,
+        decimal? ListPrice,
+        decimal? SalePrice,
+        string Currency,
+        DateTime? ListingDateUtc,
+        DateTime? SoldDateUtc,
+        PropertyStatus Status,
+        PropertyType PropertyType,
+        int? Bedrooms,
+        int? Bathrooms,
+        decimal? SquareFeet,
+        decimal? LotSizeSqFt,
+        int? YearBuilt,
+        int? GarageSpaces,
+        string Description,
+        string Features,
+        string? PhotoUrls,
+        string? VirtualTourUrl,
+        decimal? CommissionRate,
+        decimal? BuyerAgentCommission,
+        decimal? SellerAgentCommission,
+        string? Neighborhood,
+        int SellerIndex);
 
     private async Task SeedAuditEventsAsync(Guid tenantId, CancellationToken cancellationToken)
     {
