@@ -359,6 +359,61 @@ export class AssistantPanelComponent {
       .join('');
   }
 
+  protected assistantResponseSections(content: string): AssistantResponseSections {
+    const normalized = (content ?? '').replace(/\r\n/g, '\n').trim();
+    if (!normalized) {
+      return { answer: '', sections: [] };
+    }
+
+    const headingPattern = /^(?:\d+[.)]\s*)?(Situation Summary|Priority Actions|Risks?(?: \/ Blockers)?|Sources Used)\s*:\s*$/i;
+    const lines = normalized.split('\n');
+    const sections: AssistantResponseSectionDraft[] = [];
+    const answerLines: string[] = [];
+    let current: AssistantResponseSectionDraft | null = null;
+
+    for (const line of lines) {
+      const heading = line.trim().match(headingPattern);
+      if (heading) {
+        current = {
+          key: this.normalizeResponseSectionKey(heading[1]),
+          title: this.normalizeResponseSectionTitle(heading[1]),
+          content: []
+        };
+        sections.push(current);
+        continue;
+      }
+
+      if (current) {
+        current.content.push(line);
+      } else {
+        answerLines.push(line);
+      }
+    }
+
+    return {
+      answer: answerLines.join('\n').trim(),
+      sections: sections
+        .map(section => ({ ...section, content: section.content.join('\n').trim() }))
+        .filter(section => section.content)
+    };
+  }
+
+  private normalizeResponseSectionKey(value: string): AssistantResponseSectionKey {
+    const normalized = value.toLowerCase();
+    if (normalized.startsWith('situation')) return 'summary';
+    if (normalized.startsWith('priority')) return 'actions';
+    if (normalized.startsWith('risk')) return 'risks';
+    return 'sources';
+  }
+
+  private normalizeResponseSectionTitle(value: string): string {
+    const normalized = value.toLowerCase();
+    if (normalized.startsWith('situation')) return 'Situation summary';
+    if (normalized.startsWith('priority')) return 'Priority actions';
+    if (normalized.startsWith('risk')) return 'Risks and blockers';
+    return 'Sources used';
+  }
+
   private formatInline(text: string): string {
     const escaped = text
       .replace(/&/g, '&amp;')
@@ -524,4 +579,23 @@ export class AssistantPanelComponent {
 interface AssistantUiMessage extends AssistantChatMessage {
   displayContent?: string;
   isTyping?: boolean;
+}
+
+type AssistantResponseSectionKey = 'summary' | 'actions' | 'risks' | 'sources';
+
+interface AssistantResponseSection {
+  key: AssistantResponseSectionKey;
+  title: string;
+  content: string;
+}
+
+interface AssistantResponseSectionDraft {
+  key: AssistantResponseSectionKey;
+  title: string;
+  content: string[];
+}
+
+interface AssistantResponseSections {
+  answer: string;
+  sections: AssistantResponseSection[];
 }

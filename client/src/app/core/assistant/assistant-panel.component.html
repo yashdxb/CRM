@@ -41,7 +41,21 @@
           [class.user]="message.role === 'user'"
         >
           <span class="assistant-role">{{ message.role === 'user' ? 'You' : 'Assistant' }}</span>
-          <div class="assistant-content" [innerHTML]="formatAssistantMessage(message.displayContent ?? message.content)"></div>
+          <ng-container *ngIf="assistantResponseSections(message.displayContent ?? message.content) as response">
+            <div class="assistant-content assistant-answer" *ngIf="response.answer" [innerHTML]="formatAssistantMessage(response.answer)"></div>
+            <div class="assistant-response-sections" *ngIf="response.sections.length">
+              <section class="assistant-response-section" *ngFor="let section of response.sections" [class]="'assistant-response-section assistant-response-section--' + section.key">
+                <div class="assistant-response-section-heading">
+                  <span class="assistant-response-section-icon">
+                    <i class="pi" [class.pi-chart-line]="section.key === 'summary'" [class.pi-check-square]="section.key === 'actions'" [class.pi-shield]="section.key === 'risks'" [class.pi-book]="section.key === 'sources'"></i>
+                  </span>
+                  <span>{{ section.title }}</span>
+                </div>
+                <div class="assistant-content" [innerHTML]="formatAssistantMessage(section.content)"></div>
+              </section>
+            </div>
+            <div class="assistant-content" *ngIf="!response.answer && !response.sections.length" [innerHTML]="formatAssistantMessage(message.displayContent ?? message.content)"></div>
+          </ng-container>
         </div>
         <div class="assistant-message" *ngIf="assistantError()">
           <span class="assistant-role">Assistant</span>

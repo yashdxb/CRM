@@ -239,6 +239,57 @@ ul.assistant-list {
   margin-bottom: 4px;
 }
 
+.assistant-response-sections {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.assistant-response-section {
+  border: 1px solid rgba(130, 170, 255, 0.18);
+  border-left: 3px solid rgba(130, 170, 255, 0.58);
+  border-radius: 10px;
+  padding: 9px 10px 8px;
+  background: rgba(10, 17, 38, 0.38);
+
+  &--actions {
+    border-left-color: rgba(83, 203, 158, 0.75);
+  }
+
+  &--risks {
+    border-left-color: rgba(255, 177, 91, 0.8);
+  }
+
+  &--sources {
+    border-left-color: rgba(189, 157, 255, 0.75);
+  }
+}
+
+.assistant-response-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 5px;
+  color: rgba(241, 246, 255, 0.96);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.assistant-response-section-icon {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  color: rgba(171, 202, 255, 0.95);
+  font-size: 0.7rem;
+}
+
+.assistant-response-section .assistant-content {
+  font-size: 0.82rem;
+}
+
 .assistant-panel.collapsed .assistant-body,
 .assistant-panel.collapsed .assistant-input {
   display: none;
