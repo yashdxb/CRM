@@ -120,6 +120,7 @@ var allowedOrigins = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     "http://localhost:8081",
     "http://localhost:8082",
     "https://jolly-dune-0d9d1fe0f.2.azurestaticapps.net",
+    "https://polite-meadow-00114570f.7.azurestaticapps.net",
     "https://northedgesystem.com",
     "https://www.northedgesystem.com"
 };
