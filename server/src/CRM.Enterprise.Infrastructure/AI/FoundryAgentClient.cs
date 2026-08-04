@@ -259,19 +259,26 @@ public sealed class FoundryAgentClient
             throw new InvalidOperationException("Foundry model message is empty.");
         }
 
-        var body = new
+        var isAzureOpenAiEndpoint = _options.Endpoint.Contains(".openai.azure.com", StringComparison.OrdinalIgnoreCase);
+        var body = new Dictionary<string, object?>
         {
-            model = _options.Deployment,
-            messages = new[]
+            ["model"] = _options.Deployment,
+            ["messages"] = new[]
             {
                 new { role = "system", content = "You are the CRM Enterprise assistant. Give concise, evidence-based answers using the provided CRM context. Never invent records or actions." },
                 new { role = "user", content = message }
             },
-            temperature = 0.2,
-            max_completion_tokens = 800
+            ["max_completion_tokens"] = 1600
         };
+        if (!isAzureOpenAiEndpoint)
+        {
+            body["temperature"] = 0.2;
+        }
+        else if (_options.Deployment.Contains("gpt-5", StringComparison.OrdinalIgnoreCase))
+        {
+            body["reasoning_effort"] = "none";
+        }
 
-        var isAzureOpenAiEndpoint = _options.Endpoint.Contains(".openai.azure.com", StringComparison.OrdinalIgnoreCase);
         var completionPath = isAzureOpenAiEndpoint
             ? $"openai/deployments/{Uri.EscapeDataString(_options.Deployment)}/chat/completions?api-version={_options.ApiVersion}"
             : $"models/chat/completions?api-version={_options.ApiVersion}";
