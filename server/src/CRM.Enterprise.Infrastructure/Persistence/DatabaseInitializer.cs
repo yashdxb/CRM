@@ -1706,6 +1706,15 @@ public class DatabaseInitializer : IDatabaseInitializer
     {
         await _dbContext.Database.MigrateAsync(cancellationToken);
         await EnsureSchemaCompatibilityAsync(cancellationToken);
+
+        // Production skips demo seeding, but the tenant used by public bootstrap
+        // and host resolution must still exist after a fresh database migration.
+        var defaultTenant = await EnsureDefaultTenantAsync(cancellationToken);
+        await EnsureTenantVerticalPresetDefaultsAsync(defaultTenant, cancellationToken);
+        _tenantProvider.SetTenant(defaultTenant.Id, defaultTenant.Key);
+        await SeedRolesAsync(cancellationToken);
+        await SeedUsersAsync(cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
         await EnsureSuperAdminPermissionsAsync(cancellationToken);
         await BackfillRoleVisibilityScopesAsync(cancellationToken);
     }
