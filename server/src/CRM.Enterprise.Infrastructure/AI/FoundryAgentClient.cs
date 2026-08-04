@@ -271,7 +271,11 @@ public sealed class FoundryAgentClient
             max_completion_tokens = 800
         };
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"models/chat/completions?api-version={_options.ApiVersion}");
+        var isAzureOpenAiEndpoint = _options.Endpoint.Contains(".openai.azure.com", StringComparison.OrdinalIgnoreCase);
+        var completionPath = isAzureOpenAiEndpoint
+            ? $"openai/deployments/{Uri.EscapeDataString(_options.Deployment)}/chat/completions?api-version={_options.ApiVersion}"
+            : $"models/chat/completions?api-version={_options.ApiVersion}";
+        using var request = new HttpRequestMessage(HttpMethod.Post, completionPath);
         request.Headers.Add("api-key", _options.ApiKey);
         request.Content = new StringContent(JsonSerializer.Serialize(body, JsonOptions), Encoding.UTF8, "application/json");
         using var response = await _httpClient.SendAsync(request, cancellationToken);
