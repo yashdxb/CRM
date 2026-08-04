@@ -392,7 +392,13 @@ ul.assistant-list {
 .assistant-actions {
   display: grid;
   gap: $space-2;
-  margin-top: $space-2;
+  order: -1;
+  position: sticky;
+  top: -$space-3;
+  z-index: 2;
+  margin: -$space-3 -$space-3 $space-2;
+  padding: $space-3;
+  background: linear-gradient(180deg, rgba(14, 20, 44, 0.98) 72%, rgba(14, 20, 44, 0));
 }
 
 .assistant-actions-title {
