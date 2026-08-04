@@ -866,14 +866,14 @@ export class OpportunityFormPage implements OnInit, OnDestroy, HasUnsavedChanges
 
   private sectionMeta(section: DealPanelKey): DealSectionMeta {
     const sectionMap: Record<DealPanelKey, DealSectionMeta> = {
-      'opportunity-details': { label: 'Deal Details', icon: 'pi pi-briefcase' },
-      'deal-settings': { label: 'Deal Settings', icon: 'pi pi-chart-line' },
+      'opportunity-details': { label: 'Opportunity Details', icon: 'pi pi-briefcase' },
+      'deal-settings': { label: 'Opportunity Settings', icon: 'pi pi-chart-line' },
       'pricing-discounts': { label: 'Pricing & Discounts', icon: 'pi pi-percentage' },
       'quote-proposal': { label: 'Quote / Proposal', icon: 'pi pi-file-edit' },
       'pre-sales-team': { label: 'Pre-Sales Team', icon: 'pi pi-users' },
       'deal-stakeholders': { label: 'Stakeholders', icon: 'pi pi-id-card' },
-      'deal-health-score': { label: 'Deal Health', icon: 'pi pi-heart' },
-      'deal-aging': { label: 'Deal Aging', icon: 'pi pi-stopwatch' },
+      'deal-health-score': { label: 'Opportunity Health', icon: 'pi pi-heart' },
+      'deal-aging': { label: 'Opportunity Aging', icon: 'pi pi-stopwatch' },
       'approval-workflow': { label: 'Approval Workflow', icon: 'pi pi-check-circle' },
       'security-legal': { label: 'Security & Legal', icon: 'pi pi-shield' },
       'delivery-handoff': { label: 'Delivery & Handoff', icon: 'pi pi-truck' },
@@ -1302,8 +1302,8 @@ export class OpportunityFormPage implements OnInit, OnDestroy, HasUnsavedChanges
       return false;
     }
     if (!this.form.name) {
-      this.dealNameError.set('Deal name is required.');
-      this.toastService.show('error', 'Deal name is required.', 5000);
+      this.dealNameError.set('Opportunity name is required.');
+      this.toastService.show('error', 'Opportunity name is required.', 5000);
       this.scrollToFirstError('oppName');
       return false;
     }
@@ -2698,7 +2698,7 @@ export class OpportunityFormPage implements OnInit, OnDestroy, HasUnsavedChanges
         amount,
         currency: this.approvalRequest.currency || this.resolveCurrencyCode(),
         purpose: this.approvalRequest.purpose,
-        opportunityName: this.form.name?.trim() || 'Deal',
+        opportunityName: this.form.name?.trim() || 'Opportunity',
         accountName: this.form.accountId ? this.accountLabel() : null
       })
       .subscribe({

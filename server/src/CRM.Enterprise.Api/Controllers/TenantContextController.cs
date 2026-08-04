@@ -208,7 +208,15 @@ public class TenantContextController : ControllerBase
                 var parsed = JsonSerializer.Deserialize<VerticalPresetConfiguration>(tenant.VerticalPresetConfigJson, JsonOptions);
                 if (parsed is not null)
                 {
-                    return VerticalPresetDefaults.Normalize(parsed);
+                    var normalizedTenantPreset = VerticalPresetIds.Normalize(tenant.IndustryPreset);
+                    var normalizedCatalogPreset = VerticalPresetIds.Normalize(parsed.PresetId);
+                    if (string.Equals(normalizedTenantPreset, normalizedCatalogPreset, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return VerticalPresetDefaults.Normalize(parsed);
+                    }
+
+                    // The tenant's selected preset is authoritative when an older catalog was persisted.
+                    return VerticalPresetDefaults.Create(normalizedTenantPreset);
                 }
             }
             catch (JsonException)

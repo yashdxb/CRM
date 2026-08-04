@@ -496,6 +496,16 @@ public sealed class AssistantChatService : IAssistantChatService
 
     private async Task<bool> IsKnowledgeSearchEnabledAsync(CancellationToken cancellationToken)
     {
+        var cacheKey = BuildUserScopedCacheKey("assistant:knowledge-search-enabled", Guid.Empty);
+        return await _readModelCache.GetOrCreateAsync(
+            cacheKey,
+            TimeSpan.FromMinutes(1),
+            async ct => await ResolveKnowledgeSearchEnabledAsync(ct),
+            cancellationToken);
+    }
+
+    private async Task<bool> ResolveKnowledgeSearchEnabledAsync(CancellationToken cancellationToken)
+    {
         var tenant = await _dbContext.Tenants
             .AsNoTracking()
             .Where(t => t.Id == _tenantProvider.TenantId)
@@ -525,6 +535,19 @@ public sealed class AssistantChatService : IAssistantChatService
     }
 
     private async Task<AssistantExecutionSnapshot> BuildExecutionSnapshotAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        // The assistant may request the same CRM context several times while a
+        // conversation is streaming. Reuse it briefly without serving stale
+        // operational data for longer than the dashboard refresh window.
+        var cacheKey = BuildUserScopedCacheKey("assistant:execution-snapshot", userId);
+        return await _readModelCache.GetOrCreateAsync(
+            cacheKey,
+            TimeSpan.FromSeconds(15),
+            ct => BuildExecutionSnapshotCoreAsync(userId, ct),
+            cancellationToken);
+    }
+
+    private async Task<AssistantExecutionSnapshot> BuildExecutionSnapshotCoreAsync(Guid userId, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.TenantId;
         var nowUtc = DateTime.UtcNow;

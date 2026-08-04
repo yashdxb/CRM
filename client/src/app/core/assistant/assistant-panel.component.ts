@@ -1,6 +1,6 @@
 import { NgFor, NgIf } from '@angular/common';
 import { isPlatformBrowser } from '@angular/common';
-import { Component, computed, DestroyRef, inject, PLATFORM_ID, signal } from '@angular/core';
+import { Component, computed, DestroyRef, ElementRef, inject, PLATFORM_ID, signal, ViewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { DragDropModule } from '@angular/cdk/drag-drop';
@@ -24,6 +24,7 @@ import { CrmEventsService } from '../realtime/crm-events.service';
   styleUrl: './assistant-panel.component.scss'
 })
 export class AssistantPanelComponent {
+  @ViewChild('assistantBody') private assistantBody?: ElementRef<HTMLElement>;
   private readonly platformId = inject(PLATFORM_ID);
   private readonly destroyRef = inject(DestroyRef);
   private readonly assistantService = inject(AssistantService);
@@ -120,6 +121,22 @@ export class AssistantPanelComponent {
     this.assistantChatService.sendMessage(message, { stream: streamEnabled, conversationId }).subscribe({
       next: response => {
         if (streamEnabled && response.streamed) {
+          // SignalR can miss the completion event during a cold connection. The
+          // HTTP response still includes the persisted assistant history, so use
+          // its latest assistant message as a reliable fallback.
+          const completedReply = (response.reply?.trim() || [...(response.messages ?? [])]
+            .reverse()
+            .find(item => item.role === 'assistant' && item.content?.trim())?.content?.trim() || '').trim();
+          if (completedReply && this.activeConversationMessageId) {
+            const messageId = this.activeConversationMessageId;
+            this.updateMessage(messageId, { content: completedReply, displayContent: '', isTyping: true });
+            this.activeConversationId = null;
+            this.activeConversationMessageId = null;
+            this.activeRequestStartedAtMs = null;
+            this.assistantSending.set(false);
+            this.runTypewriter(messageId, completedReply);
+            this.refreshInsights();
+          }
           return;
         }
 
@@ -517,6 +534,15 @@ export class AssistantPanelComponent {
     this.assistantMessages.update(messages =>
       messages.map(message => (message.id === id ? { ...message, ...patch } : message))
     );
+    this.scrollToLatest();
+  }
+
+  private scrollToLatest(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    window.requestAnimationFrame(() => {
+      const body = this.assistantBody?.nativeElement;
+      if (body) body.scrollTop = body.scrollHeight;
+    });
   }
 
   private responseDurationMs(startedAtMs: number): number {

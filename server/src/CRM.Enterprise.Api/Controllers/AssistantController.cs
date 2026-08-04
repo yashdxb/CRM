@@ -74,11 +74,11 @@ public class AssistantController : ControllerBase
             if (request.Stream)
             {
                 // Use true streaming - publish tokens as they arrive from the AI
-                await StreamAssistantResponseAsync(userId.Value, conversationId, request.Message ?? string.Empty, cancellationToken);
+                var streamedReply = await StreamAssistantResponseAsync(userId.Value, conversationId, request.Message ?? string.Empty, cancellationToken);
                 
                 var history = await _chatService.GetHistoryAsync(userId.Value, cancellationToken, 50);
                 return Ok(new AssistantChatResponse(
-                    string.Empty,
+                    streamedReply,
                     history.Select(MapMessage).ToList(),
                     conversationId,
                     Streamed: true));
@@ -338,7 +338,7 @@ public class AssistantController : ControllerBase
     /// <summary>
     /// Streams assistant response tokens in real-time via SignalR as they arrive from the AI.
     /// </summary>
-    private async Task StreamAssistantResponseAsync(
+    private async Task<string> StreamAssistantResponseAsync(
         Guid userId,
         string conversationId,
         string message,
@@ -347,7 +347,7 @@ public class AssistantController : ControllerBase
         var tenantId = _tenantProvider.TenantId;
         if (tenantId == Guid.Empty || userId == Guid.Empty)
         {
-            return;
+            return string.Empty;
         }
 
         var sequence = 0;
@@ -391,6 +391,8 @@ public class AssistantController : ControllerBase
                 tokenCount = sequence
             },
             cancellationToken);
+
+        return fullReply ?? string.Empty;
     }
 
     private async Task PublishAssistantStreamAsync(

@@ -177,7 +177,7 @@ export class OpportunitiesPage {
     this.opportunityData.delete(row.id).subscribe({
       next: () => {
         this.load();
-        this.raiseToast('success', 'Deal deleted.');
+        this.raiseToast('success', 'Opportunity deleted.');
       },
       error: () => this.raiseToast('error', 'Unable to delete deal.')
     });

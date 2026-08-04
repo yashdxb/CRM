@@ -268,7 +268,7 @@ public sealed class FoundryAgentClient
                 new { role = "system", content = "You are the CRM Enterprise assistant. Give concise, evidence-based answers using the provided CRM context. Never invent records or actions." },
                 new { role = "user", content = message }
             },
-            ["max_completion_tokens"] = 1600
+            ["max_completion_tokens"] = 3000
         };
         if (!isAzureOpenAiEndpoint)
         {
@@ -293,8 +293,65 @@ public sealed class FoundryAgentClient
         }
 
         using var document = JsonDocument.Parse(payload);
-        var reply = document.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString();
+        var reply = ExtractCompletionText(document.RootElement);
         return string.IsNullOrWhiteSpace(reply) ? "The assistant returned an empty response." : reply;
+    }
+
+    private static string? ExtractCompletionText(JsonElement root)
+    {
+        if (root.TryGetProperty("output_text", out var outputText)
+            && outputText.ValueKind == JsonValueKind.String)
+        {
+            return outputText.GetString();
+        }
+
+        if (!root.TryGetProperty("choices", out var choices)
+            || choices.ValueKind != JsonValueKind.Array
+            || choices.GetArrayLength() == 0)
+        {
+            return null;
+        }
+
+        var choice = choices[0];
+        if (!choice.TryGetProperty("message", out var message))
+        {
+            return choice.TryGetProperty("text", out var text) ? text.GetString() : null;
+        }
+
+        if (!message.TryGetProperty("content", out var content))
+        {
+            return null;
+        }
+
+        if (content.ValueKind == JsonValueKind.String)
+        {
+            return content.GetString();
+        }
+
+        if (content.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        var parts = new List<string>();
+        foreach (var part in content.EnumerateArray())
+        {
+            if (part.ValueKind == JsonValueKind.String)
+            {
+                var value = part.GetString();
+                if (!string.IsNullOrWhiteSpace(value)) parts.Add(value);
+                continue;
+            }
+
+            if (part.TryGetProperty("text", out var textPart)
+                && textPart.ValueKind == JsonValueKind.String)
+            {
+                var value = textPart.GetString();
+                if (!string.IsNullOrWhiteSpace(value)) parts.Add(value);
+            }
+        }
+
+        return parts.Count == 0 ? null : string.Join(string.Empty, parts);
     }
 
     private async Task<string> CreateRunAsync(string threadId, CancellationToken cancellationToken)

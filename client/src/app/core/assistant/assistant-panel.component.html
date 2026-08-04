@@ -30,7 +30,7 @@
       </button>
     </div>
   </div>
-  <div class="assistant-body">
+  <div class="assistant-body" #assistantBody>
         <div class="assistant-message">
           <span class="assistant-role">Assistant</span>
           <div class="assistant-content" [innerHTML]="formatAssistantMessage(assistantGreeting())"></div>
@@ -47,6 +47,10 @@
             </span>
           </div>
           <ng-container *ngIf="assistantResponseSections(message.displayContent ?? message.content) as response">
+            <div class="assistant-typing" *ngIf="message.isTyping && !(message.displayContent ?? message.content)">
+              <span class="assistant-typing-label">Assistant is typing</span>
+              <span class="assistant-typing-dots" aria-label="Assistant is typing"><i></i><i></i><i></i></span>
+            </div>
             <div class="assistant-content assistant-answer" *ngIf="response.answer" [innerHTML]="formatAssistantMessage(response.answer)"></div>
             <div class="assistant-response-sections" *ngIf="response.sections.length">
               <section class="assistant-response-section" *ngFor="let section of response.sections" [class]="'assistant-response-section assistant-response-section--' + section.key">
@@ -60,6 +64,7 @@
               </section>
             </div>
             <div class="assistant-content" *ngIf="!response.answer && !response.sections.length" [innerHTML]="formatAssistantMessage(message.displayContent ?? message.content)"></div>
+            <span class="assistant-typing-cursor" *ngIf="message.isTyping && (message.displayContent ?? message.content)"></span>
           </ng-container>
         </div>
         <div class="assistant-status assistant-status--error" *ngIf="assistantError()" role="alert">

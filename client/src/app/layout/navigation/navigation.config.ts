@@ -48,13 +48,13 @@ export const NAV_LINKS: NavLink[] = [
     ]
   },
   { 
-    label: 'Deals', 
+    label: 'Opportunities',
     icon: 'pi-chart-line', 
     path: '/app/deals', 
     permission: PERMISSION_KEYS.opportunitiesView,
     children: [
-      { label: 'All Deals', icon: 'pi-list', path: '/app/deals', permission: PERMISSION_KEYS.opportunitiesView },
-      { label: 'Add Deal', icon: 'pi-plus', path: '/app/deals/new', permission: PERMISSION_KEYS.opportunitiesManage }
+      { label: 'All Opportunities', icon: 'pi-list', path: '/app/deals', permission: PERMISSION_KEYS.opportunitiesView },
+      { label: 'Add Opportunity', icon: 'pi-plus', path: '/app/deals/new', permission: PERMISSION_KEYS.opportunitiesManage }
     ]
   },
   {
@@ -181,7 +181,7 @@ export const NAV_LINKS: NavLink[] = [
         permission: PERMISSION_KEYS.administrationManage,
         children: [
           { label: 'Lead Statuses', icon: 'pi-tag', path: '/app/settings/lookups/lead-statuses', permission: PERMISSION_KEYS.administrationManage },
-          { label: 'Deal Stages', icon: 'pi-chart-bar', path: '/app/settings/lookups/opportunity-stages', permission: PERMISSION_KEYS.administrationManage },
+          { label: 'Opportunity Stages', icon: 'pi-chart-bar', path: '/app/settings/lookups/opportunity-stages', permission: PERMISSION_KEYS.administrationManage },
           { label: 'Activity Priorities', icon: 'pi-flag', path: '/app/settings/lookups/activity-priorities', permission: PERMISSION_KEYS.administrationManage },
           { label: 'Activity Types', icon: 'pi-list', path: '/app/settings/lookups/activity-types', permission: PERMISSION_KEYS.administrationManage },
           { label: 'Case Statuses', icon: 'pi-ticket', path: '/app/settings/lookups/helpdesk-case-statuses', permission: PERMISSION_KEYS.administrationManage },
@@ -213,7 +213,7 @@ export const NAV_LINKS: NavLink[] = [
           { label: 'Lead Assignment', icon: 'pi-sitemap', path: '/app/settings/lead-assignment', permission: PERMISSION_KEYS.leadsManage },
           { label: 'Qualification Policy', icon: 'pi-shield', path: '/app/settings/qualification-policy', permission: PERMISSION_KEYS.administrationManage },
           { label: 'Qualification Thresholds', icon: 'pi-filter', path: '/app/settings/qualification-thresholds', permission: PERMISSION_KEYS.administrationManage },
-          { label: 'Deal Health', icon: 'pi-heart', path: '/app/settings/deal-health', permission: PERMISSION_KEYS.administrationView },
+          { label: 'Opportunity Health', icon: 'pi-heart', path: '/app/settings/deal-health', permission: PERMISSION_KEYS.administrationView },
           { label: 'Opportunity Automation', icon: 'pi-cog', path: '/app/settings/opportunity-automation', permission: PERMISSION_KEYS.opportunitiesManage }
         ]
       },

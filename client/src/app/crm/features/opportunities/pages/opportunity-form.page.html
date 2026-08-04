@@ -124,14 +124,14 @@
 
           <button type="button" class="back-link" routerLink="/app/deals">
             <i class="pi pi-arrow-left"></i>
-            Back to Deals
+                Back to Opportunities
           </button>
 
           <div class="header-row">
             <div class="header-title">
               <h1 class="hero-title">
                 <span class="title-gradient">{{ isEditMode() ? 'Update' : 'Create' }}</span>
-                <span class="title-light">Deal</span>
+                <span class="title-light">Opportunity</span>
               </h1>
               <p>Capture the deal details, set your stage, and keep the team aligned on next steps.</p>
               <div class="deal-header-progress" *ngIf="isEditMode()">
@@ -251,7 +251,7 @@
               <i class="pi pi-briefcase"></i>
             </div>
             <div class="metric-content">
-              <span class="metric-label">Deal</span>
+              <span class="metric-label">Opportunity</span>
               <strong class="metric-value">{{ form.name || 'Untitled deal' }}</strong>
             </div>
           </div>
@@ -349,7 +349,7 @@
                 <div class="opportunity-accordion-header">
                   <span class="opportunity-accordion-title">
                     <i class="pi pi-briefcase"></i>
-                    Deal Details
+                    Opportunity Details
                   </span>
                   <span class="opportunity-accordion-header-meta">
                     <span class="opportunity-accordion-badge">{{ opportunityDetailsBadge() }}</span>
@@ -366,7 +366,7 @@
           <section class="form-card opportunity-accordion-card">
             <div class="form-grid">
               <div class="form-field">
-                <label for="oppName">Deal name <span class="required">*</span></label>
+                <label for="oppName">Opportunity name <span class="required">*</span></label>
                 <p-inputgroup>
                   <p-inputgroup-addon class="icon-addon icon-addon--name">
                     <i class="pi pi-tag"></i>
@@ -437,7 +437,7 @@
                 <div class="opportunity-accordion-header">
                   <span class="opportunity-accordion-title">
                     <i class="pi pi-chart-line"></i>
-                    Deal Settings
+                    Opportunity Settings
                   </span>
                   <span class="opportunity-accordion-header-meta">
                     <span
@@ -525,7 +525,7 @@
                 <small class="field-hint" *ngIf="forecastGuidance() as guidance">{{ guidance }}</small>
               </div>
               <div class="form-field">
-                <label for="oppType">Deal type</label>
+                <label for="oppType">Opportunity type</label>
                 <p-select
                   inputId="oppType"
                   appendTo="body"
@@ -1133,7 +1133,7 @@
                     <!-- Metric summary cards -->
                     <div class="forecast-metrics">
                       <div class="forecast-metric forecast-metric--primary">
-                        <span class="forecast-metric__label">Deal Value</span>
+                        <span class="forecast-metric__label">Opportunity Value</span>
                         <strong class="forecast-metric__value">{{ forecastMetrics().amount | currency:form.currency:'symbol':'1.0-0' }}</strong>
                       </div>
                       <div class="forecast-metric forecast-metric--success">
@@ -1413,7 +1413,7 @@
                 <div class="opportunity-accordion-header">
                   <span class="opportunity-accordion-title">
                     <i class="pi pi-clock"></i>
-                    Deal Activity Timeline
+                    Opportunity Activity Timeline
                   </span>
                   <span class="opportunity-accordion-header-meta">
                     <span class="opportunity-accordion-badge opportunity-accordion-badge--info">
@@ -1883,7 +1883,7 @@
                 <div class="opportunity-accordion-header">
                   <span class="opportunity-accordion-title">
                     <i class="pi pi-comments"></i>
-                    Deal Review Thread
+                    Opportunity Review Thread
                   </span>
                   <span class="opportunity-accordion-header-meta">
                     <span
@@ -2285,7 +2285,7 @@
                 <div class="opportunity-accordion-header">
                   <span class="opportunity-accordion-title">
                     <i class="pi pi-heart"></i>
-                    Deal Health
+                    Opportunity Health
                   </span>
                   <span class="opportunity-accordion-header-meta">
                     <span class="opportunity-accordion-badge opportunity-accordion-badge--info" *ngIf="dealHealthScore()">
@@ -2392,7 +2392,7 @@
                 <div class="opportunity-accordion-header">
                   <span class="opportunity-accordion-title">
                     <i class="pi pi-stopwatch"></i>
-                    Deal Aging
+                    Opportunity Aging
                   </span>
                   <span class="opportunity-accordion-header-meta">
                     <span

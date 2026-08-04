@@ -23,7 +23,7 @@
       </div>
       
       <h1 class="hero-title">
-        <span class="title-gradient">Deal</span>
+        <span class="title-gradient">Opportunity</span>
         <span class="title-light">Pipeline</span>
       </h1>
       
@@ -34,7 +34,7 @@
       <div class="hero-stats">
         <div class="hero-stat">
           <div class="stat-value">{{ metrics().total || 0 }}</div>
-          <div class="stat-label">Total Deals</div>
+          <div class="stat-label">Total Opportunities</div>
           <div class="stat-bar">
             <div class="stat-bar-fill" style="width: 100%"></div>
           </div>
@@ -73,7 +73,7 @@
         </div>
         <button type="button" class="action-btn action-btn--add" [disabled]="!canManage()" (click)="onCreate()">
           <span class="action-btn__icon"><i class="pi pi-plus"></i></span>
-          <span>New Deal</span>
+          <span>New Opportunity</span>
         </button>
         <button type="button" class="action-btn action-btn--refresh" (click)="load()">
           <span class="action-btn__icon"><i class="pi pi-refresh"></i></span>
@@ -122,7 +122,7 @@
         <i class="pi pi-briefcase"></i>
       </div>
       <div class="metric-content">
-        <span class="metric-label">Total Deals</span>
+            <span class="metric-label">Total Opportunities</span>
         <strong class="metric-value">{{ metrics().total || '—' }}</strong>
       </div>
       <div class="metric-chart">
@@ -372,7 +372,7 @@
     <div class="data-card">
       <header class="data-header">
         <div class="header-title">
-          <h2>Deal Records</h2>
+          <h2>Opportunity Records</h2>
           <span class="record-count">
             {{ opportunities().length }} of {{ total() }} records
           </span>
@@ -384,7 +384,7 @@
           </button>
           <button type="button" class="action-btn action-btn--add" [disabled]="!canManage()" (click)="onCreate()">
             <span class="action-btn__icon"><i class="pi pi-plus"></i></span>
-            <span>Add Deal</span>
+            <span>Add Opportunity</span>
           </button>
         </div>
       </header>
@@ -420,7 +420,7 @@
           <ng-template pTemplate="header">
             <tr>
               <th class="th-opportunity" pSortableColumn="name" pResizableColumn>
-                Deal
+                Opportunity
                 <p-sortIcon field="name"></p-sortIcon>
               </th>
               <th pSortableColumn="account" pResizableColumn>

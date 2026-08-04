@@ -352,9 +352,9 @@ public static class VerticalPresetDefaults
                 Vocabulary = new VerticalVocabulary
                 {
                     LeadQualificationLabel = "Qualification",
-                    OpportunitySingularLabel = "Deal",
-                    OpportunityPluralLabel = "Deals",
-                    PipelineLabel = "Deal pipeline",
+                    OpportunitySingularLabel = "Opportunity",
+                    OpportunityPluralLabel = "Opportunities",
+                    PipelineLabel = "Opportunity pipeline",
                     QualificationGuidance = "Validate fit, timeline, economic buyer, and urgency before progressing this lead."
                 },
                 LeadProfileCatalog = CreateCatalog(),
@@ -370,9 +370,9 @@ public static class VerticalPresetDefaults
                 ],
                 WorkflowTemplateHighlights =
                 [
-                    "Deal Approval",
+                    "Opportunity Approval",
                     "Discount Approval",
-                    "Large Deal Escalation",
+                    "Large Opportunity Escalation",
                     "Stage Gate Exception"
                 ]
             }

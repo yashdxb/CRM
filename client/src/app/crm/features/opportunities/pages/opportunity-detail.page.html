@@ -13,7 +13,7 @@
           <app-breadcrumbs></app-breadcrumbs>
           <div class="hero-nav">
             <a class="back-link" routerLink="/app/deals">
-              <i class="pi pi-arrow-left"></i> Deals
+              <i class="pi pi-arrow-left"></i> Opportunities
             </a>
             <a *ngIf="canEdit" class="edit-link" [routerLink]="'/app/deals/' + opp.id + '/edit'">
               <i class="pi pi-pencil"></i> Edit
@@ -33,7 +33,7 @@
         <div class="hero-right">
           <div class="hero-amount">
             <span class="hero-amount-value">{{ formatCurrency(opp.amount, opp.currency) }}</span>
-            <span class="hero-amount-label">Deal value</span>
+              <span class="hero-amount-label">Opportunity value</span>
           </div>
           <div class="hero-probability">
             <div class="probability-ring">
@@ -53,7 +53,7 @@
         <div class="kpi-card kpi-card--age">
           <div class="kpi-icon"><i class="pi pi-stopwatch"></i></div>
           <div class="kpi-content">
-            <span class="kpi-label">Deal Age</span>
+            <span class="kpi-label">Opportunity Age</span>
             <strong class="kpi-value">{{ dealAgeDays() }}d</strong>
           </div>
         </div>

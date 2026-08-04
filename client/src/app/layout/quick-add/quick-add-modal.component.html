@@ -234,7 +234,7 @@
             <small class="field-error" *ngIf="activityRelationInvalid()">Choose the related contact.</small>
           </div>
           <div class="form-field" [class.form-field--invalid]="activityRelationInvalid()" *ngIf="quickAddActivityRelationType === 'Opportunity'">
-            <label for="qa-activityOpportunity">Deal <span class="field-required">*</span></label>
+            <label for="qa-activityOpportunity">Opportunity <span class="field-required">*</span></label>
             <p-select
               id="qa-activityOpportunity"
               [options]="opportunityOptions()"
